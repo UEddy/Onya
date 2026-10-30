@@ -7,7 +7,7 @@
   },
   "financial_covenants": [
     {
-      "id": "net_leverage_ratio",
+      "id": "net_leverage",
       "name": "Net Leverage Ratio",
       "section": "5.7(a)",
       "direction": "max",
@@ -17,13 +17,13 @@
         {
           "period_end": "2023-12-30",
           "applies_after": null,
-          "value": 5.0,
+          "value": 5,
           "condition": null
         },
         {
           "period_end": "2024-03-30",
           "applies_after": null,
-          "value": 5.0,
+          "value": 5,
           "condition": null
         },
         {
@@ -35,7 +35,7 @@
         {
           "period_end": "2024-09-28",
           "applies_after": null,
-          "value": 5.0,
+          "value": 5,
           "condition": null
         },
         {
@@ -83,14 +83,14 @@
         {
           "period_end": null,
           "applies_after": "2026-07-04",
-          "value": 4.0,
+          "value": 4,
           "condition": "for each Quarterly Reporting Period occurring thereafter"
         }
       ],
-      "quote": "The Borrower shall not suffer or permit at any time the Net Leverage Ratio, as of the end of any Quarterly Reporting Period, to exceed (i) 5.00 to 1.00"
+      "quote": "The Borrower shall not suffer or permit at any time the Net Leverage Ratio, as of the end of any Quarterly Reporting Period, to exceed"
     },
     {
-      "id": "interest_coverage_ratio",
+      "id": "interest_coverage",
       "name": "Interest Coverage Ratio",
       "section": "5.7(b)",
       "direction": "min",
@@ -176,7 +176,7 @@
           "condition": "for each Quarterly Reporting Period occurring thereafter"
         }
       ],
-      "quote": "The Borrower shall not suffer or permit at any time the Interest Coverage Ratio, as of the end of any Quarterly Reporting Period, to be less than (i) 1.50 to 1.00"
+      "quote": "The Borrower shall not suffer or permit at any time the Interest Coverage Ratio, as of the end of any Quarterly Reporting Period, to be less than"
     },
     {
       "id": "liquidity",
@@ -211,10 +211,10 @@
           "condition": "as of the last Business Day of each week from October 4, 2026 and thereafter"
         }
       ],
-      "quote": "The Borrower shall (i) cause Liquidity to equal or exceed $40,000,000 as of the last day of each fiscal month from the Eleventh Amendment Effective Date until"
+      "quote": "The Borrower shall (i) cause Liquidity to equal or exceed $40,000,000 as of the last day of each fiscal month"
     },
     {
-      "id": "consolidated_adjusted_ebitda",
+      "id": "adjusted_ebitda",
       "name": "Consolidated Adjusted EBITDA",
       "section": "5.7(d)",
       "direction": "min",
@@ -225,7 +225,7 @@
           "period_end": "2026-04-04",
           "applies_after": null,
           "value": 90,
-          "condition": null
+          "condition": "for the most recently completed four Quarterly Reporting Periods then ended"
         },
         {
           "period_end": null,
@@ -248,7 +248,7 @@
           "period_end": "2026-05-01",
           "applies_after": null,
           "value": 112.5,
-          "condition": null
+          "condition": "during the consecutive four-week period then ending"
         },
         {
           "period_end": null,
@@ -257,7 +257,7 @@
           "condition": "as of the last Business Day of each week thereafter"
         }
       ],
-      "quote": "As of May 1, 2026 and as of the last Business Day of each week thereafter, the Borrower shall not suffer or permit the aggregate amount of disbursements"
+      "quote": "the Borrower shall not suffer or permit the aggregate amount of disbursements and other Dispositions of cash, Cash Equivalents and other assets"
     },
     {
       "id": "draws",
@@ -271,7 +271,7 @@
           "period_end": "2026-05-01",
           "applies_after": null,
           "value": 112.5,
-          "condition": null
+          "condition": "during the consecutive four-week period then ending"
         },
         {
           "period_end": null,
@@ -280,12 +280,12 @@
           "condition": "as of the last Business Day of each week thereafter"
         }
       ],
-      "quote": "As of May 1, 2026 and as of the last Business Day of each week thereafter, the Borrower shall not at any time suffer or permit the aggregate amount of new Revolving Loans,"
+      "quote": "the Borrower shall not at any time suffer or permit the aggregate amount of new Revolving Loans, Swing Loans and issuance or renewals"
     }
   ],
   "cap_groups": [
     {
-      "id": "cap_a_ix",
+      "id": "cap_ebitda_aix",
       "applies_to_clauses": [
         "(a)(ix)"
       ],
@@ -327,10 +327,10 @@
           "condition": "for each period thereafter"
         }
       ],
-      "quote": "provided , however , that the aggregate expenses and savings included as addbacks in any determination of Consolidated EBITDA under this clause (a)(ix) shall not exceed $60,000,000 for the trailing four consecutive Quarterly Reporting Periods ending January 3, 2026, $44,000,000"
+      "quote": "the aggregate expenses and savings included as addbacks in any determination of Consolidated EBITDA under this clause (a)(ix) shall not exceed $60,000,000 for the trailing"
     },
     {
-      "id": "cap_a_iv_viii",
+      "id": "cap_ebitda_aiv_aviii",
       "applies_to_clauses": [
         "(a)(iv)",
         "(a)(viii)"
@@ -421,23 +421,23 @@
           "condition": "for each Quarterly Reporting Period ending thereafter"
         }
       ],
-      "quote": "provided , however , that the aggregate amount of cash losses and cash expenses included as addbacks in any determination of Consolidated EBITDA under the foregoing clauses (a)(iv) and (a)(viii) shall not exceed the following amounts for the following periods:"
+      "quote": "the aggregate amount of cash losses and cash expenses included as addbacks in any determination of Consolidated EBITDA under the foregoing clauses (a)(iv) and (a)(viii) shall not exceed"
     }
   ],
   "definitions": [
     {
       "term": "Consolidated EBITDA",
       "section": "1.1",
-      "formula_summary": "Consolidated Net Earnings plus addbacks (i)-(ix) minus non-recurring non-cash gains, subject to aggregate caps and agent approval",
+      "formula_summary": "Consolidated Net Earnings plus addbacks (i) through (ix) subject to aggregate caps minus non-recurring non-cash gains",
       "components": [
         {
           "label": "Consolidated Net Earnings",
           "sign": "+",
-          "clause_ref": "(a) base",
+          "clause_ref": "base",
           "cap_group_id": null,
           "requires_agent_approval": false,
-          "publicly_verifiable": "partial",
-          "quote": "(a) Consolidated Net Earnings for such period plus, without duplication, the aggregate amounts deducted in determining such Consolidated Net Earnings in respect of (i)"
+          "publicly_verifiable": "yes",
+          "quote": "Consolidated Net Earnings for such period plus, without duplication, the aggregate amounts deducted in determining such Consolidated Net Earnings in respect of"
         },
         {
           "label": "Consolidated Interest Expense",
@@ -445,7 +445,7 @@
           "clause_ref": "(a)(i)",
           "cap_group_id": null,
           "requires_agent_approval": false,
-          "publicly_verifiable": "partial",
+          "publicly_verifiable": "yes",
           "quote": "(i) Consolidated Interest Expense,"
         },
         {
@@ -454,7 +454,7 @@
           "clause_ref": "(a)(ii)",
           "cap_group_id": null,
           "requires_agent_approval": false,
-          "publicly_verifiable": "partial",
+          "publicly_verifiable": "yes",
           "quote": "(ii) Consolidated Income Tax Expense,"
         },
         {
@@ -463,14 +463,14 @@
           "clause_ref": "(a)(iii)",
           "cap_group_id": null,
           "requires_agent_approval": false,
-          "publicly_verifiable": "partial",
+          "publicly_verifiable": "yes",
           "quote": "(iii) Consolidated Depreciation and Amortization Charges,"
         },
         {
           "label": "reasonable non-recurring non-cash and cash losses",
           "sign": "+",
           "clause_ref": "(a)(iv)",
-          "cap_group_id": "cap_a_iv_viii",
+          "cap_group_id": "cap_ebitda_aiv_aviii",
           "requires_agent_approval": true,
           "publicly_verifiable": "no",
           "quote": "(iv) reasonable non-recurring non-cash and cash losses not incurred in the ordinary course of business,"
@@ -490,7 +490,7 @@
           "clause_ref": "(a)(vi)",
           "cap_group_id": null,
           "requires_agent_approval": true,
-          "publicly_verifiable": "no",
+          "publicly_verifiable": "partial",
           "quote": "(vi) non-cash impairment expenses relating to store closures or remodeling during such period,"
         },
         {
@@ -499,26 +499,26 @@
           "clause_ref": "(a)(vii)",
           "cap_group_id": null,
           "requires_agent_approval": true,
-          "publicly_verifiable": "no",
+          "publicly_verifiable": "partial",
           "quote": "(vii) amortization of fees payable in connection with the incurrence of Indebtedness during such period,"
         },
         {
           "label": "cash restructuring expenses",
           "sign": "+",
           "clause_ref": "(a)(viii)",
-          "cap_group_id": "cap_a_iv_viii",
+          "cap_group_id": "cap_ebitda_aiv_aviii",
           "requires_agent_approval": true,
           "publicly_verifiable": "no",
-          "quote": "(viii) reasonable cash expenses directly incurred in connection with the Borrower\u2019s restructuring activities, including with respect to severance, store closures and relocation costs, and corresponding professional fees, and"
+          "quote": "(viii) reasonable cash expenses directly incurred in connection with the Borrower\u2019s restructuring activities,"
         },
         {
           "label": "annualized non-cash cost savings",
           "sign": "+",
           "clause_ref": "(a)(ix)",
-          "cap_group_id": "cap_a_ix",
+          "cap_group_id": "cap_ebitda_aix",
           "requires_agent_approval": true,
           "publicly_verifiable": "no",
-          "quote": "(ix) annualized non-cash savings directly attributable to cost reductions implemented during such period (in each case calculated on a proforma basis for such period"
+          "quote": "(ix) annualized non-cash savings directly attributable to cost reductions implemented during such period"
         },
         {
           "label": "non-recurring non-cash gains",
@@ -526,16 +526,16 @@
           "clause_ref": "(b)",
           "cap_group_id": null,
           "requires_agent_approval": false,
-          "publicly_verifiable": "partial",
-          "quote": "minus (b) to the extent included in Consolidated Net Earnings for such period, non-recurring non-cash gains not incurred in the ordinary course of business;"
+          "publicly_verifiable": "no",
+          "quote": "non-recurring non-cash gains not incurred in the ordinary course of business;"
         }
       ],
-      "quote": "\u201cConsolidated EBITDA\u201d means, for any period, as determined on a Consolidated basis, (a) Consolidated Net Earnings for such period plus, without duplication, the aggregate amounts deducted in determining such Consolidated Net Earnings in respect of"
+      "quote": "\u201cConsolidated EBITDA\u201d means, for any period, as determined on a Consolidated basis, (a) Consolidated Net Earnings for such period plus, without duplication, the"
     },
     {
       "term": "Consolidated EBITDAR",
       "section": "1.1",
-      "formula_summary": "Consolidated EBITDA plus Consolidated Rent Expense",
+      "formula_summary": "Numerator component (a) Consolidated EBITDA plus (b) Consolidated Rent Expense; denominator for ratios is not part of definition",
       "components": [
         {
           "label": "Consolidated EBITDA",
@@ -564,70 +564,245 @@
       "formula_summary": "All Indebtedness including short-term, long-term and Subordinated Indebtedness of Borrower on Consolidated basis",
       "components": [
         {
-          "label": "All Indebtedness including short-term, long-term and Subordinated Indebtedness",
+          "label": "all Indebtedness",
           "sign": "+",
-          "clause_ref": "entire definition",
+          "clause_ref": "all",
           "cap_group_id": null,
           "requires_agent_approval": false,
           "publicly_verifiable": "partial",
           "quote": "all Indebtedness (including, but not limited to, short-term, long-term and Subordinated Indebtedness, if any) of the Borrower, as determined on a Consolidated basis."
         }
       ],
-      "quote": "\u201cConsolidated Funded Indebtedness\u201d means, at any date, all Indebtedness (including, but not limited to, short-term, long-term and Subordinated Indebtedness, if any) of the Borrower, as determined on a Consolidated basis."
+      "quote": "\u201cConsolidated Funded Indebtedness\u201d means, at any date, all Indebtedness (including, but not limited to, short-term, long-term and Subordinated Indebtedness, if any) of the Borrower, as determined"
     },
     {
-      "term": "Consolidated Adjusted EBITDA",
+      "term": "Net Leverage Ratio",
       "section": "1.1",
-      "formula_summary": "Consolidated EBITDA calculated without giving effect to clause (a)(ix)",
+      "formula_summary": "Numerator: Consolidated Funded Indebtedness plus total operating lease liabilities under ASC 842 minus unrestricted US cash and Cash Equivalents in excess of $40,000,000; Denominator: Consolidated EBITDAR for most recently completed four Quarterly Reporting Periods, pro forma for Acquisitions",
       "components": [
         {
-          "label": "Consolidated EBITDA excluding (a)(ix)",
+          "label": "Consolidated Funded Indebtedness",
           "sign": "+",
-          "clause_ref": "entire definition",
+          "clause_ref": "(a)(i)",
           "cap_group_id": null,
           "requires_agent_approval": false,
           "publicly_verifiable": "partial",
-          "quote": "the Consolidated EBITDA for such period calculated without giving effect to clause (a)(ix) of the definition of Consolidated EBITDA."
+          "quote": "(i) Consolidated Funded Indebtedness (as of the end of the most recently completed Quarterly Reporting Period), plus (ii) the total operating lease"
+        },
+        {
+          "label": "operating lease liabilities",
+          "sign": "+",
+          "clause_ref": "(a)(ii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "plus (ii) the total operating lease liabilities of Borrower, as calculated in accordance with ASC 842 accounting guidance"
+        },
+        {
+          "label": "unrestricted cash in excess of $40M",
+          "sign": "-",
+          "clause_ref": "(a)(iii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "minus (iii) the aggregate amount of unrestricted cash-on-hand and Cash Equivalents of the Borrower located in the United States in excess of Forty Million Dollars ($40,000,000);"
+        },
+        {
+          "label": "Consolidated EBITDAR",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "to (b) Consolidated EBITDAR (for the most recently completed four Quarterly Reporting Periods);"
         }
       ],
-      "quote": "\u201cConsolidated Adjusted EBITDA\u201d means, for any period, as determined on a Consolidated basis, the Consolidated EBITDA for such period calculated without giving effect to clause (a)(ix)"
+      "quote": "\u201cNet Leverage Ratio\u201d means, as determined on a Consolidated basis, the ratio of (a) the sum of (i) Consolidated Funded Indebtedness"
+    },
+    {
+      "term": "Interest Coverage Ratio",
+      "section": "1.1",
+      "formula_summary": "Numerator: Consolidated EBITDA for most recently completed four Quarterly Reporting Periods; Denominator: Consolidated Interest Expense for same period",
+      "components": [
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the ratio of (a) Consolidated EBITDA to (b) Consolidated Interest Expense."
+        },
+        {
+          "label": "Consolidated Interest Expense",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "the ratio of (a) Consolidated EBITDA to (b) Consolidated Interest Expense."
+        }
+      ],
+      "quote": "\u201cInterest Coverage Ratio\u201d means, as determined for the most recently completed four Quarterly Reporting Periods of the Borrower, on a Consolidated basis, the ratio of"
+    },
+    {
+      "term": "Indebtedness",
+      "section": "1.1",
+      "formula_summary": "Sum of borrowed money, deferred purchase price, title retention, letters of credit, swaps/Hedges, synthetic leases, Capitalized Leases, securitizations, support obligations, partnership debt, financing transactions and guaranties thereof",
+      "components": [
+        {
+          "label": "borrowed money",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "(a) all obligations to repay borrowed money, direct or indirect, incurred, assumed, or guaranteed,"
+        },
+        {
+          "label": "deferred purchase price",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "(b) all obligations in respect of the deferred purchase price of property or services"
+        },
+        {
+          "label": "Capitalized Lease Obligations",
+          "sign": "+",
+          "clause_ref": "(g)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "(g) all Capitalized Lease Obligations,"
+        },
+        {
+          "label": "guaranty of obligations",
+          "sign": "+",
+          "clause_ref": "(l)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "(l) any guaranty of any obligation described in subparts (a) through (k) above"
+        }
+      ],
+      "quote": "\u201cIndebtedness\u201d means, for any Company, without duplication, (a) all obligations to repay borrowed money, direct or indirect, incurred, assumed, or guaranteed, (b) all obligations"
+    },
+    {
+      "term": "Consolidated Rent Expense",
+      "section": "1.1",
+      "formula_summary": "Total rent expense for real and personal property on Consolidated basis as reported in financial statements",
+      "components": [
+        {
+          "label": "total rent expense",
+          "sign": "+",
+          "clause_ref": "all",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the total rent expense with respect to real and personal property of the Borrower for such period, as determined on a Consolidated basis"
+        }
+      ],
+      "quote": "\u201cConsolidated Rent Expense\u201d means, for any period, the total rent expense with respect to real and personal property of the Borrower for such period, as determined"
+    },
+    {
+      "term": "Consolidated Interest Expense",
+      "section": "1.1",
+      "formula_summary": "Interest expense including imputed interest on Capitalized Leases, synthetic leases and securitizations excluding deferred financing costs on Consolidated basis",
+      "components": [
+        {
+          "label": "interest expense including imputed interest",
+          "sign": "+",
+          "clause_ref": "all",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "the interest expense (including, without limitation, the \u201cimputed interest\u201d portion of Capitalized Lease Obligations, synthetic leases and asset securitizations, if any, and excluding deferred financing"
+        }
+      ],
+      "quote": "\u201cConsolidated Interest Expense\u201d means, for any period, the interest expense (including, without limitation, the \u201cimputed interest\u201d portion of Capitalized Lease Obligations, synthetic leases and asset"
+    },
+    {
+      "term": "Consolidated Net Earnings",
+      "section": "1.1",
+      "formula_summary": "Net income (loss) of Borrower on Consolidated basis",
+      "components": [
+        {
+          "label": "net income (loss)",
+          "sign": "+",
+          "clause_ref": "all",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "the net income (loss) of the Borrower for such period, as determined on a Consolidated basis."
+        }
+      ],
+      "quote": "\u201cConsolidated Net Earnings\u201d means, for any period, the net income (loss) of the Borrower for such period, as determined on a Consolidated basis."
+    },
+    {
+      "term": "Liquidity",
+      "section": "1.1",
+      "formula_summary": "Numerator sum: (x) unrestricted cash free and clear of Liens subject to first-priority Lien plus (y) unused Revolving Credit Commitments available for a Credit Event",
+      "components": [
+        {
+          "label": "unrestricted cash",
+          "sign": "+",
+          "clause_ref": "(x)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "the sum of (x) the Borrower\u2019s and its Subsidiaries\u2019 unrestricted cash that is free and clear of Liens"
+        },
+        {
+          "label": "unused Revolving Commitments",
+          "sign": "+",
+          "clause_ref": "(y)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "plus (y) the aggregate amount of unused Revolving Credit Commitments available for a Credit Event on such date"
+        }
+      ],
+      "quote": "\u201cLiquidity\u201d means, on any date of determination, the sum of (x) the Borrower\u2019s and its Subsidiaries\u2019 unrestricted cash that is free and clear"
     }
   ],
   "specified_defaults": [
     {
-      "covenant_id": "net_leverage_ratio",
+      "covenant_id": "net_leverage",
       "period_end": "2026-04-04",
-      "description": "Failed to comply with Net Leverage Ratio requirement as of end of Quarterly Reporting Period ending April 4, 2026, resulting in Event of Default under Section 8.2",
-      "quote": "Section 5.7(a) of the Existing Credit Agreement provides, among other things, that the Borrower shall not suffer or permit the Net Leverage Ratio"
+      "description": "Failure to comply with Net Leverage Ratio not to exceed 4.75 to 1.00",
+      "quote": "the Borrower failed to comply with the foregoing Net Leverage Ratio requirement as of the end of the Quarterly Reporting Period ending April 4, 2026,"
     },
     {
-      "covenant_id": "interest_coverage_ratio",
+      "covenant_id": "interest_coverage",
       "period_end": "2026-04-04",
-      "description": "Failed to comply with Interest Coverage Ratio requirement as of end of Quarterly Reporting Period ending April 4, 2026, resulting in Event of Default under Section 8.2",
-      "quote": "Section 5.7(b) of the Existing Credit Agreement provides, among other things, that the Borrower shall not suffer or permit the Interest Coverage Ratio"
+      "description": "Failure to comply with Interest Coverage Ratio not less than 2.10 to 1.00",
+      "quote": "the Borrower failed to comply with the foregoing Interest Coverage Ratio requirement as of the end of the Quarterly Reporting Period ending April 4, 2026,"
     },
     {
-      "covenant_id": "consolidated_adjusted_ebitda",
+      "covenant_id": "adjusted_ebitda",
       "period_end": "2026-04-04",
-      "description": "Failed to comply with Consolidated Adjusted EBITDA requirement as of end of Quarterly Reporting Period ending April 4, 2026, resulting in Event of Default under Section 8.2",
-      "quote": "Section 5.7(d) of the Existing Credit Agreement provides, among other things, that the Borrower shall not suffer or permit the Consolidated Adjusted EBITDA"
+      "description": "Failure to comply with Consolidated Adjusted EBITDA not less than 90% of forecast",
+      "quote": "the Borrower failed to comply with the foregoing Consolidated Adjusted EBITDA requirement as of the end of the Quarterly Reporting Period"
     },
     {
-      "covenant_id": "notice_5_14a",
+      "covenant_id": "notice",
       "period_end": "2026-04-04",
-      "description": "Failed to notify Administrative Agent and Lenders of Specified Defaults in clauses (i) through (iii), resulting in Event of Default under Section 8.2",
-      "quote": "Section 5.14(a) of the Existing Credit Agreement provides, among other things, that the Borrower will cause a Financial Officer to promptly notify the Administrative Agent"
+      "description": "Failure to notify Administrative Agent and Lenders of Specified Defaults under Section 5.14(a)",
+      "quote": "the Borrower failed to notify the Administrative Agent and the Lenders of the Specified Defaults in the foregoing clauses (i) through (iii),"
     },
     {
-      "covenant_id": "representation_6_22",
+      "covenant_id": "representation",
       "period_end": "2026-04-04",
-      "description": "Representation that no Default or Event of Default exists was not true when made after occurrence of first Specified Default, resulting in Event of Default under Section 8.4",
-      "quote": "Section 6.22 of the Existing Credit Agreement is a representation and warranty, among other things, that no Default or Event of Default exists;"
+      "description": "Representation that no Default exists under Section 6.22 not true due to Specified Defaults",
+      "quote": "that representation and warranty was not true when made (or required to be made) after the occurrence of the first Specified Default,"
     }
   ],
   "uncertainties": [
-    "Liquidity covenant uses weekly and monthly testing dates rather than Quarterly Reporting Period ends; encoded with applies_after and condition text",
-    "Disbursement and Draw tests are measured against 13-week cash flow forecast budget, encoded as percent_of_forecast with value 112.5",
-    "Cap-group schedules list each Quarterly Reporting Period end explicitly; trailing-four-period measurement basis stated in quote but not separately encoded"
+    "Consolidated Adjusted EBITDA Forecast values in Schedule 5.7(d) not included in extracted text so forecast dollar amounts cannot be verified",
+    "Whether Liquidity thresholds in Section 5.7(c) should be treated as period-end tests or weekly/monthly point-in-time tests for threshold dating",
+    "Scope of Indebtedness subparts (c)-(k) summarized; full enumeration not separately componentized",
+    "Public verifiability judgments for addbacks requiring Administrative Agent approval are interpretive"
   ]
 }

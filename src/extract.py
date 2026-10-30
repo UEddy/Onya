@@ -67,7 +67,8 @@ Rules:
 - For dated periods set "period_end" to the date and "applies_after" to null. For an "each period thereafter" entry set "period_end" to null and "applies_after" to the YYYY-MM-DD of the last dated period it follows, so no entry has a null date without meaning.
 - "unit" is "ratio" for a pure ratio (e.g. leverage, coverage), "percent_of_forecast" for a test measured against forecast (the Consolidated Adjusted EBITDA test is 90 percent of forecast, so unit "percent_of_forecast" with value 90, never "usd" with value 90), and "usd" for a dollar amount.
 - Capture any condition on a threshold or cap amount in "condition" (e.g. the $4,000,000 cap for the period ending January 2, 2027 applies only if One Hundred Percent Lender Consent has been obtained).
-- Cover at least: the Net Leverage Ratio covenant, the Interest Coverage Ratio covenant, the minimum Consolidated Adjusted EBITDA test, and the definitions of Consolidated EBITDA, Consolidated EBITDAR, and Consolidated Funded Indebtedness.
+- Cover at least: the Net Leverage Ratio covenant, the Interest Coverage Ratio covenant, the minimum Consolidated Adjusted EBITDA test, and the definitions of Consolidated EBITDA, Consolidated EBITDAR, Consolidated Funded Indebtedness, Net Leverage Ratio, Interest Coverage Ratio, Indebtedness, Consolidated Rent Expense, Consolidated Interest Expense, Consolidated Net Earnings, and Liquidity.
+- For ratio definitions, the formula_summary must state the numerator and denominator explicitly, including any rent, lease, or cash adjustments.
 - "period_end" and "applies_after" must use YYYY-MM-DD format when not null.
 - "direction" must be "max" or "min". "unit" must be "ratio", "percent_of_forecast", or "usd". "sign" must be "+" or "-". "publicly_verifiable" must be "yes", "partial", or "no".
 - List anything ambiguous or not found in "uncertainties".
