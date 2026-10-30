@@ -1,0 +1,130 @@
+{
+  "period_end": "2025-09-27",
+  "adjusted_ebitda_ttm": [
+    {
+      "line": "Net loss",
+      "value_thousands": -78113,
+      "quote": "(78,113)"
+    },
+    {
+      "line": "Income tax benefit",
+      "value_thousands": -4893,
+      "quote": "(4,893)"
+    },
+    {
+      "line": "Interest expense",
+      "value_thousands": 47244,
+      "quote": "47,244"
+    },
+    {
+      "line": "Depreciation and amortization",
+      "value_thousands": 56706,
+      "quote": "56,706"
+    },
+    {
+      "line": "Stock-based compensation",
+      "value_thousands": 6615,
+      "quote": "6,615"
+    },
+    {
+      "line": "Restructuring costs",
+      "value_thousands": 51230,
+      "quote": "51,230"
+    },
+    {
+      "line": "Other non-recurring items",
+      "value_thousands": 5053,
+      "quote": "5,053"
+    },
+    {
+      "line": "Asset impairments",
+      "value_thousands": 1220,
+      "quote": "1,220"
+    },
+    {
+      "line": "Adjusted EBITDA",
+      "value_thousands": 85062,
+      "quote": "85,062"
+    }
+  ],
+  "leverage_table_ttm": [
+    {
+      "line": "Borrowings under credit facility",
+      "value_thousands": 579500,
+      "ratio": null,
+      "quote": "579,500"
+    },
+    {
+      "line": "Outstanding letters of credit",
+      "value_thousands": 8847,
+      "ratio": null,
+      "quote": "8,847"
+    },
+    {
+      "line": "Finance lease obligations",
+      "value_thousands": 180,
+      "ratio": null,
+      "quote": "180"
+    },
+    {
+      "line": "Consolidated funded indebtedness",
+      "value_thousands": 588527,
+      "ratio": null,
+      "quote": "588,527"
+    },
+    {
+      "line": "Operating lease liabilities",
+      "value_thousands": 361029,
+      "ratio": null,
+      "quote": "361,029"
+    },
+    {
+      "line": "Total debt including operating lease liabilities (a)",
+      "value_thousands": 949556,
+      "ratio": null,
+      "quote": "949,556"
+    },
+    {
+      "line": "Adjusted EBITDA",
+      "value_thousands": 84597,
+      "ratio": null,
+      "quote": "84,597"
+    },
+    {
+      "line": "Consolidated rent expense",
+      "value_thousands": 106490,
+      "ratio": null,
+      "quote": "106,490"
+    },
+    {
+      "line": "Consolidated EBITDAR (b)",
+      "value_thousands": 191087,
+      "ratio": null,
+      "quote": "191,087"
+    },
+    {
+      "line": "Net Leverage Ratio under revolving credit facility (a divided by b)",
+      "value_thousands": null,
+      "ratio": "5.0 to 1.0",
+      "quote": "5.0 to 1.0"
+    }
+  ],
+  "footnotes": [
+    {
+      "text": "Represents costs related to business restructuring actions.",
+      "quote": "Represents costs related to business restructuring actions."
+    },
+    {
+      "text": "Represents costs related to CEO transition activities and proxy contest costs of $0.4 million and $0, respectively, for the three months ended September 27, 2025 and $1.4 million and $1.9 million, respectively, for the trailing twelve months ended September 27, 2025. These costs were both initiated in the fourth quarter of fiscal 2024. In addition, represents CFO search costs of $0.2 million and write off of debt issuance cost of $1.6 million for both the three and trailing twelve months ended September 27, 2025. These costs were both initiated in the third quarter of 2025.",
+      "quote": "Represents costs related to CEO transition activities and proxy contest costs of $0.4 million and $0, respectively, for the three months ended September 27, 2025"
+    },
+    {
+      "text": "Reflects operating lease liabilities included in our financial statements under ASC 842.",
+      "quote": "Reflects operating lease liabilities included in our financial statements under ASC 842."
+    },
+    {
+      "text": "Adjusted EBITDA reflects $0.5 million reduction due to limitations on permitted add-backs under the Company's Credit Facility.",
+      "quote": "Adjusted EBITDA reflects $0.5 million reduction due to limitations on permitted add-backs under the Company's Credit Facility."
+    }
+  ]
+}
