@@ -1,0 +1,158 @@
+{
+  "base": "2026-01-03",
+  "next_test": "2026-04-04",
+  "next_threshold": 4.75,
+  "threshold_note": "schedule entry for 2026-04-04",
+  "ix_cap": 44000000,
+  "ix_note": "schedule entry for 2026-04-04",
+  "iv_viii_cap": 25000000,
+  "iv_viii_note": "schedule entry for 2026-04-04",
+  "baseline": {
+    "numerator": 951461000,
+    "rent": 104983000,
+    "onya_pre_proforma": 68802000,
+    "company_pre_proforma": 78255000,
+    "company_source": "result:reconciliation",
+    "disclosed_proforma": 50000000,
+    "disclosed_source": "release:Proforma annualized cost reductions"
+  },
+  "projected_proforma": 44000000,
+  "projections": {
+    "onya": {
+      "ebitda": 112802000,
+      "ebitdar": 217785000,
+      "ratio": 4.368808687466998,
+      "ratio_2dp": 4.37,
+      "threshold": 4.75,
+      "pass": true
+    },
+    "company": {
+      "ebitda": 122255000,
+      "ebitdar": 227238000,
+      "ratio": 4.187068184018518,
+      "ratio_2dp": 4.19,
+      "threshold": 4.75,
+      "pass": true
+    }
+  },
+  "cushion": {
+    "required_ebitdar": 200307578.9473684,
+    "onya": 17477421.052631587,
+    "company": 26930421.052631587
+  },
+  "trend": {
+    "series": [
+      {
+        "period_end": "2025-06-28",
+        "adjusted_ebitda": 99494000
+      },
+      {
+        "period_end": "2025-09-27",
+        "adjusted_ebitda": 85062000
+      },
+      {
+        "period_end": "2026-01-03",
+        "adjusted_ebitda": 78255000
+      }
+    ],
+    "changes": [
+      {
+        "from": "2025-06-28",
+        "to": "2025-09-27",
+        "change": -14432000
+      },
+      {
+        "from": "2025-09-27",
+        "to": "2026-01-03",
+        "change": -6807000
+      }
+    ],
+    "last_two": [
+      {
+        "from": "2025-06-28",
+        "to": "2025-09-27",
+        "change": -14432000
+      },
+      {
+        "from": "2025-09-27",
+        "to": "2026-01-03",
+        "change": -6807000
+      }
+    ],
+    "avg_decline": -10619500.0
+  },
+  "quarters_of_cushion": {
+    "onya": 1.6457856822479011,
+    "company": 2.5359405859627655
+  },
+  "risk": {
+    "onya": "HIGH",
+    "company": "MEDIUM"
+  },
+  "risk_rule": "HIGH if quarters_of_cushion < 2, MEDIUM if < 4, else LOW",
+  "backtest": {
+    "period_end": "2026-04-04",
+    "numerator": 962096000,
+    "ebitda": 43188000,
+    "ebitdar": 146254000,
+    "net_leverage": {
+      "ratio": 6.578254269968685,
+      "ratio_2dp": 6.58,
+      "threshold": 4.75,
+      "headroom": -1.828254269968685,
+      "headroom_2dp": -1.83,
+      "pass": false,
+      "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+    },
+    "file_proforma": 0,
+    "matched_savings": 44000000,
+    "like_for_like": {
+      "savings": 44000000,
+      "ebitda": 87188000,
+      "ebitdar": 190254000,
+      "net_leverage": {
+        "ratio": 5.056902877206261,
+        "ratio_2dp": 5.06,
+        "threshold": 4.75,
+        "headroom": -0.3069028772062614,
+        "headroom_2dp": -0.31,
+        "pass": false,
+        "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
+      },
+      "interest_coverage": {
+        "ratio": 1.6961325966850829,
+        "ratio_2dp": 1.7,
+        "threshold": 2.1,
+        "headroom": -0.4038674033149172,
+        "headroom_2dp": -0.4,
+        "pass": false,
+        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
+      },
+      "note": "unverifiable: requires agent approval"
+    },
+    "without_savings": {
+      "savings": 0,
+      "ebitda": 43188000,
+      "ebitdar": 146254000,
+      "net_leverage": {
+        "ratio": 6.578254269968685,
+        "ratio_2dp": 6.58,
+        "threshold": 4.75,
+        "headroom": -1.828254269968685,
+        "headroom_2dp": -1.83,
+        "pass": false,
+        "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
+      },
+      "interest_coverage": {
+        "ratio": 0.8401680803050346,
+        "ratio_2dp": 0.84,
+        "threshold": 2.1,
+        "headroom": -1.2598319196949654,
+        "headroom_2dp": -1.26,
+        "pass": false,
+        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
+      },
+      "note": "unverifiable: requires agent approval"
+    }
+  }
+}
