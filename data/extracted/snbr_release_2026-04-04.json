@@ -1,0 +1,61 @@
+{
+  "period_end": "2026-04-04",
+  "adjusted_ebitda_ttm": [
+    {
+      "line": "Net loss",
+      "value_thousands": -173609,
+      "quote": "(173,609)"
+    },
+    {
+      "line": "Income tax expense (benefit)",
+      "value_thousands": 36907,
+      "quote": "36,907"
+    },
+    {
+      "line": "Interest expense",
+      "value_thousands": 51404,
+      "quote": "51,404"
+    },
+    {
+      "line": "Depreciation and amortization",
+      "value_thousands": 49889,
+      "quote": "49,889"
+    },
+    {
+      "line": "Stock-based compensation",
+      "value_thousands": 5158,
+      "quote": "5,158"
+    },
+    {
+      "line": "Restructuring costs",
+      "value_thousands": 72373,
+      "quote": "72,373"
+    },
+    {
+      "line": "Other non-recurring items",
+      "value_thousands": 19841,
+      "quote": "19,841"
+    },
+    {
+      "line": "Asset impairments",
+      "value_thousands": 0,
+      "quote": "\u2014"
+    },
+    {
+      "line": "Adjusted EBITDA",
+      "value_thousands": 61963,
+      "quote": "61,963"
+    }
+  ],
+  "leverage_table_ttm": [],
+  "footnotes": [
+    {
+      "text": "Represents costs related to business restructuring actions.",
+      "quote": "Represents costs related to business restructuring actions."
+    },
+    {
+      "text": "Non\u2011recurring costs represent discrete, non\u2011operational items, including obsolete inventory associated with the Company\u2019s product transition, strategic alternative legal and advisory fees, executive transition and search fees, proxy contest costs, public debt issuance cost write-off, tax matters and other non\u2011routine professional and bank fees. These amounts are treated as permitted add-backs in the calculation of Adjusted EBITDA in accordance with the Company\u2019s Credit Agreement.",
+      "quote": "Non\u2011recurring costs represent discrete, non\u2011operational items, including obsolete inventory associated with the Company\u2019s product transition, strategic alternative legal and advisory fees, executive transition and search fees, proxy contest costs, public debt issuance cost write-off"
+    }
+  ]
+}

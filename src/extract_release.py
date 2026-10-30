@@ -3,8 +3,9 @@
 Sends the full release text followed by extraction instructions in ONE chat
 request (document first so the prefix can be cached), parses the JSON-only
 reply, verifies every "quote" appears verbatim in the source and every
-reported number's printed digits appear in the source, and saves the
-parsed JSON plus the raw response.
+reported number's printed digits appear in the source (dash cells instead
+require value 0 with "printed_as_dash" and a dash in that line's cells),
+and saves the parsed JSON plus the raw response.
 """
 
 import json
@@ -27,14 +28,17 @@ TEMPERATURE = 0
 
 SCHEMA = """{
  "period_end": "YYYY-MM-DD",
- "adjusted_ebitda_ttm": [{"line": str, "value_thousands": number, "quote": str}],
- "leverage_table_ttm": [{"line": str, "value_thousands": number|null, "ratio": str|null, "quote": str}],
+ "adjusted_ebitda_ttm": [{"line": str, "value_thousands": number, "quote": str, "printed_as_dash": bool (optional)}],
+ "leverage_table_ttm": [{"line": str, "value_thousands": number|null, "ratio": str|null, "quote": str, "printed_as_dash": bool (optional)}],
  "footnotes": [{"text": str, "quote": str}]
 }"""
 
+DASHES = ("—", "–", "-")
+DASH_CELLS = frozenset(DASHES)
+
 INSTRUCTIONS = """You are extracting figures from the full earnings-release document above.
 
-Return JSON ONLY matching this exact schema (no markdown, no commentary, no extra keys):
+Return JSON ONLY matching this exact schema (no markdown, no commentary, no keys beyond the schema):
 
 """ + SCHEMA + """
 
@@ -48,8 +52,10 @@ Rules:
 - Every "quote" must be copied verbatim from the document above (max 40 words each). Copy the exact characters; do not paraphrase, fix, or normalize them. Keep all original punctuation.
 - "line" labels must be copied as printed in the table.
 - Cover the TTM column (Adjusted EBITDA reconciliation) and the current-period column (Net Leverage Ratio table) ONLY. Ignore all other periods and columns.
+- If the target-column cell for a line is printed as a dash (em dash —, en dash –, or hyphen -), return "value_thousands": 0 for that line and set "printed_as_dash": true. The "quote" must still be copied verbatim from the document.
+- Omit "printed_as_dash" (or set it false) for every other entry.
 - Never infer or compute numbers. Only report values explicitly stated in the document.
-- Use null when something is not stated (e.g. a line with no dollar amount or no ratio).
+- Use null when something is not stated (e.g. a line with no dollar amount or no ratio). A dash in the target column is stated as zero (0 with "printed_as_dash": true), not null.
 - "period_end" must use YYYY-MM-DD format.
 
 Return the JSON now."""
@@ -97,6 +103,32 @@ def format_thousands(value):
     if isinstance(v, float) and v.is_integer():
         v = int(v)
     return f"{v:,}"
+
+
+def line_cells_contain_dash(document, label, window=8):
+    """Return True when a dash cell follows the label line in the source.
+
+    The textified release puts each table cell on its own line. Scan the
+    `window` lines after each exact label match, stopping at the next
+    label-like line (one containing letters), and report whether any cell
+    is exactly a dash (—, –, or -).
+    """
+    target = (label or "").strip()
+    if not target:
+        return False
+    lines = document.splitlines()
+    for idx, raw in enumerate(lines):
+        if raw.strip() != target:
+            continue
+        for cell in lines[idx + 1: idx + 1 + window]:
+            s = cell.strip()
+            if not s:
+                continue
+            if s in DASH_CELLS:
+                return True
+            if re.search(r"[A-Za-z]", s):
+                break
+    return False
 
 
 def print_usage(response):
@@ -178,9 +210,26 @@ def main():
             failures.append(f"FAILED QUOTE: {q}")
 
     # Check 2: every reported number's printed digits appear in the source.
-    def check_number(label, value):
+    # Dash rows (printed_as_dash) instead require value 0 and a dash cell
+    # after that line's label; their quotes are still covered by Check 1.
+    def check_number(label, value, entry=None):
         nonlocal verified, total
         total += 1
+        if entry is not None and entry.get("printed_as_dash") is True:
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or value != 0):
+                failures.append(
+                    f"FAILED DASH [{label}]: printed_as_dash requires "
+                    f"value_thousands 0, got {value!r}"
+                )
+                return
+            if line_cells_contain_dash(document, label):
+                verified += 1
+            else:
+                failures.append(
+                    f"FAILED DASH [{label}]: no dash cell found after label"
+                )
+            return
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             failures.append(f"FAILED NUMBER [{label}]: non-numeric value {value!r}")
             return
@@ -201,12 +250,12 @@ def main():
             failures.append(f"FAILED RATIO [{label}]: {ratio!r} not in source")
 
     for entry in parsed.get("adjusted_ebitda_ttm", []) or []:
-        check_number(entry.get("line", "?"), entry.get("value_thousands"))
+        check_number(entry.get("line", "?"), entry.get("value_thousands"), entry)
 
     for entry in parsed.get("leverage_table_ttm", []) or []:
         label = entry.get("line", "?")
         if entry.get("value_thousands") is not None:
-            check_number(label, entry.get("value_thousands"))
+            check_number(label, entry.get("value_thousands"), entry)
         if entry.get("ratio") is not None:
             check_ratio(label, entry.get("ratio"))
 

@@ -6,7 +6,7 @@ the SEC companyfacts dump into per-quarter economics for a 52/53-week filer.
 
 from datetime import date, timedelta
 
-from xbrl import load_facts
+from xbrl import ALLOWED_FORMS, load_facts
 
 PERIOD_END = "2025-09-27"
 
@@ -57,6 +57,8 @@ def _dedup(facts):
     """Deduplicate facts repeated across filings, keeping the latest filed."""
     best = {}
     for fact in facts:
+        if fact.get("form") not in ALLOWED_FORMS:
+            continue
         key = (fact.get("end"), fact.get("start"))
         if key not in best or fact.get("filed", "") >= best[key].get("filed", ""):
             best[key] = fact
@@ -82,7 +84,9 @@ def quarterly(concept):
         fact
         for unit_facts in entry.get("units", {}).values()
         for fact in unit_facts
-        if "start" in fact and "end" in fact
+        if "start" in fact
+        and "end" in fact
+        and fact.get("form") in ALLOWED_FORMS
     ]
     by_end = {}
     for (end, start), fact in _dedup(durations).items():
@@ -147,7 +151,9 @@ def instant(concept, period_end):
         fact
         for unit_facts in entry.get("units", {}).values()
         for fact in unit_facts
-        if fact.get("end") == period_end and "start" not in fact
+        if fact.get("end") == period_end
+        and "start" not in fact
+        and fact.get("form") in ALLOWED_FORMS
     ]
     if not candidates:
         raise ValueError(f"no instant fact for {concept} at {period_end}")

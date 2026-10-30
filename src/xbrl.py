@@ -4,6 +4,8 @@ import json
 
 DEFAULT_PATH = "data/raw/snbr_companyfacts.json"
 
+ALLOWED_FORMS = {"10-K", "10-Q", "10-K/A", "10-Q/A"}
+
 
 def load_facts(path="data/raw/snbr_companyfacts.json"):
     """Load the companyfacts JSON document."""
@@ -53,6 +55,8 @@ def show(concept, start="2024-06-01"):
     rows = []
     for unit, unit_facts in entry.get("units", {}).items():
         for fact in unit_facts:
+            if fact.get("form") not in ALLOWED_FORMS:
+                continue
             end = fact.get("end", "")
             if end >= start:
                 rows.append((end, fact.get("start", ""), unit, fact))
@@ -67,26 +71,23 @@ def show(concept, start="2024-06-01"):
 
 
 KEYWORDS = [
-    "LinesOfCredit",
-    "LineOfCredit",
-    "Borrowing",
-    "Revolving",
-    "CreditFacility",
-    "FinanceLease",
-    "Debt",
+    "Depreciation",
+    "Amortization",
+    "Impairment",
+    "OperatingLeaseImpairment",
+    "WriteOff",
 ]
 
 SHOW_CONCEPTS = [
-    "us-gaap:OperatingLeaseLiability",
-    "us-gaap:LettersOfCreditOutstandingAmount",
-    "us-gaap:OperatingLeaseCost",
-    "us-gaap:InterestExpense",
-    "us-gaap:InterestExpenseNonoperating",
-    "us-gaap:NetIncomeLoss",
+    "us-gaap:DepreciationDepletionAndAmortization",
+    "us-gaap:ImpairmentOfLongLivedAssetsHeldForUse",
+    "us-gaap:OperatingLeaseImpairmentLoss",
+    "us-gaap:WriteOffOfDeferredDebtIssuanceCost",
+    "us-gaap:Depreciation",
 ]
 
 
 if __name__ == "__main__":
     list_candidates(KEYWORDS)
     for concept in SHOW_CONCEPTS:
-        show(concept, start="2025-06-01")
+        show(concept, start="2024-06-01")

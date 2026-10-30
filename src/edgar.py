@@ -44,6 +44,10 @@ FILES = [
         "snbr_earnings_q4_2025.htm",
     ),
     (
+        "https://www.sec.gov/Archives/edgar/data/0000827187/000082718726000039/a2026-q1ex991earnings.htm",
+        "snbr_earnings_q1_2026.htm",
+    ),
+    (
         "https://data.sec.gov/api/xbrl/companyfacts/CIK0000827187.json",
         "snbr_companyfacts.json",
     ),
