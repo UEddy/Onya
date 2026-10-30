@@ -1,0 +1,207 @@
+{
+  "period_end": "2025-09-27",
+  "units": "USD",
+  "components": [
+    {
+      "name": "Borrowings under credit facility",
+      "value": 579500000,
+      "source": "xbrl:us-gaap:DebtCurrent",
+      "clause": "(a)(i)",
+      "note": "Consolidated Funded Indebtedness component"
+    },
+    {
+      "name": "Outstanding letters of credit",
+      "value": 8847000,
+      "source": "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
+      "clause": "(a)(i)",
+      "note": "Consolidated Funded Indebtedness component"
+    },
+    {
+      "name": "Finance lease obligations",
+      "value": 180000,
+      "source": "release:Finance lease obligations",
+      "clause": "(a)(i)",
+      "note": "Capitalized Lease Obligations are Indebtedness; company-reported"
+    },
+    {
+      "name": "Operating lease liabilities",
+      "value": 361029000,
+      "source": "xbrl:us-gaap:OperatingLeaseLiability",
+      "clause": "(a)(ii)",
+      "note": "ASC 842 operating lease liabilities"
+    },
+    {
+      "name": "Unrestricted US cash in excess of $40,000,000",
+      "value": 0,
+      "source": "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "clause": "(a)(iii)",
+      "note": "cash and equivalents = $1,264,000; excess over $40,000,000 deducted; no excess, deduction is zero"
+    },
+    {
+      "name": "Net loss",
+      "value": -78113000,
+      "source": "xbrl:us-gaap:NetIncomeLoss",
+      "clause": "base",
+      "note": "Consolidated Net Earnings"
+    },
+    {
+      "name": "Income tax expense (benefit)",
+      "value": -4893000,
+      "source": "xbrl:us-gaap:IncomeTaxExpenseBenefit",
+      "clause": "(a)(ii)",
+      "note": "Consolidated Income Tax Expense"
+    },
+    {
+      "name": "Interest expense",
+      "value": 47244000,
+      "source": "xbrl:us-gaap:InterestExpenseNonoperating",
+      "clause": "(a)(i)",
+      "note": "proxy for Consolidated Interest Expense (excludes imputed lease interest not separately tagged)"
+    },
+    {
+      "name": "Depreciation and amortization",
+      "value": 56706000,
+      "source": "release:Depreciation and amortization",
+      "clause": "(a)(iii)",
+      "note": "release value used; XBRL TTM us-gaap:DepreciationDepletionAndAmortization = $58,603,000; release minus XBRL = $-1,897,000"
+    },
+    {
+      "name": "Stock-based compensation",
+      "value": 6615000,
+      "source": "xbrl:us-gaap:ShareBasedCompensation",
+      "clause": "(a)(v)",
+      "note": "non-cash stock-based compensation"
+    },
+    {
+      "name": "Cash restructuring expenses",
+      "value": 20412000,
+      "source": "xbrl:us-gaap:RestructuringCosts",
+      "clause": "(a)(viii)",
+      "note": "subject to the (a)(iv)+(a)(viii) cap"
+    },
+    {
+      "name": "Non-cash impairments",
+      "value": 30818000,
+      "source": "xbrl:us-gaap:AssetImpairmentCharges",
+      "clause": "(a)(vi)",
+      "note": "non-cash impairment expenses (ttm.py derived-value logic)"
+    },
+    {
+      "name": "Other non-recurring items",
+      "value": 5053000,
+      "source": "release:Other non-recurring items",
+      "clause": "(a)(iv)",
+      "note": "subject to the (a)(iv)+(a)(viii) cap"
+    },
+    {
+      "name": "Asset impairments",
+      "value": 1220000,
+      "source": "release:Asset impairments",
+      "clause": "(a)(vi)",
+      "note": "company-reported asset impairments, separate line in the release reconciliation"
+    },
+    {
+      "name": "Disallowed (a)(iv)+(a)(viii) excess over cap",
+      "value": -465000,
+      "source": "contract:(a)(iv)+(a)(viii)",
+      "clause": "(a)(iv)+(a)(viii) cap",
+      "note": "cash restructuring $20,412,000 + other non-recurring $5,053,000 = $25,465,000 vs cap $25,000,000 (schedule entry for 2025-09-27); excess of $465,000 disallowed"
+    },
+    {
+      "name": "Pro forma cost savings",
+      "value": 0,
+      "source": "contract:(a)(ix)",
+      "clause": "(a)(ix)",
+      "note": "cap not applicable to this period: schedule has no entry for 2025-09-27 and no applies_after entry covers it; no pro forma savings included"
+    },
+    {
+      "name": "Consolidated rent expense",
+      "value": 106490000,
+      "source": "release:Consolidated rent expense",
+      "clause": "EBITDAR (b)",
+      "note": "release value used; XBRL TTM us-gaap:OperatingLeaseCost = $106,258,000; release minus XBRL = $232,000"
+    }
+  ],
+  "data_quality_warnings": [
+    {
+      "concept": "us-gaap:RestructuringCosts",
+      "period_end": "2024-12-28",
+      "direct": 28374000,
+      "derived": 3006000
+    },
+    {
+      "concept": "us-gaap:RestructuringCosts",
+      "period_end": "2026-01-03",
+      "direct": 48128000,
+      "derived": 2348000
+    },
+    {
+      "concept": "us-gaap:AssetImpairmentCharges",
+      "period_end": "2024-12-28",
+      "direct": 5420000,
+      "derived": 678000
+    },
+    {
+      "concept": "us-gaap:AssetImpairmentCharges",
+      "period_end": "2026-01-03",
+      "direct": 36363000,
+      "derived": 803000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2019-06-29",
+      "direct": 21079000,
+      "derived": 21080000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2020-06-27",
+      "direct": 22357000,
+      "derived": 22354000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2021-07-03",
+      "direct": 24352000,
+      "derived": 24353000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2021-10-02",
+      "direct": 24352000,
+      "derived": 25632000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2022-10-01",
+      "direct": 27821000,
+      "derived": 27822000
+    }
+  ],
+  "numerator": 949556000,
+  "numerator_thousands": 949556,
+  "ebitda": 84597000,
+  "ebitda_thousands": 84597,
+  "ebitdar": 191087000,
+  "ebitdar_thousands": 191087,
+  "disallowed": 465000,
+  "disallowed_thousands": 465,
+  "net_leverage": {
+    "ratio": 4.969233909161796,
+    "ratio_2dp": 4.97,
+    "threshold": 5.25,
+    "headroom": 0.28076609083820436,
+    "headroom_2dp": 0.28,
+    "pass": true,
+    "note": "Net Leverage Ratio max 5.25 (schedule entry for 2025-09-27)"
+  },
+  "interest_coverage": {
+    "ratio": 1.7906400812801626,
+    "ratio_2dp": 1.79,
+    "threshold": 1.5,
+    "headroom": 0.2906400812801626,
+    "headroom_2dp": 0.29,
+    "pass": true,
+    "note": "Interest Coverage Ratio min 1.5 (schedule entry for 2025-09-27)"
+  }
+}
