@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
+load_dotenv(os.path.expanduser("~/.config/onya/.env"))
 client = OpenAI(api_key=os.environ["META_API_KEY"], base_url=os.environ["META_BASE_URL"])
 r = client.chat.completions.create(
     model="muse-spark-1.3",
