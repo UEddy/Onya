@@ -16,11 +16,11 @@ def _entry(direct_val, ytd_val):
         "units": {
             "USD": [
                 {"start": "2025-01-01", "end": "2025-03-29",
-                 "val": 100, "filed": "2025-04-01"},
+                 "val": 100, "filed": "2025-04-01", "form": "10-Q"},
                 {"start": "2025-03-30", "end": "2025-06-28",
-                 "val": direct_val, "filed": "2025-07-01"},
+                 "val": direct_val, "filed": "2025-07-01", "form": "10-Q"},
                 {"start": "2025-01-01", "end": "2025-06-28",
-                 "val": ytd_val, "filed": "2025-07-01"},
+                 "val": ytd_val, "filed": "2025-07-01", "form": "10-Q"},
             ]
         }
     }

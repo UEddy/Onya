@@ -1,9 +1,11 @@
 """Focused tests for covenant argv, proforma scenarios, fallback, clauses, warnings."""
 
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -141,6 +143,205 @@ class FindProforma(unittest.TestCase):
 
     def test_none_release(self):
         self.assertIsNone(covenant.find_proforma_in_release(None))
+
+    def test_no_space_with_cost(self):
+        rel = {"leverage_table_ttm": [
+            {"line": "Proforma annualized cost reductions",
+             "value_thousands": 50_000}]}
+        self.assertEqual(covenant.find_proforma_in_release(rel),
+                         ("Proforma annualized cost reductions", 50_000_000))
+
+    def test_case_insensitive(self):
+        rel = {"adjusted_ebitda_ttm": [
+            {"line": "PRO FORMA COST SAVINGS", "value_thousands": 1_000}]}
+        self.assertEqual(covenant.find_proforma_in_release(rel),
+                         ("PRO FORMA COST SAVINGS", 1_000_000))
+
+    def test_proforma_without_cost_or_savings_ignored(self):
+        rel = {"adjusted_ebitda_ttm": [
+            {"line": "Pro forma adjustments", "value_thousands": 5_000}]}
+        self.assertIsNone(covenant.find_proforma_in_release(rel))
+
+    def test_cost_without_proforma_ignored(self):
+        rel = {"adjusted_ebitda_ttm": [
+            {"line": "Cost reductions", "value_thousands": 5_000}]}
+        self.assertIsNone(covenant.find_proforma_in_release(rel))
+
+
+class Reconciliation(unittest.TestCase):
+    def _compute_with_company_ebitda(self, value_thousands):
+        rel = _release()
+        rel["leverage_table_ttm"] = list(rel["leverage_table_ttm"]) + [
+            {"line": "Adjusted EBITDA", "value_thousands": value_thousands}]
+        with (patch.object(covenant, "load_contract", return_value=_contract()),
+              patch.object(covenant, "load_release", return_value=rel),
+              patch.object(covenant, "instant",
+                           side_effect=lambda c, e: INSTANT_VALS[c]),
+              patch.object(covenant, "ttm",
+                           side_effect=lambda c, e: TTM_VALS[c])):
+            return covenant.compute("2026-01-03")
+
+    def test_reconciled_within_tolerance(self):
+        # Onya base EBITDA for fixtures is $53,500,000; 53,800 thousands
+        # differs by $300,000 (< $1,000,000 / 1,000 thousands).
+        result = self._compute_with_company_ebitda(53_800)
+        rec = result.get("reconciliation")
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec["status"], "reconciled")
+        self.assertIn("reconciled", rec["note"])
+        comp = [c for c in result["components"]
+                if c["name"] == "Covenant EBITDA reconciliation"][0]
+        self.assertIn("reconciled", comp["note"])
+        for key in ("net_leverage", "interest_coverage"):
+            self.assertIn("company_reported", rec[key])
+            self.assertIn("onya_strict", rec[key])
+
+    def test_flagged_beyond_tolerance(self):
+        # $60,000,000 company vs $53,500,000 Onya: diff $6,500,000.
+        result = self._compute_with_company_ebitda(60_000)
+        rec = result.get("reconciliation")
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec["status"], "flagged")
+        self.assertEqual(rec["difference"], 6_500_000)
+        comp = [c for c in result["components"]
+                if c["name"] == "Covenant EBITDA reconciliation"][0]
+        self.assertIn("reported covenant EBITDA exceeds capped calculation by $",
+                      comp["note"])
+        self.assertIn("request compliance certificate", comp["note"])
+        self.assertTrue(comp["source"].startswith("release:"))
+        for key in ("net_leverage", "interest_coverage"):
+            self.assertIn("ratio", rec[key]["company_reported"])
+            self.assertIn("ratio", rec[key]["onya_strict"])
+        self.assertEqual(rec["net_leverage"]["onya_strict"]["ratio"],
+                         result["net_leverage"]["ratio"])
+        self.assertEqual(rec["interest_coverage"]["onya_strict"]["ratio"],
+                         result["interest_coverage"]["ratio"])
+
+    def test_absent_when_not_disclosed(self):
+        with (patch.object(covenant, "load_contract", return_value=_contract()),
+              patch.object(covenant, "load_release", return_value=_release()),
+              patch.object(covenant, "instant",
+                           side_effect=lambda c, e: INSTANT_VALS[c]),
+              patch.object(covenant, "ttm",
+                           side_effect=lambda c, e: TTM_VALS[c])):
+            result = covenant.compute("2026-01-03")
+        self.assertNotIn("reconciliation", result)
+
+
+class RealNumbers20260103(unittest.TestCase):
+    """Like-for-like reconciliation with real 2026-01-03 numbers (thousands).
+
+    Company Adjusted EBITDA 78,255; Onya pre-pro-forma 68,802; pro forma
+    50,000; rent 104,983; numerator 951,461.
+    """
+
+    def _compute_real(self):
+        rel = {
+            "adjusted_ebitda_ttm": [
+                {"line": "Depreciation and amortization",
+                 "value_thousands": 53169},
+                {"line": "Other non-recurring items",
+                 "value_thousands": 14699},
+                {"line": "Asset impairments", "value_thousands": 0},
+            ],
+            "leverage_table_ttm": [
+                {"line": "Finance lease obligations",
+                 "value_thousands": 159},
+                {"line": "Consolidated rent expense",
+                 "value_thousands": 104983},
+                {"line": "Adjusted EBITDA", "value_thousands": 78255},
+                {"line": "Proforma annualized cost reductions",
+                 "value_thousands": 50000},
+            ],
+        }
+        instant_vals = {
+            "us-gaap:DebtCurrent": 588_200_000,
+            "us-gaap:LettersOfCreditOutstandingAmount": 8_800_000,
+            "us-gaap:OperatingLeaseLiability": 354_302_000,
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue": 1_693_000,
+        }
+        ttm_vals = {
+            "us-gaap:NetIncomeLoss": -131_958_000,
+            "us-gaap:IncomeTaxExpenseBenefit": 35_984_000,
+            "us-gaap:InterestExpenseNonoperating": 49_382_000,
+            "us-gaap:DepreciationDepletionAndAmortization": 55_608_000,
+            "us-gaap:ShareBasedCompensation": 6_282_000,
+            "us-gaap:RestructuringCosts": 19_754_000,
+            "us-gaap:AssetImpairmentCharges": 30_943_000,
+            "us-gaap:OperatingLeaseCost": 104_797_000,
+        }
+        with (patch.object(covenant, "load_contract",
+                           return_value=_contract()),
+              patch.object(covenant, "load_release", return_value=rel),
+              patch.object(covenant, "instant",
+                           side_effect=lambda c, e: instant_vals[c]),
+              patch.object(covenant, "ttm",
+                           side_effect=lambda c, e: ttm_vals[c])):
+            return covenant.compute("2026-01-03")
+
+    def test_like_for_like_and_ratios(self):
+        result = self._compute_real()
+        self.assertEqual(result["numerator"], 951_461_000)
+        rec = result.get("reconciliation")
+        self.assertIsNotNone(rec)
+        # diff = company - onya_pre_proforma = 78,255 - 68,802 = +9,453.
+        self.assertEqual(rec["company_ebitda"], 78_255_000)
+        self.assertEqual(rec["onya_ebitda"], 68_802_000)
+        self.assertEqual(rec["difference"], 9_453_000)
+        self.assertEqual(rec["difference_thousands"], 9_453)
+        self.assertEqual(rec["status"], "flagged")
+        self.assertIn("exceeds", rec["note"])
+        self.assertNotIn("is below", rec["note"])
+        # Company basis: 951,461 / (78,255 + 104,983 + 50,000) = 4.08 PASS.
+        comp = rec["net_leverage"]["company_reported"]
+        self.assertEqual(comp["ratio_2dp"], 4.08)
+        self.assertTrue(comp["pass"])
+        # Onya-strict: 951,461 / (68,802 + 104,983 + 50,000) = 4.25 PASS.
+        strict = rec["net_leverage"]["onya_strict"]
+        self.assertEqual(strict["ratio_2dp"], 4.25)
+        self.assertTrue(strict["pass"])
+        # Company basis interest coverage:
+        # (78,255 + 50,000) / 49,382 = 2.60 PASS.
+        ccov = rec["interest_coverage"]["company_reported"]
+        self.assertEqual(ccov["ratio_2dp"], 2.60)
+        self.assertTrue(ccov["pass"])
+        # Without savings: 951,461 / (68,802 + 104,983) = 5.4749 -> 5.47 FAIL.
+        # (Task text states 5.48; precise math gives 5.47.)
+        sens = result.get("sensitivity_without_proforma")
+        self.assertIsNotNone(sens)
+        self.assertIn("without lender-approved projected savings",
+                      sens["note"])
+        slev = sens["net_leverage"]
+        self.assertEqual(slev["ratio_2dp"], 5.47)
+        self.assertFalse(slev["pass"])
+        # Printed sensitivity line carries the label, ratio, and FAIL.
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            covenant.print_result(result)
+        out = buf.getvalue()
+        self.assertIn("without lender-approved projected savings", out)
+        self.assertIn("5.47", out)
+        self.assertIn("FAIL", out)
+
+    def test_negative_diff_message(self):
+        rel = _release()
+        rel["leverage_table_ttm"] = list(rel["leverage_table_ttm"]) + [
+            {"line": "Adjusted EBITDA", "value_thousands": 40_000}]
+        with (patch.object(covenant, "load_contract",
+                           return_value=_contract()),
+              patch.object(covenant, "load_release", return_value=rel),
+              patch.object(covenant, "instant",
+                           side_effect=lambda c, e: INSTANT_VALS[c]),
+              patch.object(covenant, "ttm",
+                           side_effect=lambda c, e: TTM_VALS[c])):
+            result = covenant.compute("2026-01-03")
+        rec = result.get("reconciliation")
+        self.assertIsNotNone(rec)
+        # Onya base is $53,500,000; company $40,000,000 is below.
+        self.assertLess(rec["difference"], 0)
+        self.assertEqual(rec["status"], "flagged")
+        self.assertIn("is below", rec["note"])
+        self.assertNotIn("exceeds", rec["note"])
 
 
 class ClauseRefs(unittest.TestCase):

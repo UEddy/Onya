@@ -39,6 +39,7 @@ PERIOD_END = "2025-09-27"
 WARNING_ABS_THRESHOLD = 100_000
 WARNING_PCT_THRESHOLD = 0.005
 UNVERIFIABLE_LABEL = "unverifiable: requires agent approval"
+RECONCILIATION_TOLERANCE_DOLLARS = 1_000_000  # 1,000 thousands
 
 
 def load_contract():
@@ -113,6 +114,8 @@ def release_line(release, table, line):
 def find_proforma_in_release(release):
     """Find company-reported (a)(ix) savings in release tables.
 
+    Matches lines containing "pro forma" or "proforma" (case-insensitive,
+    with or without a space) together with "cost" or "savings".
     Returns (line, value_dollars) or None when not disclosed.
     """
     if not release:
@@ -121,15 +124,37 @@ def find_proforma_in_release(release):
         for entry in release.get(table, []) or []:
             line = entry.get("line") or ""
             low = line.lower()
-            if "saving" not in low and "pro forma" not in low:
+            has_proforma = "pro forma" in low or "proforma" in low
+            has_cost_or_savings = "cost" in low or "saving" in low
+            if not (has_proforma and has_cost_or_savings):
                 continue
-            if "saving" not in low and "pro forma" in low:
-                if "cost" not in low and "(a)(ix)" not in low and "a(ix)" not in low:
-                    continue
             val = entry.get("value_thousands")
             if val is None:
                 continue
             return line, int(val * 1000)
+    return None
+
+
+def find_covenant_ebitda_in_release(release):
+    """Find company-reported covenant-basis EBITDA in leverage_table_ttm.
+
+    Matches the "Adjusted EBITDA" line; accepts qualifiers such as
+    "Adjusted EBITDA (see above)" but never EBITDAR lines.
+    Returns (line, value_dollars) or None when not disclosed.
+    """
+    if not release:
+        return None
+    for entry in release.get("leverage_table_ttm", []) or []:
+        line = entry.get("line") or ""
+        low = line.lower()
+        if "adjusted ebitda" not in low:
+            continue
+        if "ebitdar" in low:
+            continue
+        val = entry.get("value_thousands")
+        if val is None:
+            continue
+        return line, int(val * 1000)
     return None
 
 
@@ -513,6 +538,7 @@ def compute(period_end):
         raise ValueError(f"no Interest Coverage Ratio threshold for {period_end}: {cov_note}")
 
     proforma_scenarios = None
+    proforma = 0
     if disclosed is not None:
         rep_line, reported = disclosed
         if ix_cap is not None and reported > ix_cap:
@@ -615,6 +641,135 @@ def compute(period_end):
         cov_ratio = proforma_scenarios[0]["interest_coverage"]["ratio"]
         cov_headroom = proforma_scenarios[0]["interest_coverage"]["headroom"]
 
+    # -- Reconciliation vs company-reported covenant EBITDA --
+    # Like-for-like: company Adjusted EBITDA (leverage_table_ttm, which
+    # excludes the pro forma line) vs Onya EBITDA after caps but BEFORE
+    # the (a)(ix) pro forma add-back.
+    reconciliation = None
+    covenant_disclosed = find_covenant_ebitda_in_release(release)
+    if covenant_disclosed is not None:
+        cov_line, company_ebitda = covenant_disclosed
+        onya_ebitda = ebitda_ex_proforma
+        diff = company_ebitda - onya_ebitda
+        proforma_line_val = disclosed[1] if disclosed is not None else 0
+        company_rent_val = try_release_line(
+            release, "leverage_table_ttm", "Consolidated rent expense")
+        if company_rent_val is None:
+            company_rent_val = rent
+        company_ebitdar = company_ebitda + company_rent_val + proforma_line_val
+        company_lev = numerator / company_ebitdar
+        company_cov = (company_ebitda + proforma_line_val) / interest
+        onya_strict_ebitdar = onya_ebitda + rent + proforma_line_val
+        onya_strict_lev = numerator / onya_strict_ebitdar
+        if abs(diff) <= RECONCILIATION_TOLERANCE_DOLLARS:
+            status = "reconciled"
+            rec_note = (
+                "reconciled: company-reported covenant EBITDA "
+                f"${company_ebitda:,} within "
+                f"${RECONCILIATION_TOLERANCE_DOLLARS:,} (1,000 thousands) "
+                f"of capped calculation ${onya_ebitda:,} "
+                f"(difference ${diff:,})"
+            )
+        elif diff > 0:
+            status = "flagged"
+            rec_note = (
+                "reported covenant EBITDA exceeds capped calculation by "
+                f"${diff:,}; possible reasons: items classified as non-cash "
+                "or approved under another clause; request compliance "
+                "certificate"
+            )
+        else:
+            status = "flagged"
+            rec_note = (
+                "reported covenant EBITDA is below capped calculation by "
+                f"${abs(diff):,}; possible reasons: items classified as non-cash "
+                "or approved under another clause; request compliance "
+                "certificate"
+            )
+        add(
+            "Covenant EBITDA reconciliation",
+            diff,
+            f"release:{cov_line}",
+            "definition: Consolidated EBITDA",
+            rec_note,
+        )
+        reconciliation = {
+            "company_ebitda": company_ebitda,
+            "company_ebitda_thousands": _thousands(company_ebitda),
+            "onya_ebitda": onya_ebitda,
+            "onya_ebitda_thousands": _thousands(onya_ebitda),
+            "difference": diff,
+            "difference_thousands": _thousands(diff),
+            "tolerance_dollars": RECONCILIATION_TOLERANCE_DOLLARS,
+            "status": status,
+            "note": rec_note,
+            "net_leverage": {
+                "company_reported": {
+                    "ratio": company_lev,
+                    "ratio_2dp": round(company_lev, 2),
+                    "threshold": lev_threshold,
+                    "headroom": lev_threshold - company_lev,
+                    "headroom_2dp": round(lev_threshold - company_lev, 2),
+                    "pass": company_lev <= lev_threshold,
+                },
+                "onya_strict": {
+                    "ratio": onya_strict_lev,
+                    "ratio_2dp": round(onya_strict_lev, 2),
+                    "threshold": lev_threshold,
+                    "headroom": lev_threshold - onya_strict_lev,
+                    "headroom_2dp": round(lev_threshold - onya_strict_lev, 2),
+                    "pass": onya_strict_lev <= lev_threshold,
+                },
+            },
+            "interest_coverage": {
+                "company_reported": {
+                    "ratio": company_cov,
+                    "ratio_2dp": round(company_cov, 2),
+                    "threshold": cov_threshold,
+                    "headroom": company_cov - cov_threshold,
+                    "headroom_2dp": round(company_cov - cov_threshold, 2),
+                    "pass": company_cov >= cov_threshold,
+                },
+                "onya_strict": {
+                    "ratio": cov_ratio,
+                    "ratio_2dp": round(cov_ratio, 2),
+                    "threshold": cov_threshold,
+                    "headroom": cov_headroom,
+                    "headroom_2dp": round(cov_headroom, 2),
+                    "pass": cov_ratio >= cov_threshold,
+                },
+            },
+        }
+
+    # -- Sensitivity with (a)(ix) = 0 --
+    sensitivity_without_proforma = None
+    if proforma > 0:
+        sens_ebitda = ebitda_ex_proforma
+        sens_ebitdar = sens_ebitda + rent
+        sens_lev = numerator / sens_ebitdar
+        sens_cov = sens_ebitda / interest
+        sensitivity_without_proforma = {
+            "ebitda": sens_ebitda,
+            "ebitdar": sens_ebitdar,
+            "net_leverage": {
+                "ratio": sens_lev,
+                "ratio_2dp": round(sens_lev, 2),
+                "threshold": lev_threshold,
+                "headroom": lev_threshold - sens_lev,
+                "headroom_2dp": round(lev_threshold - sens_lev, 2),
+                "pass": sens_lev <= lev_threshold,
+            },
+            "interest_coverage": {
+                "ratio": sens_cov,
+                "ratio_2dp": round(sens_cov, 2),
+                "threshold": cov_threshold,
+                "headroom": sens_cov - cov_threshold,
+                "headroom_2dp": round(sens_cov - cov_threshold, 2),
+                "pass": sens_cov >= cov_threshold,
+            },
+            "note": "without lender-approved projected savings ((a)(ix)=0)",
+        }
+
     warnings = [
         {"concept": c, "period_end": e, "direct": d, "derived": v}
         for c, e, d, v in filter_data_quality_warnings(DATA_QUALITY_WARNINGS)
@@ -661,6 +816,10 @@ def compute(period_end):
     }
     if proforma_scenarios is not None:
         result["proforma_scenarios"] = proforma_scenarios
+    if reconciliation is not None:
+        result["reconciliation"] = reconciliation
+    if sensitivity_without_proforma is not None:
+        result["sensitivity_without_proforma"] = sensitivity_without_proforma
     return result
 
 
@@ -704,6 +863,28 @@ def print_result(result):
                   f"Interest Coverage ratio={scov['ratio']:.2f} "
                   f"headroom={scov['headroom']:.2f} "
                   f"{'PASS' if scov['pass'] else 'FAIL'}")
+    rec = result.get("reconciliation")
+    if rec:
+        print(f"Covenant EBITDA reconciliation: "
+              f"company=${rec['company_ebitda']:,} "
+              f"onya=${rec['onya_ebitda']:,} "
+              f"diff=${rec['difference']:,} status={rec['status']}")
+        for key in ("net_leverage", "interest_coverage"):
+            comp = rec[key]["company_reported"]
+            strict = rec[key]["onya_strict"]
+            print(f"  {key}: company-reported ratio={comp['ratio']:.2f} "
+                  f"{'PASS' if comp['pass'] else 'FAIL'}; "
+                  f"Onya-strict ratio={strict['ratio']:.2f} "
+                  f"{'PASS' if strict['pass'] else 'FAIL'}")
+    sens = result.get("sensitivity_without_proforma")
+    if sens:
+        slev = sens["net_leverage"]
+        scov = sens["interest_coverage"]
+        print(f"Sensitivity without lender-approved projected savings "
+              f"((a)(ix)=0): Net Leverage ratio={slev['ratio']:.2f} "
+              f"{'PASS' if slev['pass'] else 'FAIL'}; "
+              f"Interest Coverage ratio={scov['ratio']:.2f} "
+              f"{'PASS' if scov['pass'] else 'FAIL'}")
 
 
 def save_result(result):

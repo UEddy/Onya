@@ -39,7 +39,7 @@
     },
     {
       "name": "Net loss",
-      "value": -132000000,
+      "value": -131958000,
       "source": "xbrl:us-gaap:NetIncomeLoss",
       "clause": "base",
       "note": "Consolidated Net Earnings"
@@ -116,10 +116,17 @@
     },
     {
       "name": "Pro forma cost savings",
-      "value": 0,
-      "source": "contract:(a)(ix)",
+      "value": 50000000,
+      "source": "release:Proforma annualized cost reductions",
       "clause": "(a)(ix)",
-      "note": "schedule covers this period (cap $60,000,000, schedule entry for 2026-01-03) but no company-reported pro forma savings amount is available; base includes zero; see proforma_scenarios for savings=cap; unverifiable: requires agent approval"
+      "note": "company-reported pro forma savings $50,000,000 within cap $60,000,000 (schedule entry for 2026-01-03)"
+    },
+    {
+      "name": "Covenant EBITDA reconciliation",
+      "value": 9453000,
+      "source": "release:Adjusted EBITDA (see above)",
+      "clause": "definition: Consolidated EBITDA",
+      "note": "reported covenant EBITDA exceeds capped calculation by $9,453,000; possible reasons: items classified as non-cash or approved under another clause; request compliance certificate"
     }
   ],
   "data_quality_warnings": [
@@ -156,78 +163,96 @@
   ],
   "numerator": 951461000,
   "numerator_thousands": 951461,
-  "ebitda": 68760000,
-  "ebitda_thousands": 68760,
-  "ebitdar": 173743000,
-  "ebitdar_thousands": 173743,
+  "ebitda": 118802000,
+  "ebitda_thousands": 118802,
+  "ebitdar": 223785000,
+  "ebitdar_thousands": 223785,
   "disallowed": 9453000,
   "disallowed_thousands": 9453,
   "net_leverage": {
-    "ratio": 5.476255158481205,
-    "ratio_2dp": 5.48,
+    "ratio": 4.2516745983868445,
+    "ratio_2dp": 4.25,
     "threshold": 4.5,
-    "headroom": -0.9762551584812051,
-    "headroom_2dp": -0.98,
-    "pass": false,
-    "note": "Net Leverage Ratio max 4.5 (schedule entry for 2026-01-03); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+    "headroom": 0.24832540161315553,
+    "headroom_2dp": 0.25,
+    "pass": true,
+    "note": "Net Leverage Ratio max 4.5 (schedule entry for 2026-01-03)"
   },
   "interest_coverage": {
-    "ratio": 1.3924101899477543,
-    "ratio_2dp": 1.39,
+    "ratio": 2.405775383743064,
+    "ratio_2dp": 2.41,
     "threshold": 2.1,
-    "headroom": -0.7075898100522457,
-    "headroom_2dp": -0.71,
-    "pass": false,
-    "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-01-03); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+    "headroom": 0.3057753837430641,
+    "headroom_2dp": 0.31,
+    "pass": true,
+    "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-01-03)"
   },
-  "proforma_scenarios": [
-    {
-      "savings": 0,
-      "ebitda": 68760000,
-      "ebitdar": 173743000,
-      "net_leverage": {
-        "ratio": 5.476255158481205,
-        "ratio_2dp": 5.48,
+  "reconciliation": {
+    "company_ebitda": 78255000,
+    "company_ebitda_thousands": 78255,
+    "onya_ebitda": 68802000,
+    "onya_ebitda_thousands": 68802,
+    "difference": 9453000,
+    "difference_thousands": 9453,
+    "tolerance_dollars": 1000000,
+    "status": "flagged",
+    "note": "reported covenant EBITDA exceeds capped calculation by $9,453,000; possible reasons: items classified as non-cash or approved under another clause; request compliance certificate",
+    "net_leverage": {
+      "company_reported": {
+        "ratio": 4.079356708598084,
+        "ratio_2dp": 4.08,
         "threshold": 4.5,
-        "headroom": -0.9762551584812051,
-        "headroom_2dp": -0.98,
-        "pass": false,
-        "note": "Net Leverage Ratio max 4.5 (schedule entry for 2026-01-03)"
+        "headroom": 0.42064329140191603,
+        "headroom_2dp": 0.42,
+        "pass": true
       },
-      "interest_coverage": {
-        "ratio": 1.3924101899477543,
-        "ratio_2dp": 1.39,
-        "threshold": 2.1,
-        "headroom": -0.7075898100522457,
-        "headroom_2dp": -0.71,
-        "pass": false,
-        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-01-03)"
-      },
-      "note": "unverifiable: requires agent approval"
+      "onya_strict": {
+        "ratio": 4.2516745983868445,
+        "ratio_2dp": 4.25,
+        "threshold": 4.5,
+        "headroom": 0.24832540161315553,
+        "headroom_2dp": 0.25,
+        "pass": true
+      }
     },
-    {
-      "savings": 60000000,
-      "ebitda": 128760000,
-      "ebitdar": 233743000,
-      "net_leverage": {
-        "ratio": 4.070543288996889,
-        "ratio_2dp": 4.07,
-        "threshold": 4.5,
-        "headroom": 0.42945671100311067,
-        "headroom_2dp": 0.43,
-        "pass": true,
-        "note": "Net Leverage Ratio max 4.5 (schedule entry for 2026-01-03)"
-      },
-      "interest_coverage": {
-        "ratio": 2.607427807703212,
-        "ratio_2dp": 2.61,
+    "interest_coverage": {
+      "company_reported": {
+        "ratio": 1.5846867279575554,
+        "ratio_2dp": 1.58,
         "threshold": 2.1,
-        "headroom": 0.5074278077032117,
-        "headroom_2dp": 0.51,
-        "pass": true,
-        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-01-03)"
+        "headroom": -0.5153132720424447,
+        "headroom_2dp": -0.52,
+        "pass": false
       },
-      "note": "unverifiable: requires agent approval"
+      "onya_strict": {
+        "ratio": 2.405775383743064,
+        "ratio_2dp": 2.41,
+        "threshold": 2.1,
+        "headroom": 0.3057753837430641,
+        "headroom_2dp": 0.31,
+        "pass": true
+      }
     }
-  ]
+  },
+  "sensitivity_without_proforma": {
+    "ebitda": 68802000,
+    "ebitdar": 173785000,
+    "net_leverage": {
+      "ratio": 5.47493166844089,
+      "ratio_2dp": 5.47,
+      "threshold": 4.5,
+      "headroom": -0.97493166844089,
+      "headroom_2dp": -0.97,
+      "pass": false
+    },
+    "interest_coverage": {
+      "ratio": 1.393260702280183,
+      "ratio_2dp": 1.39,
+      "threshold": 2.1,
+      "headroom": -0.706739297719817,
+      "headroom_2dp": -0.71,
+      "pass": false
+    },
+    "note": "without lender-approved projected savings ((a)(ix)=0)"
+  }
 }
