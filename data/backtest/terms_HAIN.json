@@ -1,0 +1,54 @@
+{
+  "ticker": "HAIN",
+  "period_end": "2025-09-30",
+  "as_of": "2025-11-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312522309599/d423508dex101.htm",
+  "agreement_filing_date": "2022-12-21",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Consolidated Interest Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 2.75,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 2.0,
+      "match": false,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "amended after agreement",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312522309599/d423508dex101.htm"
+    },
+    {
+      "name": "Consolidated Secured Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 4.25,
+      "conditional_alternatives": [
+        {
+          "value": 5.0,
+          "condition": "during the Relief Period"
+        }
+      ],
+      "disclosed_threshold": 5.5,
+      "match": false,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "amended after agreement",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312522309599/d423508dex101.htm"
+    },
+    {
+      "name": "Consolidated Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 6.0,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 6.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312522309599/d423508dex101.htm"
+    }
+  ],
+  "unmatched_disclosed": [
+    "minimum Consolidated EBITDA"
+  ]
+}

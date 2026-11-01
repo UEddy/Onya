@@ -107,11 +107,79 @@ def normalize(text):
     """Collapse whitespace runs and map curly quotes to straight quotes.
 
     Applied to BOTH the model quote and the source, so verification does
-    not depend on the model's quote style.
+    not depend on the model's quote style. Spacing around punctuation
+    is also ignored (no space before , . ; : % ) ] " or after $ ( [ "),
+    but word and digit spacing is preserved.
     """
     for curly, straight in (("“", '"'), ("”", '"'), ("‘", "'"), ("’", "'")):
         text = text.replace(curly, straight)
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r" ([,.;:%)\]])", r"\1", text)
+    text = re.sub(r"([$\(\[]) ", r"\1", text)
+    text = re.sub(r'" ', '"', text)
+    return re.sub(r' "', '"', text)
+
+
+DIAGNOSTIC_CONTEXT_CHARS = 60
+
+
+def diagnose_failed_quote(quote, source_norm,
+                          context=DIAGNOSTIC_CONTEXT_CHARS):
+    """Explain a quote that failed verification against the source.
+
+    Finds the longest prefix of the normalized quote that appears in
+    the normalized source (binary search: prefix occurrence is
+    monotonic). Returns a dict with the matched prefix length, the
+    next `context` characters of the quote past the match, the
+    `context` characters of source at the match position, and that
+    position (None when not even one character matches). An empty
+    quote (nothing left after normalization) is reported with reason
+    "empty quote".
+    """
+    q_norm = normalize(quote) if isinstance(quote, str) else ""
+    if not q_norm:
+        return {
+            "quote": quote if isinstance(quote, str) else "",
+            "matched_prefix_len": 0,
+            "quote_next": "",
+            "source_context": "",
+            "source_pos": None,
+            "reason": "empty quote",
+        }
+    lo, hi = 0, len(q_norm)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if q_norm[:mid] in source_norm:
+            lo = mid
+        else:
+            hi = mid - 1
+    if lo:
+        pos = source_norm.find(q_norm[:lo])
+        source_context = source_norm[pos:pos + context]
+    else:
+        pos = None
+        source_context = ""
+    return {
+        "quote": quote if isinstance(quote, str) else "",
+        "matched_prefix_len": lo,
+        "quote_next": q_norm[lo:lo + context],
+        "source_context": source_context,
+        "source_pos": pos,
+        "reason": None,
+    }
+
+
+def format_diagnostic(diag, index=None):
+    """One human-readable block for a diagnose_failed_quote result."""
+    label = f"[{index}] " if index is not None else ""
+    if diag.get("reason"):
+        return f"{label}reason: {diag['reason']}"
+    pos = diag["source_pos"]
+    return (
+        f"{label}matched_prefix_len: {diag['matched_prefix_len']}\n"
+        f"  quote_next: {diag['quote_next']!r}\n"
+        f"  source_context (pos {pos}): {diag['source_context']!r}"
+    )
 
 
 def print_usage(response):
@@ -174,7 +242,7 @@ def main():
     total = len(quotes)
     print(f"verified/total: {verified}/{total}")
     for q in failures:
-        print(f"FAILED QUOTE: {q}")
+        print(f"FAILED QUOTE: {q if normalize(q) else 'empty quote'}")
 
     print_usage(response)
     print(f"saved: {JSON_PATH}")

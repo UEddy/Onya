@@ -58,5 +58,26 @@ class LineCellsContainDash(unittest.TestCase):
             extract_release.line_cells_contain_dash("Other\n—\n", "Nope"))
 
 
+class NormalizePunctuationSpacing(unittest.TestCase):
+    def assertVerifies(self, quote, source):
+        norm = extract_release.normalize
+        self.assertIn(norm(quote), norm(source))
+
+    def test_trimas_spacing_variants_match(self):
+        self.assertVerifies("December 31, 2024, to be less than",
+                             "December 31, 2024 , to be less than")
+        self.assertVerifies("$75,000,000 and 6.0%",
+                             "$ 75,000,000 and 6.0 %")
+        self.assertVerifies("Ratio.", "Ratio .")
+
+    def test_different_amounts_do_not_match(self):
+        norm = extract_release.normalize
+        self.assertNotIn(norm("$7,500,000"), norm("$75,000,000"))
+
+    def test_quote_spacing_matches(self):
+        self.assertVerifies('" Consolidated EBITDA " means',
+                             '"Consolidated EBITDA" means')
+
+
 if __name__ == "__main__":
     unittest.main()

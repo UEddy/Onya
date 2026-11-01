@@ -60,21 +60,31 @@ FILES = [
 ]
 
 
+FETCH_RETRY_DELAYS = (5, 15, 30)
+
+
 def fetch(url, filename):
     dest = RAW_DIR / filename
     if dest.exists():
         return dest
     headers = {"User-Agent": SEC_USER_AGENT}
-    resp = requests.get(url, headers=headers)
-    if resp.status_code != 200:
-        raise requests.HTTPError(
-            f"GET {url} failed with status {resp.status_code}",
-            response=resp,
-        )
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(resp.content)
-    time.sleep(0.5)
-    return dest
+    for attempt in range(len(FETCH_RETRY_DELAYS) + 1):
+        try:
+            resp = requests.get(url, headers=headers)
+        except requests.ConnectionError:
+            if attempt == len(FETCH_RETRY_DELAYS):
+                raise
+            time.sleep(FETCH_RETRY_DELAYS[attempt])
+            continue
+        if resp.status_code != 200:
+            raise requests.HTTPError(
+                f"GET {url} failed with status {resp.status_code}",
+                response=resp,
+            )
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(resp.content)
+        time.sleep(0.5)
+        return dest
 
 
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -124,7 +134,8 @@ EXHIBIT_TYPE_RE = re.compile(r"^EX-10(\.\d+)?$", re.IGNORECASE)
 TITLE_UPPER_CHARS = 1500
 TITLE_KEYWORDS = ("AGREEMENT", "AMENDMENT", "FORBEARANCE")
 
-COMPLETE_MIN_CHARS = 150000
+DISCOVERY_SINCE = "2015-01-01"
+COMPLETE_MIN_CHARS = 60000
 COMPLETE_TOP_N = 5
 CONSOLIDATED_EBITDA_RE = re.compile(r"consolidated\s+ebitda", re.IGNORECASE)
 EBITDA_DEFINED_RE = re.compile(
@@ -358,7 +369,7 @@ def _extract_title(head):
 
 
 def find_credit_agreements(ticker_or_cik, verbose=False):
-    """Candidate credit-agreement exhibits across 8-K/10-K/10-Q since 2023.
+    """Candidate credit-agreement exhibits across 8-K/10-K/10-Q since 2015.
 
     Only 8-Ks reporting item 1.01 or 2.03 are checked, plus all 10-Ks
     and 10-Qs. Every EX-10 / EX-10.n exhibit (regex ``^EX-10(\\.\\d+)?$``,
@@ -372,14 +383,15 @@ def find_credit_agreements(ticker_or_cik, verbose=False):
     the full text is read and ``is_complete`` is True when it contains
     a Consolidated EBITDA defined term (or EBITDA defined with
     "means"), a financial-covenant section (Financial Covenant,
-    Leverage Ratio, or Coverage Ratio), and over 150,000 characters;
+    Leverage Ratio, or Coverage Ratio), and over 60,000 characters;
     ``char_count``/``character_count`` records the full-text length.
     Progress lines print only when verbose is True (the CLI
     discover/select commands); library and agent callers stay quiet.
     """
     cik10 = get_cik(ticker_or_cik)
     cik_plain = _cik_plain(cik10)
-    filings = list_filings(cik10, forms=("8-K", "10-K", "10-Q"), since="2023-01-01")
+    filings = list_filings(cik10, forms=("8-K", "10-K", "10-Q"),
+                           since=DISCOVERY_SINCE)
     to_check = [f for f in filings if _wants_index_page(f)]
     skipped = len(filings) - len(to_check)
     if skipped and verbose:

@@ -1,0 +1,40 @@
+{
+  "ticker": "AIN",
+  "period_end": "2026-06-30",
+  "as_of": "2026-08-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/819793/000081979324000051/ain-20240630xex101.htm",
+  "agreement_filing_date": "2024-08-06",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 3.75,
+      "conditional_alternatives": [
+        {
+          "value": 4.25,
+          "condition": "during Leverage Increase Period following Leverage Increase Election"
+        }
+      ],
+      "disclosed_threshold": 3.75,
+      "match": true,
+      "quote_verified": true,
+      "repaired": true,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/819793/000081979324000051/ain-20240630xex101.htm"
+    },
+    {
+      "name": "Interest Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 3.0,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 3.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/819793/000081979324000051/ain-20240630xex101.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}

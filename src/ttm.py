@@ -44,9 +44,9 @@ def _split_concept(concept):
     return "us-gaap", concept
 
 
-def _entry(concept):
+def _entry(concept, cik=None):
     ns, name = _split_concept(concept)
-    data = load_facts()
+    data = load_facts(cik=cik)
     entry = data.get("facts", {}).get(ns, {}).get(name)
     if entry is None:
         raise ValueError(f"concept not found: {concept}")
@@ -65,9 +65,11 @@ def _dedup(facts):
     return best
 
 
-def quarterly(concept):
+def quarterly(concept, cik=None):
     """Derive standalone quarter values from duration facts.
 
+    With a CIK, reads that company's companyfacts dump (downloaded via
+    edgar.fetch when missing); without one reads SNBR's, as before.
     Returns {quarter-end date: standalone value}. A fact whose start is the
     day after the previous quarter end is a 3-month fact and is used
     directly; otherwise the quarter is the year-to-date (or full-year) value
@@ -79,7 +81,7 @@ def quarterly(concept):
     by end date, so 52/53-week shifts need no special handling. Ends that
     cannot be isolated to a single quarter are skipped.
     """
-    entry = _entry(concept)
+    entry = _entry(concept, cik=cik)
     durations = [
         fact
         for unit_facts in entry.get("units", {}).values()
@@ -122,9 +124,9 @@ def quarterly(concept):
     return out
 
 
-def ttm(concept, period_end):
+def ttm(concept, period_end, cik=None):
     """Sum the four standalone quarters ending at period_end."""
-    quarters = quarterly(concept)
+    quarters = quarterly(concept, cik=cik)
     ends = sorted(quarters)
     if period_end not in quarters:
         raise ValueError(f"no quarterly value for {concept} ending {period_end}")
@@ -144,9 +146,9 @@ def ttm(concept, period_end):
     return sum(quarters[end] for end in window)
 
 
-def instant(concept, period_end):
+def instant(concept, period_end, cik=None):
     """Balance at period_end (latest filed when repeated across filings)."""
-    entry = _entry(concept)
+    entry = _entry(concept, cik=cik)
     candidates = [
         fact
         for unit_facts in entry.get("units", {}).values()

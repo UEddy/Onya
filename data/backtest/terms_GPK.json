@@ -1,0 +1,45 @@
+{
+  "ticker": "GPK",
+  "period_end": "2026-06-30",
+  "as_of": "2026-08-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1408075/000119312526077943/d106221dex101.htm",
+  "agreement_filing_date": "2026-02-27",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Consolidated Total Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": null,
+      "conditional_alternatives": [
+        {
+          "value": 4.25,
+          "condition": "June 30, 2024 through and including December 31, 2025"
+        }
+      ],
+      "disclosed_threshold": 5.0,
+      "match": false,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "amended after agreement",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1408075/000119312526077943/d106221dex101.htm"
+    },
+    {
+      "name": "Consolidated Interest Expense Ratio",
+      "direction": "min",
+      "agreement_threshold": null,
+      "conditional_alternatives": [
+        {
+          "value": 3.0,
+          "condition": "as of the end of any Test Period ending on or after June 30, 2024"
+        }
+      ],
+      "disclosed_threshold": 3.0,
+      "match": false,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "mismatch",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1408075/000119312526077943/d106221dex101.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}

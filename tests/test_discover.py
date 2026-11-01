@@ -231,6 +231,10 @@ EXHIBIT_HTML = {
 <p>AMENDMENT NO. 1 TO CREDIT AGREEMENT</p>
 <p>Dated as of December 12, 2023.</p>
 </body></html>""",
+    "ex101.htm": """<html><body>
+<p>ORIGINAL CREDIT AGREEMENT</p>
+<p>Dated as of May 1, 2022, by and among Sleep Number Corporation, as Borrower.</p>
+</body></html>""",
 }
 
 
@@ -408,10 +412,12 @@ class FindCreditAgreements(DiscoverTestBase):
         cands, _ = self._find()
         self.assertEqual(
             [c["filingDate"] for c in cands],
-            ["2026-01-15", "2025-11-10", "2025-09-27", "2025-03-01", "2023-12-15"],
+            ["2026-01-15", "2025-11-10", "2025-09-27", "2025-03-01",
+             "2023-12-15", "2022-05-01"],
         )
         self.assertEqual(
-            [c["form"] for c in cands], ["8-K", "8-K", "10-Q", "10-K", "8-K"]
+            [c["form"] for c in cands],
+            ["8-K", "8-K", "10-Q", "10-K", "8-K", "10-K"],
         )
         for cand in cands:
             self.assertEqual(
@@ -450,8 +456,14 @@ class FindCreditAgreements(DiscoverTestBase):
         self.assertNotIn("ex104-lease", urls)  # lease amendment
         self.assertNotIn("ex105-executive", urls)  # executive amendment
         self.assertNotIn("snbr-20260115.htm", urls)  # non-exhibit type
-        self.assertNotIn("000082718722000009", urls)  # filing before 2023
         self.assertNotIn("000082718725000099", urls)  # Form 4 not swept
+
+    def test_filings_back_to_2015_searched(self):
+        self._route_all()
+        cands, _ = self._find()
+        urls = " ".join(c["url"] for c in cands)
+        # The 2022 base filing is now swept for the complete document.
+        self.assertIn("000082718722000009", urls)
 
     def test_skips_8k_without_101_or_203(self):
         self._route_all()
@@ -460,26 +472,26 @@ class FindCreditAgreements(DiscoverTestBase):
         self.assertNotIn("000082718725000200", urls)
         fetched = " ".join(u for u, _ in self.fetch.calls)
         self.assertNotIn("000082718725000200", fetched)
-        # The 5 checked filings were fetched; skipped one was not.
+        # The 6 checked filings were fetched; skipped one was not.
         index_calls = [u for u, _ in self.fetch.calls if "-index.htm" in u]
-        self.assertEqual(len(index_calls), 5)
+        self.assertEqual(len(index_calls), 6)
 
     def test_progress_output(self):
         self._route_all()
         _, out = self._find()
-        self.assertNotIn("1 of 5", out)
-        self.assertNotIn("5 of 5", out)
+        self.assertNotIn("1 of 6", out)
+        self.assertNotIn("6 of 6", out)
         buf = io.StringIO()
         with redirect_stdout(buf):
             edgar.find_credit_agreements("SNBR", verbose=True)
         verbose_out = buf.getvalue()
-        self.assertIn("1 of 5", verbose_out)
-        self.assertIn("5 of 5", verbose_out)
+        self.assertIn("1 of 6", verbose_out)
+        self.assertIn("6 of 6", verbose_out)
 
     def test_accepts_cik(self):
         self._route_all_cik()
         cands, _ = self._find("827187")
-        self.assertEqual(len(cands), 5)
+        self.assertEqual(len(cands), 6)
         fetched = " ".join(u for u, _ in self.fetch.calls)
         self.assertNotIn("company_tickers.json", fetched)
 
@@ -506,6 +518,10 @@ class FindCreditAgreements(DiscoverTestBase):
         self.assertEqual(
             by_url["ex101old.htm"]["title"],
             "AMENDMENT NO. 1 TO CREDIT AGREEMENT",
+        )
+        self.assertEqual(
+            by_url["ex101.htm"]["title"],
+            "ORIGINAL CREDIT AGREEMENT",
         )
         for cand in cands:
             self.assertLessEqual(len(cand["title"]), 150)
@@ -552,6 +568,7 @@ class FindCreditAgreements(DiscoverTestBase):
             "ex105-executive.htm",
             "ex101-credit.htm",
             "ex101old.htm",
+            "ex101.htm",
         ):
             self.assertIn(docname, fetched)
         self.assertNotIn("ex991earnings.htm", fetched)
@@ -803,8 +820,18 @@ class IsCompleteUnit(unittest.TestCase):
     def test_true_with_ebitda_means(self):
         self.assertTrue(edgar._is_complete_text(_long_text(ebitda_means=True)))
 
+    def test_true_over_60000_chars(self):
+        self.assertEqual(edgar.COMPLETE_MIN_CHARS, 60000)
+        self.assertTrue(edgar._is_complete_text(_long_text(length=70000)))
+
     def test_false_when_short(self):
         self.assertFalse(edgar._is_complete_text(_long_text(length=100)))
+
+    def test_false_at_60000_chars(self):
+        text = _long_text(length=100)
+        text += "Z" * (60000 - len(text))
+        self.assertEqual(len(text), 60000)
+        self.assertFalse(edgar._is_complete_text(text))
 
     def test_false_without_ebitda(self):
         self.assertFalse(edgar._is_complete_text(_long_text(with_ebitda=False)))
@@ -862,7 +889,7 @@ class IsCompleteIntegration(DiscoverTestBase):
             cands = edgar.find_credit_agreements("827187")
         by_url = {c["url"].rsplit("/", 1)[-1]: c for c in cands}
         self.assertTrue(by_url["big.htm"]["is_complete"])
-        self.assertGreater(by_url["big.htm"]["char_count"], 150000)
+        self.assertGreater(by_url["big.htm"]["char_count"], 60000)
         self.assertEqual(
             by_url["big.htm"]["char_count"], by_url["big.htm"]["character_count"]
         )

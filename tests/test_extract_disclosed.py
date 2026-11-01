@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import extract_disclosed
+from openai import APIConnectionError
 
 
 def _response(content, prompt=10, completion=5):
@@ -140,6 +141,39 @@ class ParseResponse(unittest.TestCase):
         self.assertEqual(kwargs["max_tokens"], 16000)
 
 
+class RequestRetry(unittest.TestCase):
+    def _failing_client(self, failures, response):
+        client = FakeClient([])
+        calls = []
+
+        def create(**kwargs):
+            calls.append(kwargs)
+            if len(calls) <= failures:
+                raise APIConnectionError(request=None)
+            return response
+
+        client.chat.completions.create = create
+        return client, calls
+
+    def test_connection_error_retries_then_raises(self):
+        client, calls = self._failing_client(99, None)
+        with patch.object(extract_disclosed.time, "sleep") as sleep:
+            with self.assertRaises(APIConnectionError):
+                extract_disclosed.request_completion(client, "content")
+        self.assertEqual(len(calls), 4)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list],
+                         [5, 15, 30])
+
+    def test_recovers_after_transient_failures(self):
+        resp = _response(json.dumps(PARSED))
+        client, calls = self._failing_client(2, resp)
+        with patch.object(extract_disclosed.time, "sleep") as sleep:
+            self.assertIs(
+                extract_disclosed.request_completion(client, "content"), resp)
+        self.assertEqual(len(calls), 3)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [5, 15])
+
+
 class NumberInSource(unittest.TestCase):
     def test_ratio_digits_found(self):
         source = extract_disclosed.normalize(DOCUMENT)
@@ -179,6 +213,15 @@ class Verify(unittest.TestCase):
         verified, total, failures = extract_disclosed.verify(bad, DOCUMENT)
         self.assertEqual(verified, total - 1)
         self.assertTrue(any("FAILED NUMBER" in f for f in failures))
+
+    def test_empty_quote_flagged_with_reason(self):
+        bad = json.loads(json.dumps(PARSED))
+        bad["covenants"][0]["quote"] = ""
+        verified, total, failures = extract_disclosed.verify(bad, DOCUMENT)
+        self.assertEqual(verified, total - 1)
+        self.assertEqual(len(failures), 1)
+        self.assertIn("FAILED QUOTE", failures[0])
+        self.assertIn("empty quote", failures[0])
 
     def test_null_threshold_and_actual_skipped(self):
         parsed = {"period_end": "2026-03-31",

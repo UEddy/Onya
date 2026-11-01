@@ -1,0 +1,388 @@
+{
+  "borrower": "Carpenter Technology Corporation",
+  "agreement": {
+    "title": "THIRD AMENDED AND RESTATED CREDIT AGREEMENT",
+    "dated": "2025-11-20",
+    "administrative_agent": "BANK OF AMERICA, N.A."
+  },
+  "financial_covenants": [
+    {
+      "id": "interest_coverage_ratio",
+      "name": "Interest Coverage Ratio",
+      "section": "7.12(a)",
+      "direction": "min",
+      "metric_term": "Interest Coverage Ratio",
+      "unit": "ratio",
+      "thresholds": [
+        {
+          "period_end": "2025-12-31",
+          "applies_after": null,
+          "value": 3.0,
+          "condition": null
+        },
+        {
+          "period_end": null,
+          "applies_after": "2025-12-31",
+          "value": 3.0,
+          "condition": null
+        }
+      ],
+      "quote": "Permit the Interest Coverage Ratio to be less than 3.00 to 1.00 for the Measurement Period ending December 31, 2025 or any Measurement Period ending thereafter."
+    },
+    {
+      "id": "consolidated_net_leverage_ratio",
+      "name": "Consolidated Net Leverage Ratio",
+      "section": "7.12(b)",
+      "direction": "max",
+      "metric_term": "Consolidated Net Leverage Ratio",
+      "unit": "ratio",
+      "thresholds": [
+        {
+          "period_end": "2025-12-31",
+          "applies_after": null,
+          "value": 3.5,
+          "condition": null
+        },
+        {
+          "period_end": null,
+          "applies_after": "2025-12-31",
+          "value": 3.5,
+          "condition": null
+        }
+      ],
+      "quote": "Permit the Consolidated Net Leverage Ratio to exceed 3.50 to 1.00 for the Measurement Period ending December 31, 2025 and any Measurement Period ending thereafter."
+    }
+  ],
+  "cap_groups": [
+    {
+      "id": "cap_non_domestic_cash_40m",
+      "applies_to_clauses": [
+        "(a)(iii)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 40000000,
+          "condition": null
+        }
+      ],
+      "quote": "in an amount not to exceed the Dollar Equivalent of $40,000,000;"
+    },
+    {
+      "id": "cap_aggregate_cash_200m",
+      "applies_to_clauses": [
+        "(a)(ii)",
+        "(a)(iii)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 200000000,
+          "condition": null
+        }
+      ],
+      "quote": "provided that the aggregate amount of clauses (ii) and (iii) shall not exceed $200,000,000"
+    }
+  ],
+  "definitions": [
+    {
+      "term": "Consolidated EBITDA",
+      "section": "1.01",
+      "formula_summary": "Consolidated Net Income plus Consolidated Interest Expense plus tax provisions plus depreciation, amortization and other non-cash expenses, excluding certain actuarially determined non-cash retiree medical and Pension Plan amounts",
+      "components": [
+        {
+          "label": "Consolidated Net Income",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated Net Income for such period"
+        },
+        {
+          "label": "Consolidated Interest Expense",
+          "sign": "+",
+          "clause_ref": "(b)(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated Interest Expense"
+        },
+        {
+          "label": "Tax provisions",
+          "sign": "+",
+          "clause_ref": "(b)(ii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "provisions for Federal, state, local and foreign income, value added and similar taxes"
+        },
+        {
+          "label": "Depreciation, amortization and other non-cash expense",
+          "sign": "+",
+          "clause_ref": "(b)(iii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "depreciation, amortization (including, without limitation, amortization of goodwill and other intangibles but excluding amortization of prepaid cash expenses that were paid in a prior period) and other non-cash expense"
+        }
+      ],
+      "quote": "“Consolidated EBITDA” means, for any Measurement Period, the sum of (a) Consolidated Net Income for such period plus (b) an amount which, in the determination of Consolidated Net Income for such period, has been deducted for (i) Consolidated Interest Expense, (ii) provisions for Federal, state, local and foreign income, value added and similar taxes and (iii) depreciation, amortization"
+    },
+    {
+      "term": "Consolidated Net Leverage Ratio",
+      "section": "1.01",
+      "formula_summary": "(Consolidated Indebtedness minus domestically-held unrestricted cash and Cash Equivalents minus non-domestic unrestricted cash and Cash Equivalents, subject to $40,000,000 individual cap and $200,000,000 aggregate cap) divided by Consolidated EBITDA",
+      "components": [
+        {
+          "label": "Consolidated Indebtedness",
+          "sign": "+",
+          "clause_ref": "(a)(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated Indebtedness as of such date"
+        },
+        {
+          "label": "Domestically-held unrestricted cash and Cash Equivalents",
+          "sign": "-",
+          "clause_ref": "(a)(ii)",
+          "cap_group_id": "cap_aggregate_cash_200m",
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "the amount as of the date of determination of domestically-held unrestricted cash and Cash Equivalents of the Loan Parties held in accounts on the consolidated balance sheet"
+        },
+        {
+          "label": "Non-domestic unrestricted cash and Cash Equivalents",
+          "sign": "-",
+          "clause_ref": "(a)(iii)",
+          "cap_group_id": "cap_non_domestic_cash_40m",
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "unrestricted cash and Cash Equivalents of Carpenter or its Subsidiaries held in non-domestic accounts with the Administrative Agent or any Affiliate thereof"
+        },
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated EBITDA for the period of the four fiscal quarters most recently ended"
+        }
+      ],
+      "quote": "“Consolidated Net Leverage Ratio” means, as of any date of determination, the ratio of (a) (i) Consolidated Indebtedness as of such date minus (ii) the amount as of the date of determination of domestically-held unrestricted cash and Cash Equivalents"
+    },
+    {
+      "term": "Consolidated Total Leverage Ratio",
+      "section": "1.01",
+      "formula_summary": "Consolidated Indebtedness divided by Consolidated EBITDA",
+      "components": [
+        {
+          "label": "Consolidated Indebtedness",
+          "sign": "+",
+          "clause_ref": "(a)(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated Indebtedness as of such date"
+        },
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated EBITDA for the period of the four fiscal quarters most recently ended"
+        }
+      ],
+      "quote": "“Consolidated Total Leverage Ratio” means, as of any date of determination, the ratio of (a) (i) Consolidated Indebtedness as of such date to (b) Consolidated EBITDA for the period of the four fiscal quarters most recently ended."
+    },
+    {
+      "term": "Interest Coverage Ratio",
+      "section": "1.01",
+      "formula_summary": "Consolidated EBITDA divided by Consolidated Interest Expense",
+      "components": [
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated EBITDA"
+        },
+        {
+          "label": "Consolidated Interest Expense",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "Consolidated Interest Expense for such period"
+        }
+      ],
+      "quote": "“Interest Coverage Ratio” means for any Measurement Period the ratio of (a) Consolidated EBITDA to (b) Consolidated Interest Expense for such period."
+    },
+    {
+      "term": "Consolidated Interest Expense",
+      "section": "1.01",
+      "formula_summary": "Total interest expense including Finance Lease Obligations interest, Synthetic Lease Obligations interest, and commissions, discounts and fees on letters of credit and bankers’ acceptances, on consolidated basis",
+      "components": [
+        {
+          "label": "Total interest expense",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the total interest expense, including the interest component of all payments under Finance Lease Obligations"
+        },
+        {
+          "label": "Synthetic Lease Obligations interest",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the implied interest component of Synthetic Lease Obligations (regardless of whether accounted for as interest expense under GAAP)"
+        },
+        {
+          "label": "Commissions, discounts and fees",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "all commissions, discounts and other fees and charges owed with respect to letters of credit and bankers’ acceptances"
+        }
+      ],
+      "quote": "“Consolidated Interest Expense” means, for any Measurement Period, the total interest expense, including the interest component of all payments under Finance Lease Obligations and the implied interest component of Synthetic Lease Obligations"
+    },
+    {
+      "term": "Consolidated Net Income",
+      "section": "1.01",
+      "formula_summary": "Net income after taxes on consolidated basis, excluding non-operating, non-recurring, extraordinary gains/losses and income of subsidiaries restricted from dividend distribution",
+      "components": [
+        {
+          "label": "Net income after taxes",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "the net income (or net loss) after taxes of Carpenter and its Consolidated Subsidiaries for such period, as determined in accordance with GAAP"
+        },
+        {
+          "label": "Non-operating, non-recurring and extraordinary gains/losses",
+          "sign": "-",
+          "clause_ref": "proviso",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "non-operating, non-recurring gains and losses and extraordinary gains and losses of Carpenter and its Consolidated Subsidiaries"
+        },
+        {
+          "label": "Restricted subsidiary income",
+          "sign": "-",
+          "clause_ref": "proviso",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "the net income of any Consolidated Subsidiary shall be excluded from Consolidated Net Income to the extent that the declaration or payment of dividends"
+        }
+      ],
+      "quote": "“Consolidated Net Income” means, for any Measurement Period, the net income (or net loss) after taxes of Carpenter and its Consolidated Subsidiaries for such period, as determined in accordance with GAAP;"
+    },
+    {
+      "term": "Consolidated Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Indebtedness of Carpenter and its Consolidated Subsidiaries on consolidated basis",
+      "components": [
+        {
+          "label": "Indebtedness",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the Indebtedness of Carpenter and its Consolidated Subsidiaries, determined on a consolidated basis as of such date."
+        }
+      ],
+      "quote": "“Consolidated Indebtedness” means at any date the Indebtedness of Carpenter and its Consolidated Subsidiaries, determined on a consolidated basis as of such date."
+    },
+    {
+      "term": "Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Sum of borrowed money, bonds, conditional sale obligations, deferred purchase price, Finance Lease and Synthetic Lease Attributable Indebtedness, securities purchase obligations, letter of credit reimbursement obligations, Guarantees, Disqualified Stock, Swap Termination Value, and other entity Indebtedness by ownership",
+      "components": [
+        {
+          "label": "Borrowed money",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "all obligations of such Person for borrowed money, including, without limitation, obligations for borrowed money incurred by any Person in respect of any asset securitization transaction,"
+        },
+        {
+          "label": "Bonds, debentures, notes",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "all obligations of such Person evidenced by bonds, debentures, notes or other similar instruments,"
+        },
+        {
+          "label": "Finance Lease and Synthetic Lease Attributable Indebtedness",
+          "sign": "+",
+          "clause_ref": "(e)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "the Attributable Indebtedness of such Person in respect of Finance Lease Obligations and Synthetic Lease Obligations"
+        },
+        {
+          "label": "Guarantees",
+          "sign": "+",
+          "clause_ref": "(h)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "all Guarantees of such Person,"
+        },
+        {
+          "label": "Swap Termination Value",
+          "sign": "+",
+          "clause_ref": "(j)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "the obligations of such Person in respect of any Swap Contract, calculated as the Swap Termination Value as of such date"
+        }
+      ],
+      "quote": "“Indebtedness” of any Person means at any date, without duplication, (a) all obligations of such Person for borrowed money, including, without limitation, obligations for borrowed money incurred by any Person in respect of any asset securitization transaction, (b) all obligations of such Person evidenced by bonds, debentures, notes"
+    }
+  ],
+  "specified_defaults": [],
+  "equity_cure": {
+    "present": false,
+    "section": null,
+    "max_uses": null,
+    "limits": null,
+    "how_applied": null,
+    "quote": null
+  },
+  "uncertainties": [
+    "Minimum Consolidated Adjusted EBITDA test (90 percent of forecast) not found in document",
+    "Definitions for Consolidated EBITDAR, Consolidated Funded Indebtedness, Consolidated Rent Expense, Consolidated Net Earnings, and Liquidity not found in document",
+    "Consolidated Net Leverage Ratio component (a)(iii) is subject to both $40,000,000 individual cap and $200,000,000 aggregate cap; only one cap_group_id can be linked per component",
+    "Cap group schedules have no explicit period dates in document; treated as always applicable with null period_end and applies_after",
+    "No equity cure, cure right, or specified equity contribution provision found in document",
+    "No specified defaults for financial covenants found in document"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "ticker": "TRS",
+  "period_end": "2025-09-30",
+  "as_of": "2025-11-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/842633/000084263325000073/ex101creditagreement.htm",
+  "agreement_filing_date": "2025-04-01",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Interest Expense Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 3.0,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 3.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/842633/000084263325000073/ex101creditagreement.htm"
+    },
+    {
+      "name": "Total Net Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 4.0,
+      "conditional_alternatives": [
+        {
+          "value": 4.5,
+          "condition": "during a Covenant Holiday Period"
+        }
+      ],
+      "disclosed_threshold": 4.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/842633/000084263325000073/ex101creditagreement.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}

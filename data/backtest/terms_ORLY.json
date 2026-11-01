@@ -1,0 +1,40 @@
+{
+  "ticker": "ORLY",
+  "period_end": "2026-06-30",
+  "as_of": "2026-08-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/898173/000110465925030592/tm2510899d1_ex10-1.htm",
+  "agreement_filing_date": "2025-04-01",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Consolidated Fixed Charge Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 2.5,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 2.5,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/898173/000110465925030592/tm2510899d1_ex10-1.htm"
+    },
+    {
+      "name": "Consolidated Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 3.5,
+      "conditional_alternatives": [
+        {
+          "value": 3.75,
+          "condition": "Permitted Leverage Increase during Increase Period - first four fiscal quarters ending after consummation of Material Acquisition"
+        }
+      ],
+      "disclosed_threshold": 3.5,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/898173/000110465925030592/tm2510899d1_ex10-1.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}

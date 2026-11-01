@@ -26,11 +26,12 @@ with no tickers extracting every case in companies.json.
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import APIConnectionError, OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from extract_release import (  # noqa: E402
@@ -133,13 +134,23 @@ def build_content(document):
     return document + "\n\n---\n\n" + INSTRUCTIONS
 
 
+REQUEST_RETRY_DELAYS = (5, 15, 30)
+
+
 def request_completion(client, content):
-    return client.chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": content}],
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-    )
+    """One chat completion, retrying Baseten connection errors."""
+    for attempt in range(len(REQUEST_RETRY_DELAYS) + 1):
+        try:
+            return client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "user", "content": content}],
+                max_tokens=MAX_TOKENS,
+                temperature=TEMPERATURE,
+            )
+        except APIConnectionError:
+            if attempt == len(REQUEST_RETRY_DELAYS):
+                raise
+            time.sleep(REQUEST_RETRY_DELAYS[attempt])
 
 
 def parse_response(client, content):
@@ -271,7 +282,9 @@ def verify(parsed, document):
         if q_norm and q_norm in source_norm:
             verified += 1
         else:
-            failures.append(f"FAILED QUOTE: {q}")
+            failures.append(
+                f"FAILED QUOTE: {q}" if q_norm else "FAILED QUOTE: empty quote"
+            )
 
     for entry in parsed.get("covenants", []) or []:
         label = entry.get("name", "?")

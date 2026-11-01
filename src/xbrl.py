@@ -1,26 +1,67 @@
-"""Explore us-gaap facts in the SEC companyfacts dump."""
+"""Explore us-gaap facts in SEC companyfacts dumps."""
 
 import json
 
 DEFAULT_PATH = "data/raw/snbr_companyfacts.json"
 
+SNBR_CIK = "827187"
+
+COMPANYFACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik10}.json"
+
 ALLOWED_FORMS = {"10-K", "10-Q", "10-K/A", "10-Q/A"}
 
 
-def load_facts(path="data/raw/snbr_companyfacts.json"):
-    """Load the companyfacts JSON document."""
+def _cik_10(cik):
+    """Normalize a CIK to 10-digit zero-padded form."""
+    digits = "".join(ch for ch in str(cik) if ch.isdigit())
+    if not digits:
+        raise ValueError(f"Invalid CIK: {cik!r}")
+    return digits.zfill(10)[-10:]
+
+
+def companyfacts_filename(cik):
+    """Cache filename for a CIK's companyfacts dump."""
+    return f"companyfacts_{_cik_10(cik)}.json"
+
+
+def ensure_companyfacts(cik):
+    """Download a company's companyfacts dump (cached), return its path.
+
+    SNBR's CIK maps to the existing data/raw/snbr_companyfacts.json so
+    SNBR behavior is unchanged; every other CIK downloads via
+    edgar.fetch to data/raw/companyfacts_<cik10>.json.
+    """
+    if _cik_10(cik) == _cik_10(SNBR_CIK):
+        return DEFAULT_PATH
+    from edgar import fetch  # lazy: edgar requires SEC_USER_AGENT at import
+
+    return str(fetch(COMPANYFACTS_URL.format(cik10=_cik_10(cik)),
+                     companyfacts_filename(cik)))
+
+
+def load_facts(path=None, cik=None):
+    """Load a companyfacts JSON document.
+
+    With neither argument (or SNBR's CIK) loads
+    data/raw/snbr_companyfacts.json, exactly as before. With another
+    CIK, downloads that company's dump via edgar.fetch (cached as
+    data/raw/companyfacts_<cik10>.json) and loads it. An explicit path
+    always wins.
+    """
+    if path is None:
+        path = ensure_companyfacts(cik) if cik is not None else DEFAULT_PATH
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
-def list_candidates(keywords):
+def list_candidates(keywords, cik=None):
     """Print every concept whose name or label contains any keyword.
 
     Searches ALL taxonomies (us-gaap, dei, company custom namespace).
     Match is case-insensitive substring. Prints namespace:concept, its
     label, and its unit(s).
     """
-    data = load_facts()
+    data = load_facts(cik=cik)
     facts = data.get("facts", {})
     lowered = [k.lower() for k in keywords]
     for ns in sorted(facts):
@@ -34,7 +75,7 @@ def list_candidates(keywords):
                 print(f"{ns}:{concept}: {label} [{', '.join(units)}]")
 
 
-def show(concept, start="2024-06-01"):
+def show(concept, start="2024-06-01", cik=None):
     """Print every fact for a concept with end date on or after start.
 
     Concept may be "namespace:Concept" (e.g. "us-gaap:NetIncomeLoss");
@@ -42,7 +83,7 @@ def show(concept, start="2024-06-01"):
     (with a start date) and instant facts (without one), sorted by
     end date.
     """
-    data = load_facts()
+    data = load_facts(cik=cik)
     facts = data.get("facts", {})
     if ":" in concept:
         ns, name = concept.split(":", 1)

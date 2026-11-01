@@ -90,11 +90,17 @@ def normalize(text):
     """Collapse whitespace runs and map curly quotes to straight quotes.
 
     Applied to BOTH the model quote and the source, so verification does
-    not depend on the model's quote style.
+    not depend on the model's quote style. Spacing around punctuation
+    is also ignored (no space before , . ; : % ) ] " or after $ ( [ "),
+    but word and digit spacing is preserved.
     """
     for curly, straight in (("“", '"'), ("”", '"'), ("‘", "'"), ("’", "'")):
         text = text.replace(curly, straight)
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r" ([,.;:%)\]])", r"\1", text)
+    text = re.sub(r"([$\(\[]) ", r"\1", text)
+    text = re.sub(r'" ', '"', text)
+    return re.sub(r' "', '"', text)
 
 
 def format_thousands(value):
@@ -207,7 +213,9 @@ def main():
         if q_norm and q_norm in source_norm:
             verified += 1
         else:
-            failures.append(f"FAILED QUOTE: {q}")
+            failures.append(
+                f"FAILED QUOTE: {q}" if q_norm else "FAILED QUOTE: empty quote"
+            )
 
     # Check 2: every reported number's printed digits appear in the source.
     # Dash rows (printed_as_dash) instead require value 0 and a dash cell

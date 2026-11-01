@@ -1,0 +1,28 @@
+{
+  "ticker": "STGW",
+  "period_end": "2025-06-30",
+  "as_of": "2025-08-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/876883/000110465925038729/tm2513100d1_ex10-1.htm",
+  "agreement_filing_date": "2025-04-24",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Total Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 4.25,
+      "conditional_alternatives": [
+        {
+          "value": 4.5,
+          "condition": "for the four (4) fiscal quarter period following the consummation of a Material Acquisition, at the Borrowers\u2019 election (Total Leverage Ratio Covenant Holiday)"
+        }
+      ],
+      "disclosed_threshold": 4.25,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/876883/000110465925038729/tm2513100d1_ex10-1.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}

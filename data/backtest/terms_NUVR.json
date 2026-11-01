@@ -1,0 +1,35 @@
+{
+  "ticker": "NUVR",
+  "period_end": "2026-06-30",
+  "as_of": "2026-08-14",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/71557/000151316224000083/exhibit10_1.htm",
+  "agreement_filing_date": "2024-06-25",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Maximum Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 6,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 6.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/71557/000151316224000083/exhibit10_1.htm"
+    },
+    {
+      "name": "Minimum Debt Service Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 2,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 2.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/71557/000151316224000083/exhibit10_1.htm"
+    }
+  ],
+  "unmatched_disclosed": []
+}
