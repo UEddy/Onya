@@ -39,7 +39,7 @@
     },
     {
       "name": "Net loss",
-      "value": -173651000,
+      "value": -173609000,
       "source": "xbrl:us-gaap:NetIncomeLoss",
       "clause": "base",
       "note": "Consolidated Net Earnings"
@@ -156,26 +156,26 @@
   ],
   "numerator": 962096000,
   "numerator_thousands": 962096,
-  "ebitda": 43188000,
-  "ebitda_thousands": 43188,
-  "ebitdar": 146254000,
-  "ebitdar_thousands": 146254,
+  "ebitda": 43230000,
+  "ebitda_thousands": 43230,
+  "ebitdar": 146296000,
+  "ebitdar_thousands": 146296,
   "disallowed": 18732000,
   "disallowed_thousands": 18732,
   "net_leverage": {
-    "ratio": 6.578254269968685,
+    "ratio": 6.5763657242850115,
     "ratio_2dp": 6.58,
     "threshold": 4.75,
-    "headroom": -1.828254269968685,
+    "headroom": -1.8263657242850115,
     "headroom_2dp": -1.83,
     "pass": false,
     "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
   },
   "interest_coverage": {
-    "ratio": 0.8401680803050346,
+    "ratio": 0.8409851373433974,
     "ratio_2dp": 0.84,
     "threshold": 2.1,
-    "headroom": -1.2598319196949654,
+    "headroom": -1.2590148626566027,
     "headroom_2dp": -1.26,
     "pass": false,
     "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
@@ -183,22 +183,22 @@
   "proforma_scenarios": [
     {
       "savings": 0,
-      "ebitda": 43188000,
-      "ebitdar": 146254000,
+      "ebitda": 43230000,
+      "ebitdar": 146296000,
       "net_leverage": {
-        "ratio": 6.578254269968685,
+        "ratio": 6.5763657242850115,
         "ratio_2dp": 6.58,
         "threshold": 4.75,
-        "headroom": -1.828254269968685,
+        "headroom": -1.8263657242850115,
         "headroom_2dp": -1.83,
         "pass": false,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
-        "ratio": 0.8401680803050346,
+        "ratio": 0.8409851373433974,
         "ratio_2dp": 0.84,
         "threshold": 2.1,
-        "headroom": -1.2598319196949654,
+        "headroom": -1.2590148626566027,
         "headroom_2dp": -1.26,
         "pass": false,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
@@ -207,22 +207,22 @@
     },
     {
       "savings": 44000000,
-      "ebitda": 87188000,
-      "ebitdar": 190254000,
+      "ebitda": 87230000,
+      "ebitdar": 190296000,
       "net_leverage": {
-        "ratio": 5.056902877206261,
+        "ratio": 5.055786774288477,
         "ratio_2dp": 5.06,
         "threshold": 4.75,
-        "headroom": -0.3069028772062614,
+        "headroom": -0.3057867742884772,
         "headroom_2dp": -0.31,
         "pass": false,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
-        "ratio": 1.6961325966850829,
+        "ratio": 1.6969496537234456,
         "ratio_2dp": 1.7,
         "threshold": 2.1,
-        "headroom": -0.4038674033149172,
+        "headroom": -0.40305034627655445,
         "headroom_2dp": -0.4,
         "pass": false,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
@@ -246,7 +246,7 @@
             "source": "result:numerator"
           },
           "ebitdar": {
-            "value": 146254000,
+            "value": 146296000,
             "source": "result:ebitdar"
           },
           "threshold": {
@@ -256,24 +256,24 @@
         },
         "figures": {
           "debt_reduction_needed": {
-            "value": 267389500.0,
+            "value": 267190000.0,
             "formula": "numerator - threshold x EBITDAR",
-            "detail": "$962,096,000 - 4.75 x $146,254,000 = $267,389,500.00"
+            "detail": "$962,096,000 - 4.75 x $146,296,000 = $267,190,000.00"
           },
           "ebitda_increase_needed": {
-            "value": 56292526.31578946,
+            "value": 56250526.31578946,
             "formula": "numerator / threshold - EBITDAR",
-            "detail": "$962,096,000 / 4.75 - $146,254,000 = $56,292,526.32",
+            "detail": "$962,096,000 / 4.75 - $146,296,000 = $56,250,526.32",
             "note": "EBITDA rise flows 1:1 into EBITDAR with rent flat"
           }
         },
-        "summary": "To pass Net Leverage at 4.75x, debt must fall by $267,389,500 or EBITDA must rise by $56,292,526."
+        "summary": "To pass Net Leverage at 4.75x, debt must fall by $267,190,000 or EBITDA must rise by $56,250,526."
       },
       "interest_coverage": {
         "status": "fail",
         "inputs": {
           "ebitda": {
-            "value": 43188000,
+            "value": 43230000,
             "source": "result:ebitda"
           },
           "interest": {
@@ -287,17 +287,17 @@
         },
         "figures": {
           "ebitda_increase_needed": {
-            "value": 64760400.0,
+            "value": 64718400.0,
             "formula": "threshold x interest - EBITDA",
-            "detail": "2.1 x $51,404,000 - $43,188,000 = $64,760,400.00"
+            "detail": "2.1 x $51,404,000 - $43,230,000 = $64,718,400.00"
           },
           "interest_reduction_needed": {
-            "value": 30838285.714285716,
+            "value": 30818285.714285716,
             "formula": "interest - EBITDA / threshold",
-            "detail": "$51,404,000 - $43,188,000 / 2.1 = $30,838,285.71"
+            "detail": "$51,404,000 - $43,230,000 / 2.1 = $30,818,285.71"
           }
         },
-        "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $64,760,400 or interest must fall by $30,838,286."
+        "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $64,718,400 or interest must fall by $30,818,286."
       }
     },
     "equity_cure": {
@@ -315,7 +315,7 @@
               "source": "result:numerator"
             },
             "ebitdar": {
-              "value": 146254000,
+              "value": 146296000,
               "source": "result:proforma_scenarios[0].ebitdar"
             },
             "threshold": {
@@ -325,24 +325,24 @@
           },
           "figures": {
             "debt_reduction_needed": {
-              "value": 267389500.0,
+              "value": 267190000.0,
               "formula": "numerator - threshold x EBITDAR",
-              "detail": "$962,096,000 - 4.75 x $146,254,000 = $267,389,500.00"
+              "detail": "$962,096,000 - 4.75 x $146,296,000 = $267,190,000.00"
             },
             "ebitda_increase_needed": {
-              "value": 56292526.31578946,
+              "value": 56250526.31578946,
               "formula": "numerator / threshold - EBITDAR",
-              "detail": "$962,096,000 / 4.75 - $146,254,000 = $56,292,526.32",
+              "detail": "$962,096,000 / 4.75 - $146,296,000 = $56,250,526.32",
               "note": "EBITDA rise flows 1:1 into EBITDAR with rent flat"
             }
           },
-          "summary": "To pass Net Leverage at 4.75x, debt must fall by $267,389,500 or EBITDA must rise by $56,292,526."
+          "summary": "To pass Net Leverage at 4.75x, debt must fall by $267,190,000 or EBITDA must rise by $56,250,526."
         },
         "interest_coverage": {
           "status": "fail",
           "inputs": {
             "ebitda": {
-              "value": 43188000,
+              "value": 43230000,
               "source": "result:proforma_scenarios[0].ebitda"
             },
             "interest": {
@@ -356,17 +356,17 @@
           },
           "figures": {
             "ebitda_increase_needed": {
-              "value": 64760400.0,
+              "value": 64718400.0,
               "formula": "threshold x interest - EBITDA",
-              "detail": "2.1 x $51,404,000 - $43,188,000 = $64,760,400.00"
+              "detail": "2.1 x $51,404,000 - $43,230,000 = $64,718,400.00"
             },
             "interest_reduction_needed": {
-              "value": 30838285.714285716,
+              "value": 30818285.714285716,
               "formula": "interest - EBITDA / threshold",
-              "detail": "$51,404,000 - $43,188,000 / 2.1 = $30,838,285.71"
+              "detail": "$51,404,000 - $43,230,000 / 2.1 = $30,818,285.71"
             }
           },
-          "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $64,760,400 or interest must fall by $30,838,286."
+          "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $64,718,400 or interest must fall by $30,818,286."
         }
       },
       {
@@ -379,7 +379,7 @@
               "source": "result:numerator"
             },
             "ebitdar": {
-              "value": 190254000,
+              "value": 190296000,
               "source": "result:proforma_scenarios[1].ebitdar"
             },
             "threshold": {
@@ -389,24 +389,24 @@
           },
           "figures": {
             "debt_reduction_needed": {
-              "value": 58389500.0,
+              "value": 58190000.0,
               "formula": "numerator - threshold x EBITDAR",
-              "detail": "$962,096,000 - 4.75 x $190,254,000 = $58,389,500.00"
+              "detail": "$962,096,000 - 4.75 x $190,296,000 = $58,190,000.00"
             },
             "ebitda_increase_needed": {
-              "value": 12292526.315789461,
+              "value": 12250526.315789461,
               "formula": "numerator / threshold - EBITDAR",
-              "detail": "$962,096,000 / 4.75 - $190,254,000 = $12,292,526.32",
+              "detail": "$962,096,000 / 4.75 - $190,296,000 = $12,250,526.32",
               "note": "EBITDA rise flows 1:1 into EBITDAR with rent flat"
             }
           },
-          "summary": "To pass Net Leverage at 4.75x, debt must fall by $58,389,500 or EBITDA must rise by $12,292,526."
+          "summary": "To pass Net Leverage at 4.75x, debt must fall by $58,190,000 or EBITDA must rise by $12,250,526."
         },
         "interest_coverage": {
           "status": "fail",
           "inputs": {
             "ebitda": {
-              "value": 87188000,
+              "value": 87230000,
               "source": "result:proforma_scenarios[1].ebitda"
             },
             "interest": {
@@ -420,17 +420,17 @@
           },
           "figures": {
             "ebitda_increase_needed": {
-              "value": 20760400.0,
+              "value": 20718400.0,
               "formula": "threshold x interest - EBITDA",
-              "detail": "2.1 x $51,404,000 - $87,188,000 = $20,760,400.00"
+              "detail": "2.1 x $51,404,000 - $87,230,000 = $20,718,400.00"
             },
             "interest_reduction_needed": {
-              "value": 9885904.761904761,
+              "value": 9865904.761904761,
               "formula": "interest - EBITDA / threshold",
-              "detail": "$51,404,000 - $87,188,000 / 2.1 = $9,885,904.76"
+              "detail": "$51,404,000 - $87,230,000 / 2.1 = $9,865,904.76"
             }
           },
-          "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $20,760,400 or interest must fall by $9,885,905."
+          "summary": "To pass Interest Coverage at 2.1x, EBITDA must rise by $20,718,400 or interest must fall by $9,865,905."
         }
       }
     ]

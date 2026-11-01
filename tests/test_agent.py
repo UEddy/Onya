@@ -54,14 +54,14 @@ def _covenant_result():
     return {
         "period_end": "2026-04-04", "units": "USD",
         "numerator": 962096000, "numerator_thousands": 962096,
-        "ebitda": 43188000, "ebitda_thousands": 43188,
-        "ebitdar": 146254000, "ebitdar_thousands": 146254,
+        "ebitda": 43230000, "ebitda_thousands": 43230,
+        "ebitdar": 146296000, "ebitdar_thousands": 146296,
         "disallowed": 18732000,
-        "net_leverage": {"ratio": 6.578, "ratio_2dp": 6.58,
+        "net_leverage": {"ratio": 6.576, "ratio_2dp": 6.58,
                          "threshold": 4.75, "headroom": -1.83,
                          "headroom_2dp": -1.83, "pass": False,
                          "note": "Net Leverage Ratio max 4.75"},
-        "interest_coverage": {"ratio": 0.84, "ratio_2dp": 0.84,
+        "interest_coverage": {"ratio": 0.841, "ratio_2dp": 0.84,
                               "threshold": 2.1, "headroom": -1.26,
                               "headroom_2dp": -1.26, "pass": False,
                               "note": "Interest Coverage Ratio min 2.1"},
@@ -286,8 +286,8 @@ class ProjectAndCure(unittest.TestCase):
                        "net_leverage": {
                            "status": "fail",
                            "figures": {"debt_reduction_needed":
-                                       {"value": 267389500.0}},
-                           "summary": "debt must fall by $267,389,500"},
+                                       {"value": 267190000.0}},
+                           "summary": "debt must fall by $267,190,000"},
                        "interest_coverage": {
                            "status": "fail", "figures": {},
                            "summary": "coverage fails"}},
@@ -299,7 +299,7 @@ class ProjectAndCure(unittest.TestCase):
             result = agent.tool_cure_analysis("SNBR", "2026-04-04")
         self.assertEqual(result["base"]["net_leverage"]["status"], "fail")
         self.assertEqual(result["base"]["net_leverage"]["figures"][
-            "debt_reduction_needed"], 267389500.0)
+            "debt_reduction_needed"], 267190000.0)
         self.assertFalse(result["equity_cure"]["found"])
 
 
@@ -329,8 +329,8 @@ class DraftMemo(unittest.TestCase):
         self.assertIn("3.25x", result["unverified_numbers"])
 
     def test_m_suffix_rounding_accepted(self):
-        agent._record({"figures": {"debt_reduction_needed": 267389500.0}})
-        draft = "Debt must fall by about $267.4M to pass."
+        agent._record({"figures": {"debt_reduction_needed": 267190000.0}})
+        draft = "Debt must fall by about $267.2M to pass."
         result = agent.tool_draft_memo("SNBR", "2026-04-04", draft=draft)
         self.assertTrue(result["verified"])
 

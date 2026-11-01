@@ -1,0 +1,233 @@
+{
+  "period_end": "2026-04-04",
+  "units": "USD",
+  "components": [
+    {
+      "name": "Borrowings under credit facility",
+      "value": 605600000,
+      "source": "xbrl:us-gaap:DebtCurrent",
+      "clause": "(a)(i)",
+      "note": "Consolidated Funded Indebtedness component"
+    },
+    {
+      "name": "Outstanding letters of credit",
+      "value": 8300000,
+      "source": "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
+      "clause": "(a)(i)",
+      "note": "Consolidated Funded Indebtedness component"
+    },
+    {
+      "name": "Finance lease obligations",
+      "value": 159000,
+      "source": "estimate: carried forward from 2026-01-03",
+      "clause": "(a)(i)",
+      "note": "immaterial; not disclosed this period"
+    },
+    {
+      "name": "Operating lease liabilities",
+      "value": 348037000,
+      "source": "xbrl:us-gaap:OperatingLeaseLiability",
+      "clause": "(a)(ii)",
+      "note": "ASC 842 operating lease liabilities"
+    },
+    {
+      "name": "Unrestricted US cash in excess of $40,000,000",
+      "value": 0,
+      "source": "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "clause": "(a)(iii)",
+      "note": "cash and equivalents = $1,484,000; excess over $40,000,000 deducted; no excess, deduction is zero"
+    },
+    {
+      "name": "Net loss",
+      "value": -173609000,
+      "source": "xbrl:us-gaap:NetIncomeLoss",
+      "clause": "base",
+      "note": "Consolidated Net Earnings"
+    },
+    {
+      "name": "Income tax expense (benefit)",
+      "value": 36907000,
+      "source": "xbrl:us-gaap:IncomeTaxExpenseBenefit",
+      "clause": "(a)(ii)",
+      "note": "Consolidated Income Tax Expense"
+    },
+    {
+      "name": "Interest expense",
+      "value": 51404000,
+      "source": "xbrl:us-gaap:InterestExpenseNonoperating",
+      "clause": "(a)(i)",
+      "note": "proxy for Consolidated Interest Expense (excludes imputed lease interest not separately tagged)"
+    },
+    {
+      "name": "Depreciation and amortization",
+      "value": 49889000,
+      "source": "release:Depreciation and amortization",
+      "clause": "(a)(iii)",
+      "note": "release value used; XBRL TTM us-gaap:DepreciationDepletionAndAmortization = $53,143,000; release minus XBRL = $-3,254,000"
+    },
+    {
+      "name": "Stock-based compensation",
+      "value": 5157000,
+      "source": "xbrl:us-gaap:ShareBasedCompensation",
+      "clause": "(a)(v)",
+      "note": "non-cash stock-based compensation"
+    },
+    {
+      "name": "Cash restructuring expenses",
+      "value": 23891000,
+      "source": "xbrl:us-gaap:RestructuringCosts",
+      "clause": "(a)(viii)",
+      "note": "subject to the (a)(iv)+(a)(viii) cap"
+    },
+    {
+      "name": "Non-cash impairments",
+      "value": 48482000,
+      "source": "xbrl:us-gaap:AssetImpairmentCharges",
+      "clause": "(a)(vi)",
+      "note": "non-cash impairment expenses (ttm.py derived-value logic)"
+    },
+    {
+      "name": "Other non-recurring items",
+      "value": 19841000,
+      "source": "release:Other non-recurring items",
+      "clause": "(a)(iv)",
+      "note": "subject to the (a)(iv)+(a)(viii) cap"
+    },
+    {
+      "name": "Asset impairments",
+      "value": 0,
+      "source": "release:Asset impairments",
+      "clause": "(a)(vi)",
+      "note": "company-reported asset impairments, separate line in the release reconciliation"
+    },
+    {
+      "name": "Disallowed (a)(iv)+(a)(viii) excess over cap",
+      "value": -18732000,
+      "source": "contract:(a)(iv)+(a)(viii)",
+      "clause": "definition: Consolidated EBITDA",
+      "note": "cash restructuring $23,891,000 + other non-recurring $19,841,000 = $43,732,000 vs cap $25,000,000 (schedule entry for 2026-04-04); excess of $18,732,000 disallowed"
+    },
+    {
+      "name": "Consolidated rent expense",
+      "value": 103066000,
+      "source": "xbrl:us-gaap:OperatingLeaseCost",
+      "clause": "definition: Consolidated Rent Expense",
+      "note": "release leverage_table_ttm[Consolidated rent expense] missing for 2026-04-04, used XBRL fallback: us-gaap:OperatingLeaseCost"
+    },
+    {
+      "name": "Pro forma cost savings",
+      "value": 0,
+      "source": "contract:(a)(ix)",
+      "clause": "(a)(ix)",
+      "note": "schedule covers this period (cap $44,000,000, schedule entry for 2026-04-04) but no company-reported pro forma savings amount is available; base includes zero; see proforma_scenarios for savings=cap; unverifiable: requires agent approval"
+    }
+  ],
+  "data_quality_warnings": [
+    {
+      "concept": "us-gaap:RestructuringCosts",
+      "period_end": "2024-12-28",
+      "direct": 28374000,
+      "derived": 3006000
+    },
+    {
+      "concept": "us-gaap:RestructuringCosts",
+      "period_end": "2026-01-03",
+      "direct": 48128000,
+      "derived": 2348000
+    },
+    {
+      "concept": "us-gaap:AssetImpairmentCharges",
+      "period_end": "2024-12-28",
+      "direct": 5420000,
+      "derived": 678000
+    },
+    {
+      "concept": "us-gaap:AssetImpairmentCharges",
+      "period_end": "2026-01-03",
+      "direct": 36363000,
+      "derived": 803000
+    },
+    {
+      "concept": "us-gaap:OperatingLeaseCost",
+      "period_end": "2021-10-02",
+      "direct": 24352000,
+      "derived": 25632000
+    }
+  ],
+  "numerator": 962096000,
+  "numerator_thousands": 962096,
+  "ebitda": 43230000,
+  "ebitda_thousands": 43230,
+  "ebitdar": 146296000,
+  "ebitdar_thousands": 146296,
+  "disallowed": 18732000,
+  "disallowed_thousands": 18732,
+  "net_leverage": {
+    "ratio": 6.5763657242850115,
+    "ratio_2dp": 6.58,
+    "threshold": 4.75,
+    "headroom": -1.8263657242850115,
+    "headroom_2dp": -1.83,
+    "pass": false,
+    "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+  },
+  "interest_coverage": {
+    "ratio": 0.8409851373433974,
+    "ratio_2dp": 0.84,
+    "threshold": 2.1,
+    "headroom": -1.2590148626566027,
+    "headroom_2dp": -1.26,
+    "pass": false,
+    "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+  },
+  "proforma_scenarios": [
+    {
+      "savings": 0,
+      "ebitda": 43230000,
+      "ebitdar": 146296000,
+      "net_leverage": {
+        "ratio": 6.5763657242850115,
+        "ratio_2dp": 6.58,
+        "threshold": 4.75,
+        "headroom": -1.8263657242850115,
+        "headroom_2dp": -1.83,
+        "pass": false,
+        "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
+      },
+      "interest_coverage": {
+        "ratio": 0.8409851373433974,
+        "ratio_2dp": 0.84,
+        "threshold": 2.1,
+        "headroom": -1.2590148626566027,
+        "headroom_2dp": -1.26,
+        "pass": false,
+        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
+      },
+      "note": "unverifiable: requires agent approval"
+    },
+    {
+      "savings": 44000000,
+      "ebitda": 87230000,
+      "ebitdar": 190296000,
+      "net_leverage": {
+        "ratio": 5.055786774288477,
+        "ratio_2dp": 5.06,
+        "threshold": 4.75,
+        "headroom": -0.3057867742884772,
+        "headroom_2dp": -0.31,
+        "pass": false,
+        "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
+      },
+      "interest_coverage": {
+        "ratio": 1.6969496537234456,
+        "ratio_2dp": 1.7,
+        "threshold": 2.1,
+        "headroom": -0.40305034627655445,
+        "headroom_2dp": -0.4,
+        "pass": false,
+        "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
+      },
+      "note": "unverifiable: requires agent approval"
+    }
+  ]
+}

@@ -104,8 +104,15 @@
       "name": "Disallowed (a)(iv)+(a)(viii) excess over cap",
       "value": -465000,
       "source": "contract:(a)(iv)+(a)(viii)",
-      "clause": "(a)(iv)+(a)(viii) cap",
+      "clause": "definition: Consolidated EBITDA",
       "note": "cash restructuring $20,412,000 + other non-recurring $5,053,000 = $25,465,000 vs cap $25,000,000 (schedule entry for 2025-09-27); excess of $465,000 disallowed"
+    },
+    {
+      "name": "Consolidated rent expense",
+      "value": 106490000,
+      "source": "release:Consolidated rent expense",
+      "clause": "definition: Consolidated Rent Expense",
+      "note": "release value used; XBRL TTM us-gaap:OperatingLeaseCost = $106,258,000; release minus XBRL = $232,000"
     },
     {
       "name": "Pro forma cost savings",
@@ -115,11 +122,11 @@
       "note": "cap not applicable to this period: schedule has no entry for 2025-09-27 and no applies_after entry covers it; no pro forma savings included"
     },
     {
-      "name": "Consolidated rent expense",
-      "value": 106490000,
-      "source": "release:Consolidated rent expense",
-      "clause": "EBITDAR (b)",
-      "note": "release value used; XBRL TTM us-gaap:OperatingLeaseCost = $106,258,000; release minus XBRL = $232,000"
+      "name": "Covenant EBITDA reconciliation",
+      "value": 0,
+      "source": "release:Adjusted EBITDA",
+      "clause": "definition: Consolidated EBITDA",
+      "note": "reconciled: company-reported covenant EBITDA $84,597,000 within $1,000,000 (1,000 thousands) of capped calculation $84,597,000 (difference $0)"
     }
   ],
   "data_quality_warnings": [
@@ -149,33 +156,9 @@
     },
     {
       "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2019-06-29",
-      "direct": 21079000,
-      "derived": 21080000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2020-06-27",
-      "direct": 22357000,
-      "derived": 22354000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2021-07-03",
-      "direct": 24352000,
-      "derived": 24353000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
       "period_end": "2021-10-02",
       "direct": 24352000,
       "derived": 25632000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2022-10-01",
-      "direct": 27821000,
-      "derived": 27822000
     }
   ],
   "numerator": 949556000,
@@ -203,5 +186,52 @@
     "headroom_2dp": 0.29,
     "pass": true,
     "note": "Interest Coverage Ratio min 1.5 (schedule entry for 2025-09-27)"
+  },
+  "reconciliation": {
+    "company_ebitda": 84597000,
+    "company_ebitda_thousands": 84597,
+    "onya_ebitda": 84597000,
+    "onya_ebitda_thousands": 84597,
+    "difference": 0,
+    "difference_thousands": 0,
+    "tolerance_dollars": 1000000,
+    "status": "reconciled",
+    "note": "reconciled: company-reported covenant EBITDA $84,597,000 within $1,000,000 (1,000 thousands) of capped calculation $84,597,000 (difference $0)",
+    "net_leverage": {
+      "company_reported": {
+        "ratio": 4.969233909161796,
+        "ratio_2dp": 4.97,
+        "threshold": 5.25,
+        "headroom": 0.28076609083820436,
+        "headroom_2dp": 0.28,
+        "pass": true
+      },
+      "onya_strict": {
+        "ratio": 4.969233909161796,
+        "ratio_2dp": 4.97,
+        "threshold": 5.25,
+        "headroom": 0.28076609083820436,
+        "headroom_2dp": 0.28,
+        "pass": true
+      }
+    },
+    "interest_coverage": {
+      "company_reported": {
+        "ratio": 1.7906400812801626,
+        "ratio_2dp": 1.79,
+        "threshold": 1.5,
+        "headroom": 0.2906400812801626,
+        "headroom_2dp": 0.29,
+        "pass": true
+      },
+      "onya_strict": {
+        "ratio": 1.7906400812801626,
+        "ratio_2dp": 1.79,
+        "threshold": 1.5,
+        "headroom": 0.2906400812801626,
+        "headroom_2dp": 0.29,
+        "pass": true
+      }
+    }
   }
 }

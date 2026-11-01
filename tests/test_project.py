@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import project
@@ -197,8 +198,8 @@ def _write_result(directory, period, scenarios, file_proforma=0):
     payload = {
         "period_end": period,
         "numerator": 962_096_000,
-        "ebitda": 43_188_000,
-        "ebitdar": 146_254_000,
+        "ebitda": 43_230_000,
+        "ebitdar": 146_296_000,
         "net_leverage": {"ratio": 6.58, "ratio_2dp": 6.58,
                          "threshold": 4.75, "pass": False},
         "components": [{"name": "Pro forma cost savings",
@@ -213,8 +214,8 @@ class LoadBacktest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             res = Path(tmp) / "data" / "results"
             _write_result(res, "2026-04-04",
-                          [_scenario(0, 146_254_000, 6.58),
-                           _scenario(44_000_000, 190_254_000, 5.06)])
+                          [_scenario(0, 146_296_000, 6.58),
+                           _scenario(44_000_000, 190_296_000, 5.06)])
             with patch.object(project, "PROJECT_ROOT", Path(tmp)):
                 back = project.load_backtest("2026-04-04", 44_000_000)
         self.assertEqual(back["like_for_like"]["savings"], 44_000_000)
@@ -230,7 +231,7 @@ class LoadBacktest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             res = Path(tmp) / "data" / "results"
             _write_result(res, "2026-04-04",
-                          [_scenario(0, 146_254_000, 6.58)])
+                          [_scenario(0, 146_296_000, 6.58)])
             with patch.object(project, "PROJECT_ROOT", Path(tmp)):
                 back = project.load_backtest("2026-04-04", 44_000_000)
         self.assertIsNone(back["like_for_like"])
@@ -273,7 +274,8 @@ class QuartersAndRisk(unittest.TestCase):
 
 class RealBase20260103(unittest.TestCase):
     def test_full_projection(self):
-        result = project.compute("2026-01-03")
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-01-03")
         self.assertEqual(result["next_test"], "2026-04-04")
         self.assertEqual(result["next_threshold"], 4.75)
         self.assertEqual(result["ix_cap"], 44_000_000)
@@ -305,7 +307,8 @@ class RealBase20260103(unittest.TestCase):
         self.assertEqual(zero["net_leverage"]["ratio_2dp"], 6.58)
 
     def test_print_includes_rule_and_backtest(self):
-        result = project.compute("2026-01-03")
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-01-03")
         buf = io.StringIO()
         with redirect_stdout(buf):
             project.print_result(result)
@@ -319,7 +322,8 @@ class RealBase20260103(unittest.TestCase):
         self.assertIn("4.37", out)
 
     def test_backtest_missing_reports_no_file(self):
-        result = project.compute("2026-04-04")
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-04-04")
         self.assertIsNone(result["backtest"])
         buf = io.StringIO()
         with redirect_stdout(buf):
@@ -329,7 +333,8 @@ class RealBase20260103(unittest.TestCase):
 
 class SaveResult(unittest.TestCase):
     def test_writes_projection_file(self):
-        result = project.compute("2026-01-03")
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-01-03")
         with tempfile.TemporaryDirectory() as tmp:
             with patch.object(project, "PROJECT_ROOT", Path(tmp)):
                 path = project.save_result(result)

@@ -1,0 +1,137 @@
+{
+  "period_end": "2026-01-03",
+  "adjusted_ebitda_ttm": [
+    {
+      "line": "Net loss",
+      "value_thousands": -131958,
+      "quote": "(131,958)"
+    },
+    {
+      "line": "Income tax expense (benefit)",
+      "value_thousands": 35984,
+      "quote": "35,984"
+    },
+    {
+      "line": "Interest expense",
+      "value_thousands": 49382,
+      "quote": "49,382"
+    },
+    {
+      "line": "Depreciation and amortization",
+      "value_thousands": 53169,
+      "quote": "53,169"
+    },
+    {
+      "line": "Stock-based compensation",
+      "value_thousands": 6282,
+      "quote": "6,282"
+    },
+    {
+      "line": "Restructuring costs",
+      "value_thousands": 50697,
+      "quote": "50,697"
+    },
+    {
+      "line": "Other non-recurring items",
+      "value_thousands": 14699,
+      "quote": "14,699"
+    },
+    {
+      "line": "Asset impairments",
+      "value_thousands": 0,
+      "quote": "\u2014",
+      "printed_as_dash": true
+    },
+    {
+      "line": "Adjusted EBITDA",
+      "value_thousands": 78255,
+      "quote": "78,255"
+    }
+  ],
+  "leverage_table_ttm": [
+    {
+      "line": "Borrowings under revolving credit facility",
+      "value_thousands": 588200,
+      "ratio": null,
+      "quote": "588,200"
+    },
+    {
+      "line": "Outstanding letters of credit",
+      "value_thousands": 8800,
+      "ratio": null,
+      "quote": "8,800"
+    },
+    {
+      "line": "Finance lease obligations",
+      "value_thousands": 159,
+      "ratio": null,
+      "quote": "159"
+    },
+    {
+      "line": "Consolidated funded indebtedness",
+      "value_thousands": 597159,
+      "ratio": null,
+      "quote": "597,159"
+    },
+    {
+      "line": "Operating lease liabilities",
+      "value_thousands": 354302,
+      "ratio": null,
+      "quote": "354,302"
+    },
+    {
+      "line": "Total debt including operating lease liabilities (a)",
+      "value_thousands": 951461,
+      "ratio": null,
+      "quote": "951,461"
+    },
+    {
+      "line": "Adjusted EBITDA (see above)",
+      "value_thousands": 78255,
+      "ratio": null,
+      "quote": "78,255"
+    },
+    {
+      "line": "Consolidated rent expense",
+      "value_thousands": 104983,
+      "ratio": null,
+      "quote": "104,983"
+    },
+    {
+      "line": "Proforma annualized cost reductions",
+      "value_thousands": 50000,
+      "ratio": null,
+      "quote": "50,000"
+    },
+    {
+      "line": "Consolidated EBITDAR (b)",
+      "value_thousands": 233238,
+      "ratio": null,
+      "quote": "233,238"
+    },
+    {
+      "line": "Net Leverage Ratio under revolving credit facility (a divided by b)",
+      "value_thousands": null,
+      "ratio": "4.1 to 1.0",
+      "quote": "4.1 to 1.0"
+    }
+  ],
+  "footnotes": [
+    {
+      "text": "Represents costs related to business restructuring actions.",
+      "quote": "Represents costs related to business restructuring actions."
+    },
+    {
+      "text": "Other non-recurring items includes the following:",
+      "quote": "Other non-recurring items includes the following:"
+    },
+    {
+      "text": "Reflects operating lease liabilities included in our financial statements under ASC 842.",
+      "quote": "Reflects operating lease liabilities included in our financial statements under ASC 842."
+    },
+    {
+      "text": "Represents annualized impact of cost reductions over the future trailing twelve months the Company has executed.",
+      "quote": "Represents annualized impact of cost reductions over the future trailing twelve months the Company has executed."
+    }
+  ]
+}

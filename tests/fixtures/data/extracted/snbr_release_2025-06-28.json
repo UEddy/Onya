@@ -1,0 +1,126 @@
+{
+  "period_end": "2025-06-28",
+  "adjusted_ebitda_ttm": [
+    {
+      "line": "Net loss",
+      "value_thousands": -41459,
+      "quote": "(41,459)"
+    },
+    {
+      "line": "Income tax expense (benefit)",
+      "value_thousands": 7830,
+      "quote": "7,830"
+    },
+    {
+      "line": "Interest expense",
+      "value_thousands": 46614,
+      "quote": "46,614"
+    },
+    {
+      "line": "Depreciation and amortization",
+      "value_thousands": 59590,
+      "quote": "59,590"
+    },
+    {
+      "line": "Stock-based compensation",
+      "value_thousands": 8835,
+      "quote": "8,835"
+    },
+    {
+      "line": "Restructuring costs",
+      "value_thousands": 14039,
+      "quote": "14,039"
+    },
+    {
+      "line": "CEO transition/Proxy contest costs",
+      "value_thousands": 2825,
+      "quote": "2,825"
+    },
+    {
+      "line": "Asset impairments",
+      "value_thousands": 1220,
+      "quote": "1,220"
+    },
+    {
+      "line": "Adjusted EBITDA",
+      "value_thousands": 99494,
+      "quote": "99,494"
+    }
+  ],
+  "leverage_table_ttm": [
+    {
+      "line": "Borrowings under revolving credit facility",
+      "value_thousands": 563900,
+      "ratio": null,
+      "quote": "563,900"
+    },
+    {
+      "line": "Outstanding letters of credit",
+      "value_thousands": 6847,
+      "ratio": null,
+      "quote": "6,847"
+    },
+    {
+      "line": "Finance lease obligations",
+      "value_thousands": 201,
+      "ratio": null,
+      "quote": "201"
+    },
+    {
+      "line": "Consolidated funded indebtedness",
+      "value_thousands": 570948,
+      "ratio": null,
+      "quote": "570,948"
+    },
+    {
+      "line": "Operating lease liabilities",
+      "value_thousands": 369794,
+      "ratio": null,
+      "quote": "369,794"
+    },
+    {
+      "line": "Total debt including operating lease liabilities (a)",
+      "value_thousands": 940742,
+      "ratio": null,
+      "quote": "940,742"
+    },
+    {
+      "line": "Adjusted EBITDA (see above)",
+      "value_thousands": 99494,
+      "ratio": null,
+      "quote": "99,494"
+    },
+    {
+      "line": "Consolidated rent expense",
+      "value_thousands": 106737,
+      "ratio": null,
+      "quote": "106,737"
+    },
+    {
+      "line": "Consolidated EBITDAR (b)",
+      "value_thousands": 206231,
+      "ratio": null,
+      "quote": "206,231"
+    },
+    {
+      "line": "Net Leverage Ratio under revolving credit facility (a divided by b)",
+      "value_thousands": null,
+      "ratio": "4.56 to 1.0",
+      "quote": "4.56 to 1.0"
+    }
+  ],
+  "footnotes": [
+    {
+      "text": "Represents costs related to business restructuring actions initiated in the fourth quarter of fiscal 2023.",
+      "quote": "Represents costs related to business restructuring actions initiated in the fourth quarter of fiscal 2023."
+    },
+    {
+      "text": "Represents costs related to CEO transition activities and proxy contest costs of $0.1 million and $0, respectively, for the three months ended June 28, 2025 and $0.8 million and $2.0 million, respectively, for the trailing twelve months ended June 28, 2025. These costs were both initiated in the fourth quarter of fiscal 2024.",
+      "quote": "Represents costs related to CEO transition activities and proxy contest costs of $0.1 million and $0, respectively, for the three months ended June 28, 2025 and $0.8 million and $2.0 million, respectively, for the trailing twelve months ended"
+    },
+    {
+      "text": "Reflects operating lease liabilities included in our financial statements under ASC 842.",
+      "quote": "Reflects operating lease liabilities included in our financial statements under ASC 842."
+    }
+  ]
+}

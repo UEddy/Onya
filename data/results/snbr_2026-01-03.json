@@ -217,12 +217,12 @@
     },
     "interest_coverage": {
       "company_reported": {
-        "ratio": 1.5846867279575554,
-        "ratio_2dp": 1.58,
+        "ratio": 2.5972014094204368,
+        "ratio_2dp": 2.6,
         "threshold": 2.1,
-        "headroom": -0.5153132720424447,
-        "headroom_2dp": -0.52,
-        "pass": false
+        "headroom": 0.49720140942043667,
+        "headroom_2dp": 0.5,
+        "pass": true
       },
       "onya_strict": {
         "ratio": 2.405775383743064,

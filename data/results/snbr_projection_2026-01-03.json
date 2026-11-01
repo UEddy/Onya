@@ -93,13 +93,13 @@
   "backtest": {
     "period_end": "2026-04-04",
     "numerator": 962096000,
-    "ebitda": 43188000,
-    "ebitdar": 146254000,
+    "ebitda": 43230000,
+    "ebitdar": 146296000,
     "net_leverage": {
-      "ratio": 6.578254269968685,
+      "ratio": 6.5763657242850115,
       "ratio_2dp": 6.58,
       "threshold": 4.75,
-      "headroom": -1.828254269968685,
+      "headroom": -1.8263657242850115,
       "headroom_2dp": -1.83,
       "pass": false,
       "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
@@ -108,22 +108,22 @@
     "matched_savings": 44000000,
     "like_for_like": {
       "savings": 44000000,
-      "ebitda": 87188000,
-      "ebitdar": 190254000,
+      "ebitda": 87230000,
+      "ebitdar": 190296000,
       "net_leverage": {
-        "ratio": 5.056902877206261,
+        "ratio": 5.055786774288477,
         "ratio_2dp": 5.06,
         "threshold": 4.75,
-        "headroom": -0.3069028772062614,
+        "headroom": -0.3057867742884772,
         "headroom_2dp": -0.31,
         "pass": false,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
-        "ratio": 1.6961325966850829,
+        "ratio": 1.6969496537234456,
         "ratio_2dp": 1.7,
         "threshold": 2.1,
-        "headroom": -0.4038674033149172,
+        "headroom": -0.40305034627655445,
         "headroom_2dp": -0.4,
         "pass": false,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
@@ -132,22 +132,22 @@
     },
     "without_savings": {
       "savings": 0,
-      "ebitda": 43188000,
-      "ebitdar": 146254000,
+      "ebitda": 43230000,
+      "ebitdar": 146296000,
       "net_leverage": {
-        "ratio": 6.578254269968685,
+        "ratio": 6.5763657242850115,
         "ratio_2dp": 6.58,
         "threshold": 4.75,
-        "headroom": -1.828254269968685,
+        "headroom": -1.8263657242850115,
         "headroom_2dp": -1.83,
         "pass": false,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
-        "ratio": 0.8401680803050346,
+        "ratio": 0.8409851373433974,
         "ratio_2dp": 0.84,
         "threshold": 2.1,
-        "headroom": -1.2598319196949654,
+        "headroom": -1.2590148626566027,
         "headroom_2dp": -1.26,
         "pass": false,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"

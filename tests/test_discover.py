@@ -467,8 +467,14 @@ class FindCreditAgreements(DiscoverTestBase):
     def test_progress_output(self):
         self._route_all()
         _, out = self._find()
-        self.assertIn("1 of 5", out)
-        self.assertIn("5 of 5", out)
+        self.assertNotIn("1 of 5", out)
+        self.assertNotIn("5 of 5", out)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            edgar.find_credit_agreements("SNBR", verbose=True)
+        verbose_out = buf.getvalue()
+        self.assertIn("1 of 5", verbose_out)
+        self.assertIn("5 of 5", verbose_out)
 
     def test_accepts_cik(self):
         self._route_all_cik()
