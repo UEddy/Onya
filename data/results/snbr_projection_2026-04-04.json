@@ -1,0 +1,103 @@
+{
+  "base": "2026-04-04",
+  "next_test": "2026-07-04",
+  "next_threshold": 4.8,
+  "threshold_note": "schedule entry for 2026-07-04",
+  "ix_cap": 26000000,
+  "ix_note": "schedule entry for 2026-07-04",
+  "iv_viii_cap": 25000000,
+  "iv_viii_note": "schedule entry for 2026-07-04",
+  "baseline": {
+    "numerator": 962096000,
+    "rent": 103066000,
+    "onya_pre_proforma": 43230000,
+    "company_pre_proforma": 43230000,
+    "company_source": "fallback:onya_pre (no company EBITDA disclosed)",
+    "disclosed_proforma": 0,
+    "disclosed_source": "none disclosed (0)"
+  },
+  "projected_proforma": 0,
+  "projections": {
+    "onya": {
+      "ebitda": 43230000,
+      "ebitdar": 146296000,
+      "ratio": 6.5763657242850115,
+      "ratio_2dp": 6.58,
+      "threshold": 4.8,
+      "pass": false
+    },
+    "company": {
+      "ebitda": 43230000,
+      "ebitdar": 146296000,
+      "ratio": 6.5763657242850115,
+      "ratio_2dp": 6.58,
+      "threshold": 4.8,
+      "pass": false
+    }
+  },
+  "cushion": {
+    "required_ebitdar": 200436666.6666667,
+    "onya": -54140666.66666669,
+    "company": -54140666.66666669
+  },
+  "trend": {
+    "series": [
+      {
+        "period_end": "2025-06-28",
+        "adjusted_ebitda": 99494000
+      },
+      {
+        "period_end": "2025-09-27",
+        "adjusted_ebitda": 85062000
+      },
+      {
+        "period_end": "2026-01-03",
+        "adjusted_ebitda": 78255000
+      },
+      {
+        "period_end": "2026-04-04",
+        "adjusted_ebitda": 61963000
+      }
+    ],
+    "changes": [
+      {
+        "from": "2025-06-28",
+        "to": "2025-09-27",
+        "change": -14432000
+      },
+      {
+        "from": "2025-09-27",
+        "to": "2026-01-03",
+        "change": -6807000
+      },
+      {
+        "from": "2026-01-03",
+        "to": "2026-04-04",
+        "change": -16292000
+      }
+    ],
+    "last_two": [
+      {
+        "from": "2025-09-27",
+        "to": "2026-01-03",
+        "change": -6807000
+      },
+      {
+        "from": "2026-01-03",
+        "to": "2026-04-04",
+        "change": -16292000
+      }
+    ],
+    "avg_decline": -11549500.0
+  },
+  "quarters_of_cushion": {
+    "onya": -4.687706538522593,
+    "company": -4.687706538522593
+  },
+  "risk": {
+    "onya": "HIGH",
+    "company": "HIGH"
+  },
+  "risk_rule": "HIGH if quarters_of_cushion < 2, MEDIUM if < 4, else LOW",
+  "backtest": null
+}
