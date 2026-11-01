@@ -1,1 +1,23 @@
-{"period_end":"2026-06-30","covenants":[{"name":"Consolidated Total Leverage Ratio","direction":"max","threshold":5.0,"actual":4.37,"in_compliance":true,"waiver_or_amendment_note":"Amendment No. 1 on February 26, 2026 increased maximum from 4.25 to 5.00 through December 31, 2026 and to 4.75 through June 30, 2027","quote":"At June 30, 2026, the Company was in compliance with such covenant and the ratio was 4.37 to 1.00."},{"name":"Consolidated Interest Expense Ratio","direction":"min","threshold":3.0,"actual":4.86,"in_compliance":true,"waiver_or_amendment_note":null,"quote":"At June 30, 2026, the Company was in compliance with such covenant and the ratio was 4.86 to 1.00."}]}
+{
+ "period_end": "2026-06-30",
+ "covenants": [
+   {
+     "name": "Consolidated Total Leverage Ratio",
+     "direction": "max",
+     "threshold": 5.0,
+     "actual": 4.37,
+     "in_compliance": true,
+     "waiver_or_amendment_note": "Amendment No. 1 on February 26, 2026 increased maximum from 4.25 to 5.00 through December 31, 2026 and to 4.75 through June 30, 2027",
+     "quote": "At June 30, 2026, the Company was in compliance with such covenant and the ratio was 4.37 to 1.00."
+   },
+   {
+     "name": "Consolidated Interest Expense Ratio",
+     "direction": "min",
+     "threshold": 3.0,
+     "actual": 4.86,
+     "in_compliance": true,
+     "waiver_or_amendment_note": null,
+     "quote": "The Company must also comply with a minimum Consolidated Interest Expense Ratio of 3.00 to 1.00. At June 30, 2026, the Company was in compliance with such covenant and the ratio was 4.86 to 1.00."
+   }
+ ]
+}

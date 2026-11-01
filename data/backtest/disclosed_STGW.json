@@ -8,7 +8,9 @@
       "actual": 3.16,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "Pursuant to the Credit Agreement, the Company must maintain a Total Leverage Ratio (as defined in the Credit Agreement) below an established threshold."
+      "quote": "Pursuant to the Credit Agreement, the Company must maintain a Total Leverage Ratio (as defined in the Credit Agreement) below an established threshold.",
+      "quote_verified": true,
+      "repaired": false
     }
   ]
 }

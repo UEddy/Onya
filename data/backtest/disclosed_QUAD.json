@@ -8,7 +8,9 @@
       "actual": 2.0,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "shall not exceed 3.50 to 1.00 (for the twelve months ended June 30, 2026, the Company\u2019s Total Leverage Ratio was 2.00 to 1.00)"
+      "quote": "Total Leverage Ratio, defined as consolidated total indebtedness to consolidated EBITDA, shall not exceed 3.50 to 1.00",
+      "quote_verified": true,
+      "repaired": false
     },
     {
       "name": "Senior Secured Leverage Ratio",
@@ -17,7 +19,9 @@
       "actual": 1.99,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "shall not exceed 3.00 to 1.00 for any fiscal quarter ending on or after September 30, 2024 (for the twelve months ended June 30, 2026, the Company\u2019s Senior Secured Leverage Ratio was 1.99 to 1.00)"
+      "quote": "Senior Secured Leverage Ratio, defined as the ratio of consolidated senior secured net indebtedness to consolidated EBITDA, shall not exceed 3.00 to 1.00",
+      "quote_verified": true,
+      "repaired": false
     },
     {
       "name": "Interest Coverage Ratio",
@@ -26,7 +30,9 @@
       "actual": 5.23,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "shall not be less than 3.00 to 1.00 (for the twelve months ended June 30, 2026, the Company\u2019s Interest Coverage Ratio was 5.23 to 1.00)"
+      "quote": "Interest Coverage Ratio, defined as consolidated EBITDA to cash consolidated interest expense, shall not be less than 3.00 to 1.00",
+      "quote_verified": true,
+      "repaired": false
     },
     {
       "name": "Total Net Leverage Ratio",
@@ -35,7 +41,9 @@
       "actual": 2.14,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "The limitations described above are not currently applicable, as the Company\u2019s Senior Secured Leverage Ratio was 1.99 to 1.00 and the Total Net Leverage Ratio was 2.14 to 1.00, as of June 30, 2026."
+      "quote": "Total Net Leverage Ratio which, on a rolling twelve-month basis, is defined as consolidated net indebtedness to consolidated EBITDA, is greater than 3.50 to 1.00",
+      "quote_verified": true,
+      "repaired": false
     }
   ]
 }

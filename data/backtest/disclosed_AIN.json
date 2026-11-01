@@ -8,7 +8,9 @@
       "actual": 1.71,
       "in_compliance": true,
       "waiver_or_amendment_note": "4.25 to 1.00 after a significant acquisition",
-      "quote": "Under the Amended Credit Agreement, we are required to maintain a leverage ratio (as defined in the Credit Agreement) of not greater than 3.75 to 1.00, or 4.25 to 1.00 after a significant acquisition."
+      "quote": "Under the Amended Credit Agreement, we are required to maintain a leverage ratio (as defined in the Credit Agreement) of not greater than 3.75 to 1.00, or 4.25 to 1.00 after a significant acquisition.",
+      "quote_verified": true,
+      "repaired": false
     },
     {
       "name": "interest coverage ratio",
@@ -17,7 +19,9 @@
       "actual": 8.07,
       "in_compliance": true,
       "waiver_or_amendment_note": null,
-      "quote": "We are also required to maintain a minimum interest coverage ratio (as defined in the Credit Agreement) of greater than 3.00 to 1.00."
+      "quote": "We are also required to maintain a minimum interest coverage ratio (as defined in the Credit Agreement) of greater than 3.00 to 1.00.",
+      "quote_verified": true,
+      "repaired": false
     }
   ]
 }
