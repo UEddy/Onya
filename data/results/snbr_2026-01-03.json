@@ -254,5 +254,80 @@
       "pass": false
     },
     "note": "without lender-approved projected savings ((a)(ix)=0)"
+  },
+  "cure": {
+    "period_end": "2026-01-03",
+    "units": "USD",
+    "interest": {
+      "value": 49382000,
+      "source": "result:components[Interest expense] (xbrl:us-gaap:InterestExpenseNonoperating)"
+    },
+    "base": {
+      "net_leverage": {
+        "status": "pass",
+        "inputs": {
+          "numerator": {
+            "value": 951461000,
+            "source": "result:numerator"
+          },
+          "ebitdar": {
+            "value": 223785000,
+            "source": "result:ebitdar"
+          },
+          "threshold": {
+            "value": 4.5,
+            "source": "result:net_leverage.threshold"
+          }
+        },
+        "figures": {
+          "debt_capacity": {
+            "value": 55571500.0,
+            "formula": "threshold x EBITDAR - numerator",
+            "detail": "4.5 x $223,785,000 - $951,461,000 = $55,571,500.00"
+          },
+          "ebitda_cushion": {
+            "value": 12349222.222222209,
+            "formula": "EBITDAR - numerator / threshold",
+            "detail": "$223,785,000 - $951,461,000 / 4.5 = $12,349,222.22",
+            "note": "EBITDA could fall by this much before breaching, with rent flat"
+          }
+        },
+        "summary": "Net Leverage passes at 4.5x: $55,571,500 of additional debt fits, or EBITDA could fall by $12,349,222 before breaching."
+      },
+      "interest_coverage": {
+        "status": "pass",
+        "inputs": {
+          "ebitda": {
+            "value": 118802000,
+            "source": "result:ebitda"
+          },
+          "interest": {
+            "value": 49382000,
+            "source": "result:components[Interest expense] (xbrl:us-gaap:InterestExpenseNonoperating)"
+          },
+          "threshold": {
+            "value": 2.1,
+            "source": "result:interest_coverage.threshold"
+          }
+        },
+        "figures": {
+          "ebitda_cushion": {
+            "value": 15099800.0,
+            "formula": "EBITDA - threshold x interest",
+            "detail": "$118,802,000 - 2.1 x $49,382,000 = $15,099,800.00"
+          },
+          "interest_cushion": {
+            "value": 7190380.952380948,
+            "formula": "EBITDA / threshold - interest",
+            "detail": "$118,802,000 / 2.1 - $49,382,000 = $7,190,380.95"
+          }
+        },
+        "summary": "Interest Coverage passes at 2.1x: EBITDA exceeds the requirement by $15,099,800, or interest could rise by $7,190,381 before breaching."
+      }
+    },
+    "equity_cure": {
+      "found": false,
+      "note": "equity cure: not found in extracted terms"
+    }
   }
 }
