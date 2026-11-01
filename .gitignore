@@ -4,3 +4,4 @@ __pycache__/
 data/raw/
 data/extracted/*.txt
 data/extracted/snbr_covenants.json
+data/runs/

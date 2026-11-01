@@ -245,6 +245,24 @@ class LoadBacktest(unittest.TestCase):
                     project.load_backtest("2026-04-04", 44_000_000))
 
 
+TREND_LABEL = "company-reported Adjusted EBITDA (TTM, before covenant caps)"
+
+
+class TrendLabel(unittest.TestCase):
+    def test_compute_trend_carries_label(self):
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-01-03")
+        self.assertEqual(result["trend"]["label"], TREND_LABEL)
+
+    def test_print_uses_label(self):
+        with patch.object(project, "PROJECT_ROOT", FIXTURES):
+            result = project.compute("2026-01-03")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            project.print_result(result)
+        self.assertIn(TREND_LABEL, buf.getvalue())
+
+
 class QuartersAndRisk(unittest.TestCase):
     def test_boundaries(self):
         _, r = project.quarters_and_risk(1.99 * 100, -100)

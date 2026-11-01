@@ -877,5 +877,74 @@ class QuietMode(unittest.TestCase):
         self.assertIn("Checking filing 1 of 1", buf.getvalue())
 
 
+TREND_LABEL = "company-reported Adjusted EBITDA (TTM, before covenant caps)"
+
+
+class TrendLabelPassthrough(unittest.TestCase):
+    def test_project_passes_trend_label(self):
+        payload = {"base": "2026-01-03", "next_test": "2026-04-04",
+                   "next_threshold": 4.75, "threshold_note": "n",
+                   "ix_cap": 44000000, "ix_note": "i", "iv_viii_cap": 1,
+                   "projected_proforma": 44000000,
+                   "projections": {
+                       "onya": {"ratio_2dp": 6.1, "threshold": 4.75,
+                                "pass": False, "ebitdar": 100},
+                       "company": {"ratio_2dp": 5.9, "threshold": 4.75,
+                                   "pass": False, "ebitdar": 110}},
+                   "cushion": {"onya": -5}, "quarters_of_cushion": {"onya": 1.2},
+                   "risk": {"onya": "HIGH"}, "risk_rule": "r",
+                   "trend": {"label": TREND_LABEL, "avg_decline": -3,
+                             "series": []},
+                   "backtest": None}
+        with (patch.object(agent.project, "compute", return_value=payload),
+              patch.object(agent.project, "save_result",
+                            return_value=Path("/tmp/p.json"))):
+            agent.reset_corpus()
+            result = agent.tool_project_next_test("SNBR", "2026-01-03")
+        self.assertEqual(result["trend_label"], TREND_LABEL)
+
+
+class EquityCureReporting(unittest.TestCase):
+    def test_cure_passes_equity_present_and_terms(self):
+        payload = {"period_end": "2026-04-04", "units": "USD",
+                   "interest": {"value": 51404000},
+                   "base": {
+                       "net_leverage": {"status": "fail", "figures": {},
+                                        "summary": "fails"},
+                       "interest_coverage": {"status": "fail", "figures": {},
+                                             "summary": "fails"}},
+                   "equity_cure": {"found": True, "present": True,
+                                   "section": "5.7(f)",
+                                   "max_uses": "twice",
+                                   "limits": "capped",
+                                   "how_applied": "deemed EBITDA",
+                                   "quote": "Equity Cure"}}
+        with (patch.object(agent.cure, "compute", return_value=payload),
+              patch.object(agent.cure, "save_result",
+                            return_value=Path("/tmp/c.json"))):
+            agent.reset_corpus()
+            result = agent.tool_cure_analysis("SNBR", "2026-04-04")
+        eq = result["equity_cure"]
+        self.assertTrue(eq["present"])
+        self.assertEqual(eq["section"], "5.7(f)")
+        self.assertEqual(eq["how_applied"], "deemed EBITDA")
+
+    def test_extract_summary_includes_equity_cure(self):
+        summary = agent.summarize_extraction({
+            "borrower": "B", "agreement": {},
+            "financial_covenants": [], "cap_groups": [], "definitions": [],
+            "equity_cure": {"present": False, "section": None,
+                            "max_uses": None, "limits": None,
+                            "how_applied": None, "quote": None}})
+        self.assertIn("equity_cure", summary)
+        self.assertFalse(summary["equity_cure"]["present"])
+
+    def test_system_prompt_equity_cure_rule(self):
+        self.assertIn('never say "no equity cure available"',
+                      agent.SYSTEM_PROMPT)
+        self.assertIn("equity_cure.present is false",
+                      agent.SYSTEM_PROMPT)
+
+
 if __name__ == "__main__":
     unittest.main()

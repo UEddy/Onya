@@ -275,6 +275,44 @@ class EquityCure(unittest.TestCase):
         self.assertNotIn("not found in extracted terms", out)
 
 
+class EquityCureField(unittest.TestCase):
+    def test_present_true_reported_from_field(self):
+        contract = {"equity_cure": {
+            "present": True, "section": "5.7(f)",
+            "max_uses": "twice in any four-quarter period",
+            "limits": "cure amount capped at $10,000,000",
+            "how_applied": "deemed increase to Consolidated EBITDA",
+            "quote": "the Borrower may effect an Equity Cure"}}
+        c = _compute(_result_2026_04_04(), contract=contract)
+        eq = c["equity_cure"]
+        self.assertTrue(eq["found"])
+        self.assertTrue(eq["present"])
+        self.assertEqual(eq["section"], "5.7(f)")
+        self.assertEqual(eq["limits"], "cure amount capped at $10,000,000")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cure.print_result(c)
+        out = buf.getvalue()
+        self.assertIn("5.7(f)", out)
+        self.assertNotIn("not found in extracted terms", out)
+
+    def test_present_false_ignores_stray_wording(self):
+        contract = {
+            "equity_cure": {"present": False, "section": None,
+                            "max_uses": None, "limits": None,
+                            "how_applied": None, "quote": None},
+            "notes": ["an equity cure cash contribution cures breach"],
+        }
+        c = _compute(_result_2026_04_04(), contract=contract)
+        self.assertFalse(c["equity_cure"]["found"])
+        self.assertFalse(c["equity_cure"]["present"])
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cure.print_result(c)
+        self.assertIn("equity cure: not found in extracted terms",
+                      buf.getvalue())
+
+
 class SaveAndErrors(unittest.TestCase):
     def test_save_adds_cure_key_preserving_rest(self):
         with tempfile.TemporaryDirectory() as tmp:

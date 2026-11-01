@@ -357,7 +357,7 @@ def _extract_title(head):
     return fallback
 
 
-def find_credit_agreements(ticker_or_cik):
+def find_credit_agreements(ticker_or_cik, verbose=False):
     """Candidate credit-agreement exhibits across 8-K/10-K/10-Q since 2023.
 
     Only 8-Ks reporting item 1.01 or 2.03 are checked, plus all 10-Ks
@@ -374,13 +374,15 @@ def find_credit_agreements(ticker_or_cik):
     "means"), a financial-covenant section (Financial Covenant,
     Leverage Ratio, or Coverage Ratio), and over 150,000 characters;
     ``char_count``/``character_count`` records the full-text length.
+    Progress lines print only when verbose is True (the CLI
+    discover/select commands); library and agent callers stay quiet.
     """
     cik10 = get_cik(ticker_or_cik)
     cik_plain = _cik_plain(cik10)
     filings = list_filings(cik10, forms=("8-K", "10-K", "10-Q"), since="2023-01-01")
     to_check = [f for f in filings if _wants_index_page(f)]
     skipped = len(filings) - len(to_check)
-    if skipped:
+    if skipped and verbose:
         print(
             f"Skipping {skipped} 8-K(s) without item 1.01/2.03; "
             f"checking {len(to_check)} of {len(filings)} filings"
@@ -388,11 +390,12 @@ def find_credit_agreements(ticker_or_cik):
     total = len(to_check)
     candidates = []
     for i, filing in enumerate(to_check, 1):
-        print(
-            f"Checking filing {i} of {total}: "
-            f"{filing['form']} {filing['filingDate']} "
-            f"{filing['accessionNumber']}"
-        )
+        if verbose:
+            print(
+                f"Checking filing {i} of {total}: "
+                f"{filing['form']} {filing['filingDate']} "
+                f"{filing['accessionNumber']}"
+            )
         acc = filing["accessionNumber"].replace("-", "")
         try:
             docs = filing_documents(cik10, filing["accessionNumber"])
@@ -452,9 +455,9 @@ def find_credit_agreements(ticker_or_cik):
     return candidates
 
 
-def discover(ticker_or_cik, limit=10):
+def discover(ticker_or_cik, limit=10, verbose=False):
     """Top `limit` credit-agreement candidates for a ticker or CIK, newest first."""
-    return find_credit_agreements(ticker_or_cik)[:limit]
+    return find_credit_agreements(ticker_or_cik, verbose=verbose)[:limit]
 
 
 def format_candidate(i, cand):
@@ -472,7 +475,7 @@ def format_candidate(i, cand):
 
 
 def run_discover_cli(ticker_or_cik):
-    found = discover(ticker_or_cik)
+    found = discover(ticker_or_cik, verbose=True)
     if not found:
         print(f"No credit-agreement candidates found for {ticker_or_cik}.")
     for i, cand in enumerate(found, 1):
@@ -552,7 +555,7 @@ def _as_of_str(as_of):
     return str(as_of).strip()[:10]
 
 
-def select_agreement(ticker_or_cik, as_of=None):
+def select_agreement(ticker_or_cik, as_of=None, verbose=False):
     """Newest complete agreement on/before as_of plus newer amendments.
 
     Base is the newest candidate with ``is_complete`` True filed on or
@@ -561,10 +564,11 @@ def select_agreement(ticker_or_cik, as_of=None):
     ``as_of`` with ``is_amendment`` True and ``is_complete`` falsy,
     oldest first so they apply in order after the base.
     Returns AgreementSelection(base, amendments); base is None when no
-    complete candidate qualifies.
+    complete candidate qualifies. Progress lines print only when
+    verbose is True.
     """
     cutoff = _as_of_str(as_of)
-    cands = find_credit_agreements(ticker_or_cik)
+    cands = find_credit_agreements(ticker_or_cik, verbose=verbose)
     if cutoff:
         cands = [c for c in cands if (c.get("filingDate") or "") <= cutoff]
     base = next((c for c in cands if c.get("is_complete")), None)
@@ -600,7 +604,8 @@ def format_select_candidate(cand):
 
 
 def run_select_cli(ticker_or_cik, as_of=None):
-    base, amendments = select_agreement(ticker_or_cik, as_of=as_of)
+    base, amendments = select_agreement(ticker_or_cik, as_of=as_of,
+                                        verbose=True)
     if base is None:
         print(f"No complete agreement found for {ticker_or_cik}.")
         return

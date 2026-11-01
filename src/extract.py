@@ -49,6 +49,7 @@ SCHEMA = """{
      "quote": str }],
    "quote": str }],
  "specified_defaults": [{"covenant_id": str, "period_end": "YYYY-MM-DD", "description": str, "quote": str}],
+ "equity_cure": {"present": bool, "section": str|null, "max_uses": str|null, "limits": str|null, "how_applied": str|null, "quote": str|null},
  "uncertainties": [str]
 }"""
 
@@ -69,6 +70,7 @@ Rules:
 - Capture any condition on a threshold or cap amount in "condition" (e.g. the $4,000,000 cap for the period ending January 2, 2027 applies only if One Hundred Percent Lender Consent has been obtained).
 - Cover at least: the Net Leverage Ratio covenant, the Interest Coverage Ratio covenant, the minimum Consolidated Adjusted EBITDA test, and the definitions of Consolidated EBITDA, Consolidated EBITDAR, Consolidated Funded Indebtedness, Net Leverage Ratio, Interest Coverage Ratio, Indebtedness, Consolidated Rent Expense, Consolidated Interest Expense, Consolidated Net Earnings, and Liquidity.
 - For ratio definitions, the formula_summary must state the numerator and denominator explicitly, including any rent, lease, or cash adjustments.
+- For "equity_cure": set present=false only if the agreement contains no equity cure, cure right, or specified equity contribution provision. When present is true, fill section, max_uses, limits, and how_applied from the provision and copy a verbatim quote (max 40 words); when false, set section, max_uses, limits, how_applied, and quote to null.
 - "period_end" and "applies_after" must use YYYY-MM-DD format when not null.
 - "direction" must be "max" or "min". "unit" must be "ratio", "percent_of_forecast", or "usd". "sign" must be "+" or "-". "publicly_verifiable" must be "yes", "partial", or "no".
 - List anything ambiguous or not found in "uncertainties".

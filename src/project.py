@@ -6,7 +6,7 @@ Baseline "no operating change" from a base period result:
 - pro forma savings = min(disclosed amount at base, new (a)(ix) cap),
 - project the Net Leverage ratio on Onya-strict and company bases,
 - cushion = EBITDAR - numerator / next threshold (dollars),
-- trend from company Adjusted EBITDA (TTM) in release files,
+- trend from company-reported Adjusted EBITDA (TTM, before covenant caps),
 - quarters_of_cushion = cushion / |avg_decline|, risk HIGH/MEDIUM/LOW,
 - backtest like-for-like: the actual scenario with the same pro forma
   savings as projected, plus the actual without savings.
@@ -29,6 +29,7 @@ import covenant  # noqa: E402
 
 DEFAULT_BASE = "2026-01-03"
 RISK_RULE = "HIGH if quarters_of_cushion < 2, MEDIUM if < 4, else LOW"
+TREND_LABEL = "company-reported Adjusted EBITDA (TTM, before covenant caps)"
 
 
 def resolve_base(argv=None):
@@ -203,12 +204,13 @@ def cushions(projections, numerator, threshold):
 
 
 def load_trend(base):
-    """Read company Adjusted EBITDA (TTM) for each release period <= base.
+    """Read company-reported Adjusted EBITDA (TTM) for each period <= base.
 
-    Uses adjusted_ebitda_ttm[Adjusted EBITDA] (value_thousands * 1000).
-    Returns series, quarter-over-quarter changes, and avg_decline, the
-    mean of the negative changes over the last 2 quarters (None when
-    there is no negative change in that window).
+    Uses adjusted_ebitda_ttm[Adjusted EBITDA] (value_thousands * 1000),
+    before covenant caps. Returns the series label, the series,
+    quarter-over-quarter changes, and avg_decline, the mean of the
+    negative changes over the last 2 quarters (None when there is no
+    negative change in that window).
     """
     extracted = PROJECT_ROOT / "data" / "extracted"
     series = []
@@ -246,6 +248,7 @@ def load_trend(base):
     negatives = [c["change"] for c in last_two if c["change"] < 0]
     avg_decline = (sum(negatives) / len(negatives)) if negatives else None
     return {
+        "label": TREND_LABEL,
         "series": series,
         "changes": changes,
         "last_two": last_two,
@@ -387,7 +390,7 @@ def print_result(result):
     t = result["trend"]
     seq = ", ".join(f"{r['period_end']}={_fmt_dollars(r['adjusted_ebitda'])}"
                     for r in t["series"])
-    print(f"company Adjusted EBITDA (TTM) up to base: {seq or 'n/a'}")
+    print(f"{t.get('label', TREND_LABEL)} up to base: {seq or 'n/a'}")
     chg = ", ".join(f"{r['from']}->{r['to']}={_fmt_dollars(r['change'])}"
                     for r in t["changes"])
     print(f"quarter-over-quarter TTM changes: {chg or 'n/a'}")

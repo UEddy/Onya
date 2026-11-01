@@ -799,6 +799,14 @@
       "quote": "that representation and warranty was not true when made (or required to be made) after the occurrence of the first Specified Default,"
     }
   ],
+  "equity_cure": {
+    "present": false,
+    "section": null,
+    "max_uses": null,
+    "limits": null,
+    "how_applied": null,
+    "quote": null
+  },
   "uncertainties": [
     "Consolidated Adjusted EBITDA Forecast values in Schedule 5.7(d) not included in extracted text so forecast dollar amounts cannot be verified",
     "Whether Liquidity thresholds in Section 5.7(c) should be treated as period-end tests or weekly/monthly point-in-time tests for threshold dating",

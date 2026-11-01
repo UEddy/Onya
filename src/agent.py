@@ -60,14 +60,14 @@ EDGAR company-name search). Returns candidates with cik, name, and source.
 via EDGAR. Returns compact metadata only, newest first. Accepts a name, ticker, or CIK.
 - extract_covenants(company, agreement_url, as_of?): download, textify, LLM-extract, and \
 quote-verify a credit agreement. Returns thresholds, cap groups, definition terms, \
-verification counts, and the saved path. Prefers an existing reviewed extraction when \
-one is available.
+the equity_cure field, verification counts, and the saved path. Prefers an existing \
+reviewed extraction when one is available.
 - compute_covenants(company, period_end, as_of?): covenant ratios, thresholds, headroom, \
 pass/fail, flags, labels, and scenarios. SNBR only for now.
 - project_next_test(company, base_period, as_of?): baseline projection to the next Net \
 Leverage test with cushions, trend risk, and backtest. SNBR only for now.
 - cure_analysis(company, period_end, as_of?): dollar cure figures per covenant plus \
-equity-cure status. SNBR only for now.
+equity-cure status from the reviewed file's equity_cure field. SNBR only for now.
 - draft_memo(company, period_end, draft, as_of?): submit your watchlist memo prose in the \
 'draft' argument; every number, amendment ordinal, and document title in it is verified \
 against prior tool outputs and any invented figure is flagged. Always call this before \
@@ -89,6 +89,8 @@ outputs; never name or number an amendment yourself (no invented "first amendmen
 "13th amendment", or document title).
 - When compute_covenants reports reconciliation as "not available (no company leverage \
 table disclosed)", say exactly that in the memo; never write "no break".
+- Report equity-cure status only from the reviewed file's equity_cure field: never say \
+"no equity cure available" unless equity_cure.present is false in the reviewed file.
 - Spell out small counts ("two covenants") instead of using digits that never appeared \
 in tool outputs.
 - If a tool says "unsupported" (anything beyond SNBR for compute/project/cure), say \
@@ -323,7 +325,7 @@ def verify_memo_numbers(draft, tool_outputs):
     A draft number passes when its digits appear verbatim (after stripping
     $, commas, %, and x), when it is a year from a tool-output date, or
     when it equals a tool-output value within rounding tolerance (so
-    "$267.4M" matches $267,389,500 and "6.58" matches 6.57825...).
+    "$267.2M" matches $267,190,000 and "6.58" matches 6.57636...).
     Returns counts plus the list of unverified (likely invented) numbers.
     """
     corpus_text = json.dumps(tool_outputs or [], default=str)
@@ -758,11 +760,21 @@ def summarize_extraction(data):
         })
     terms = sorted({d.get("term") for d in data.get("definitions", []) or []
                     if d.get("term")})
+    field = data.get("equity_cure")
+    if isinstance(field, dict):
+        equity_cure = {"present": field.get("present"),
+                       "section": field.get("section"),
+                       "max_uses": field.get("max_uses"),
+                       "limits": field.get("limits"),
+                       "how_applied": field.get("how_applied")}
+    else:
+        equity_cure = None
     return {"borrower": data.get("borrower"),
             "agreement": data.get("agreement"),
             "financial_covenants": covenants,
             "cap_groups": caps,
-            "definition_terms": terms}
+            "definition_terms": terms,
+            "equity_cure": equity_cure}
 
 
 def tool_extract_covenants(company, agreement_url, as_of=None,
@@ -1023,6 +1035,7 @@ def tool_project_next_test(company, base_period, as_of=None):
         "cushion": result.get("cushion"),
         "quarters_of_cushion": result.get("quarters_of_cushion"),
         "risk": result.get("risk"), "risk_rule": result.get("risk_rule"),
+        "trend_label": trend.get("label", project.TREND_LABEL),
         "trend_avg_decline": trend.get("avg_decline"),
         "trend_series": trend.get("series", []),
         "backtest": back,
@@ -1080,7 +1093,14 @@ def tool_cure_analysis(company, period_end, as_of=None):
                 (result.get("base") or {}).get("interest_coverage")),
         },
         "scenarios": scenarios,
-        "equity_cure": {"found": eq.get("found"), "note": eq.get("note")},
+        "equity_cure": {"found": eq.get("found"),
+                        "present": eq.get("present"),
+                        "section": eq.get("section"),
+                        "max_uses": eq.get("max_uses"),
+                        "limits": eq.get("limits"),
+                        "how_applied": eq.get("how_applied"),
+                        "quote": eq.get("quote"),
+                        "note": eq.get("note")},
         "saved_path": saved,
     })
 
@@ -1208,7 +1228,8 @@ TOOL_SCHEMAS = [
         "description": ("Dollar cure figures for each covenant at a filed "
                         "period (debt reduction / EBITDA increase needed, or "
                         "capacity/cushion when passing) plus equity-cure "
-                        "status. SNBR only."),
+                        "status from the reviewed equity_cure field. "
+                        "SNBR only."),
         "parameters": {"type": "object", "properties": {
             "company": {"type": "string",
                         "description": "Company name, ticker, or CIK"},

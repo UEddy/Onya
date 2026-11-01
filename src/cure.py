@@ -13,8 +13,10 @@ much debt must fall or EBITDA must rise to pass each covenant:
   interest - EBITDA / threshold. Passing -> ebitda_cushion and
   interest_cushion.
 
-Equity cure is reported only when the reviewed contract JSON contains an
-equity cure provision; it is never assumed. Run from the project root::
+Equity cure is reported from the reviewed contract's "equity_cure"
+field (present, section, max_uses, limits, how_applied, quote); contracts
+without that field fall back to a text scan. It is never assumed.
+Run from the project root::
 
     python src/cure.py [period_end]
 
@@ -61,12 +63,41 @@ def component_value(result, name):
     raise ValueError(f"component not found in result file: {name}")
 
 
+def equity_cure_from_field(contract):
+    """Return the equity-cure report from the contract's equity_cure field.
+
+    Returns None when the contract has no equity_cure object with a
+    "present" flag (legacy contracts fall back to find_equity_cure).
+    Otherwise "found" mirrors "present" and the section, max_uses,
+    limits, how_applied, and quote come straight from the field.
+    """
+    field = contract.get("equity_cure")
+    if not isinstance(field, dict) or "present" not in field:
+        return None
+    present = bool(field.get("present"))
+    report = {
+        "found": present,
+        "present": present,
+        "section": field.get("section"),
+        "max_uses": field.get("max_uses"),
+        "limits": field.get("limits"),
+        "how_applied": field.get("how_applied"),
+        "quote": field.get("quote"),
+    }
+    if present:
+        report["note"] = "equity cure provision in reviewed extraction"
+    else:
+        report["note"] = EQUITY_CURE_NOT_FOUND
+    return report
+
+
 def find_equity_cure(contract):
     """Return equity-cure provisions found in the contract JSON.
 
-    Walks every string value; a hit must mention both "equity" and
-    "cure" (case-insensitive). Returns a list of {"path", "text"}
-    hits, or an empty list when the contract has no such provision.
+    Legacy text scan for contracts without an equity_cure field: walks
+    every string value; a hit must mention both "equity" and "cure"
+    (case-insensitive). Returns a list of {"path", "text"} hits, or an
+    empty list when the contract has no such provision.
     """
     hits = []
 
@@ -250,12 +281,15 @@ def compute(period_end):
                 interest_source),
         })
 
-    hits = find_equity_cure(contract)
-    if hits:
-        equity_cure = {"found": True, "provisions": hits,
-                       "note": "equity cure provision(s) in extracted terms"}
-    else:
-        equity_cure = {"found": False, "note": EQUITY_CURE_NOT_FOUND}
+    equity_cure = equity_cure_from_field(contract)
+    if equity_cure is None:
+        hits = find_equity_cure(contract)
+        if hits:
+            equity_cure = {
+                "found": True, "provisions": hits,
+                "note": "equity cure provision(s) in extracted terms"}
+        else:
+            equity_cure = {"found": False, "note": EQUITY_CURE_NOT_FOUND}
 
     cure = {
         "period_end": period_end,
@@ -308,8 +342,16 @@ def print_result(cure):
         print_scenario(f"pro forma savings=${sc['savings']:,}", sc)
     eq = cure["equity_cure"]
     if eq["found"]:
-        for prov in eq["provisions"]:
-            print(f"equity cure ({prov['path']}): {prov['text']}")
+        if "provisions" in eq:
+            for prov in eq["provisions"]:
+                print(f"equity cure ({prov['path']}): {prov['text']}")
+        else:
+            print(f"equity cure present: section={eq.get('section') or 'n/a'} "
+                  f"max_uses={eq.get('max_uses') or 'n/a'} "
+                  f"limits={eq.get('limits') or 'n/a'} "
+                  f"how_applied={eq.get('how_applied') or 'n/a'}")
+            if eq.get("quote"):
+                print(f"equity cure quote: {eq['quote']}")
     else:
         print(EQUITY_CURE_NOT_FOUND)
 
