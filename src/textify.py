@@ -20,20 +20,16 @@ def _is_struck(tag) -> bool:
     return bool(style) and bool(LINE_THROUGH_RE.search(style))
 
 
-def textify(in_path, out_path) -> tuple[int, int]:
-    """Parse HTML at in_path, drop struck-through elements, save text to out_path.
+def html_to_text_with_stats(html) -> tuple[str, int]:
+    """Clean HTML to text, dropping struck-through elements.
 
     Removes every element whose tag is s, strike, or del, or whose style
     contains "line-through" (case-insensitive, any spacing). Extracts text
-    with newlines between block elements, collapses runs of blank lines,
-    and saves UTF-8 text.
+    with newlines between block elements and collapses runs of blank lines.
 
-    Returns (character_count, removed_count).
+    Returns (text, removed_count).
     """
-    in_path = Path(in_path)
-    out_path = Path(out_path)
-
-    soup = BeautifulSoup(in_path.read_bytes(), "html.parser")
+    soup = BeautifulSoup(html, "html.parser")
 
     matches = soup.find_all(_is_struck)
     removed = 0
@@ -48,6 +44,29 @@ def textify(in_path, out_path) -> tuple[int, int]:
     text = BLANK_RUN_RE.sub("\n\n", "\n".join(lines)).strip()
     if text:
         text += "\n"
+    return text, removed
+
+
+def html_to_text(html) -> str:
+    """Clean HTML to text, dropping struck-through elements."""
+    text, _ = html_to_text_with_stats(html)
+    return text
+
+
+def textify(in_path, out_path) -> tuple[int, int]:
+    """Parse HTML at in_path, drop struck-through elements, save text to out_path.
+
+    Removes every element whose tag is s, strike, or del, or whose style
+    contains "line-through" (case-insensitive, any spacing). Extracts text
+    with newlines between block elements, collapses runs of blank lines,
+    and saves UTF-8 text.
+
+    Returns (character_count, removed_count).
+    """
+    in_path = Path(in_path)
+    out_path = Path(out_path)
+
+    text, removed = html_to_text_with_stats(in_path.read_bytes())
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8")
