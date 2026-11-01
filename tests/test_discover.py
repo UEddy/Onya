@@ -5,7 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -424,6 +424,9 @@ class FindCreditAgreements(DiscoverTestBase):
                     "title",
                     "is_forbearance",
                     "is_amendment",
+                    "is_complete",
+                    "char_count",
+                    "character_count",
                 },
             )
 
@@ -481,10 +484,10 @@ class FindCreditAgreements(DiscoverTestBase):
         self.assertEqual(
             by_url["ex101-forbearance.htm"]["title"], "FORBEARANCE AGREEMENT"
         )
-        # First line without an INCLUDE match is skipped.
+        # Uppercase AMENDMENT line wins even without an INCLUDE match.
         self.assertEqual(
             by_url["ex101creditagreement.htm"]["title"],
-            "CREDIT AND SECURITY AGREEMENT",
+            "THIRTEENTH AMENDMENT TO",
         )
         self.assertEqual(
             by_url["ex102.htm"]["title"],
@@ -675,6 +678,301 @@ class Discover(DiscoverTestBase):
         self.assertIn("CREDIT AND SECURITY AGREEMENT", out)
         self.assertIn("[FORBEARANCE]", out)
         self.assertIn("[AMENDMENT]", out)
+
+
+class ExhibitTypeRegex(unittest.TestCase):
+    def test_matches_ex10_variants(self):
+        for typ in ("EX-10", "EX-10.1", "EX-10.2", "ex-10.10", " ex-10.1 "):
+            self.assertTrue(
+                bool(edgar.EXHIBIT_TYPE_RE.match(typ.strip())),
+                f"should match: {typ!r}",
+            )
+
+    def test_rejects_xbrl_and_other(self):
+        for typ in ("EX-101", "EX-101.SCH", "EX-101.CAL", "EX-99.1", "8-K", "EX-10.1/A"):
+            self.assertFalse(
+                bool(edgar.EXHIBIT_TYPE_RE.match(typ)),
+                f"should reject: {typ!r}",
+            )
+
+
+class ExhibitTypeIntegration(DiscoverTestBase):
+    def test_ex101_sch_excluded(self):
+        subs = {
+            "cik": "0000827187",
+            "filings": {
+                "recent": {
+                    "accessionNumber": ["0000827187-25-000123"],
+                    "filingDate": ["2025-11-10"],
+                    "reportDate": ["2025-11-10"],
+                    "form": ["10-K"],
+                    "primaryDocument": ["snbr-20251110.htm"],
+                    "items": [""],
+                }
+            },
+        }
+        self.fetch.add("submissions/CIK", subs)
+        nodash = "000082718725000123"
+        rows = [
+            {
+                "name": "credit.htm",
+                "type": "EX-10.1",
+                "description": "Credit Agreement",
+            },
+            {
+                "name": "xbrl.sch",
+                "type": "EX-101.SCH",
+                "description": "Credit Agreement XBRL",
+            },
+        ]
+        self.fetch.add("credit.htm", EXHIBIT_HTML["ex101-credit.htm"])
+        # Would be included by text if the type matched.
+        self.fetch.add("xbrl.sch", EXHIBIT_HTML["ex101-credit.htm"])
+        self.fetch.add(nodash, _index_html(nodash, rows))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cands = edgar.find_credit_agreements("827187")
+        urls = " ".join(c["url"] for c in cands)
+        self.assertIn("credit.htm", urls)
+        self.assertNotIn("xbrl.sch", urls)
+        fetched = " ".join(u for u, _ in self.fetch.calls)
+        self.assertNotIn("xbrl.sch", fetched)
+
+
+class UppercaseTitle(unittest.TestCase):
+    def test_uppercase_wins_over_mid_sentence_fragment(self):
+        head = (
+            "This amendment to the Credit Agreement, dated as of March 1, 2025,\n"
+            "is entered into by and among the parties hereto.\n"
+            "\n"
+            "SECOND AMENDED AND RESTATED CREDIT AGREEMENT\n"
+            "Dated as of March 1, 2025.\n"
+        )
+        self.assertEqual(
+            edgar._extract_title(head),
+            "SECOND AMENDED AND RESTATED CREDIT AGREEMENT",
+        )
+
+    def test_mixed_case_falls_back_to_include_match(self):
+        head = (
+            "This Credit Agreement is entered into as of March 1, 2025.\n"
+            "Some other line here.\n"
+        )
+        self.assertEqual(
+            edgar._extract_title(head),
+            "This Credit Agreement is entered into as of March 1, 2025.",
+        )
+
+    def test_below_threshold_not_uppercase(self):
+        # Only ~30% uppercase letters: not mostly uppercase.
+        line = "Amendment to the credit agreement dated March 2025"
+        self.assertFalse(edgar._is_mostly_uppercase(line))
+        self.assertTrue(edgar._is_mostly_uppercase("AMENDMENT TO CREDIT AGREEMENT"))
+
+    def test_beyond_1500_chars_ignored(self):
+        first = "This Credit Agreement is entered into as of March 1, 2025."
+        head = first + "\n" + "x" * 1600 + "\nCREDIT AGREEMENT\n"
+        # Uppercase title beyond 1,500 chars does not win; fallback to
+        # the first INCLUDE match (the mixed-case fragment).
+        self.assertEqual(edgar._extract_title(head), first)
+
+
+def _long_text(with_ebitda=True, with_covenant=True, length=160000, ebitda_means=False):
+    parts = ["CREDIT AGREEMENT"]
+    if with_ebitda:
+        if ebitda_means:
+            parts.append('"EBITDA" means net income plus interest, taxes and depreciation.')
+        else:
+            parts.append('"Consolidated EBITDA" means consolidated net income plus add-backs.')
+    if with_covenant:
+        parts.append("Section 7. Financial Covenant: the Leverage Ratio shall not exceed 3.50.")
+    parts.append("X" * length)
+    return "\n".join(parts) + "\n"
+
+
+class IsCompleteUnit(unittest.TestCase):
+    def test_true_with_consolidated_ebitda(self):
+        self.assertTrue(edgar._is_complete_text(_long_text()))
+
+    def test_true_with_ebitda_means(self):
+        self.assertTrue(edgar._is_complete_text(_long_text(ebitda_means=True)))
+
+    def test_false_when_short(self):
+        self.assertFalse(edgar._is_complete_text(_long_text(length=100)))
+
+    def test_false_without_ebitda(self):
+        self.assertFalse(edgar._is_complete_text(_long_text(with_ebitda=False)))
+
+    def test_false_without_covenant(self):
+        self.assertFalse(edgar._is_complete_text(_long_text(with_covenant=False)))
+
+    def test_true_with_coverage_ratio(self):
+        text = (
+            "CREDIT AGREEMENT\nConsolidated EBITDA defined herein.\n"
+            "The Coverage Ratio shall be tested quarterly.\n" + "Y" * 160000
+        )
+        self.assertTrue(edgar._is_complete_text(text))
+
+
+class IsCompleteIntegration(DiscoverTestBase):
+    def test_top5_full_text_marks_complete(self):
+        subs = {
+            "cik": "0000827187",
+            "filings": {
+                "recent": {
+                    "accessionNumber": ["0000827187-25-000123"],
+                    "filingDate": ["2025-11-10"],
+                    "reportDate": ["2025-11-10"],
+                    "form": ["10-K"],
+                    "primaryDocument": ["snbr-20251110.htm"],
+                    "items": [""],
+                }
+            },
+        }
+        self.fetch.add("submissions/CIK", subs)
+        nodash = "000082718725000123"
+        rows = [
+            {"name": "big.htm", "type": "EX-10.1", "description": "Credit Agreement"},
+            {"name": "small.htm", "type": "EX-10.2", "description": "Credit Agreement"},
+        ]
+        big_text = _long_text()
+        big_html = (
+            "<html><body><p>CREDIT AGREEMENT</p>"
+            f"<p>{big_text[:5000]}</p><p>{'Z' * 160000}</p></body></html>"
+        )
+        # Ensure the full-text markers survive in the HTML version.
+        big_html = (
+            "<html><body><p>CREDIT AGREEMENT</p>"
+            "<p>Consolidated EBITDA means consolidated net income.</p>"
+            "<p>Section 7. Financial Covenant and Leverage Ratio tests.</p>"
+            f"<p>{'Z' * 160000}</p></body></html>"
+        )
+        small_html = EXHIBIT_HTML["ex101-credit.htm"]
+        self.fetch.add("big.htm", big_html)
+        self.fetch.add("small.htm", small_html)
+        self.fetch.add(nodash, _index_html(nodash, rows))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            cands = edgar.find_credit_agreements("827187")
+        by_url = {c["url"].rsplit("/", 1)[-1]: c for c in cands}
+        self.assertTrue(by_url["big.htm"]["is_complete"])
+        self.assertGreater(by_url["big.htm"]["char_count"], 150000)
+        self.assertEqual(
+            by_url["big.htm"]["char_count"], by_url["big.htm"]["character_count"]
+        )
+        self.assertFalse(by_url["small.htm"]["is_complete"])
+
+
+def _cand(filing_date, complete=False, amendment=False, name="ex.htm"):
+    return {
+        "url": f"https://example.invalid/{filing_date}/{name}",
+        "filingDate": filing_date,
+        "form": "8-K",
+        "description": name,
+        "title": "TITLE " + filing_date,
+        "is_forbearance": False,
+        "is_amendment": amendment,
+        "is_complete": complete,
+        "char_count": 200000 if complete else 5000,
+        "character_count": 200000 if complete else 5000,
+    }
+
+
+class SelectAgreement(unittest.TestCase):
+    def _fake(self):
+        # Newest first, as find_credit_agreements returns.
+        return [
+            _cand("2025-11-10", complete=False, amendment=True, name="amend2.htm"),
+            _cand("2025-10-01", complete=False, amendment=False, name="other.htm"),
+            _cand("2025-09-27", complete=False, amendment=True, name="amend1.htm"),
+            _cand("2025-03-01", complete=True, amendment=False, name="base.htm"),
+            _cand("2024-01-15", complete=True, amendment=False, name="oldbase.htm"),
+        ]
+
+    def test_base_is_newest_complete(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            base, amendments = edgar.select_agreement("SNBR")
+        self.assertEqual(base["filingDate"], "2025-03-01")
+        self.assertTrue(base["is_complete"])
+
+    def test_amendments_newer_oldest_first_excludes_non_amendment(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            base, amendments = edgar.select_agreement("SNBR")
+        self.assertEqual(
+            [c["filingDate"] for c in amendments], ["2025-09-27", "2025-11-10"]
+        )
+        for c in amendments:
+            self.assertTrue(c["is_amendment"])
+            self.assertFalse(c["is_complete"])
+
+    def test_dict_style_access(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            result = edgar.select_agreement("SNBR")
+        self.assertEqual(result["base"]["filingDate"], "2025-03-01")
+        self.assertEqual(len(result["amendments"]), 2)
+        self.assertEqual(result.base["filingDate"], "2025-03-01")
+        self.assertEqual(len(result.amendments), 2)
+
+    def test_as_of_filters_base_and_amendments(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            base, amendments = edgar.select_agreement("SNBR", as_of="2025-10-01")
+        self.assertEqual(base["filingDate"], "2025-03-01")
+        self.assertEqual([c["filingDate"] for c in amendments], ["2025-09-27"])
+
+    def test_as_of_before_base_picks_older(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            base, amendments = edgar.select_agreement("SNBR", as_of="2025-01-01")
+        self.assertEqual(base["filingDate"], "2024-01-15")
+        self.assertEqual(amendments, [])
+
+    def test_as_of_before_all_complete(self):
+        with patch.object(edgar, "find_credit_agreements", return_value=self._fake()):
+            base, amendments = edgar.select_agreement("SNBR", as_of="2023-01-01")
+        self.assertIsNone(base)
+        self.assertEqual(amendments, [])
+
+
+class SelectCli(unittest.TestCase):
+    def test_unknown_command_prints_usage(self):
+        with patch.object(
+            edgar, "main", side_effect=AssertionError("default download must not run")
+        ):
+            err = io.StringIO()
+            with redirect_stderr(err):
+                with self.assertRaises(SystemExit) as ctx:
+                    edgar.main_cli(["edgar.py", "bogus"])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("Usage", err.getvalue())
+
+    def test_select_missing_ticker_prints_usage(self):
+        err = io.StringIO()
+        with redirect_stderr(err):
+            with self.assertRaises(SystemExit) as ctx:
+                edgar.main_cli(["edgar.py", "select"])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("Usage", err.getvalue())
+
+    def test_select_cli_prints_base_and_amendments(self):
+        base = _cand("2025-03-01", complete=True, name="base.htm")
+        amend = _cand("2025-09-27", complete=False, amendment=True, name="amend1.htm")
+        with patch.object(
+            edgar, "select_agreement", return_value=(base, [amend])
+        ):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                edgar.run_select_cli("SNBR")
+        out = buf.getvalue()
+        self.assertIn("Base agreement", out)
+        self.assertIn("is_complete", out)
+        self.assertIn("200000", out)
+        self.assertIn("characters", out)
+        self.assertIn("Amendments to apply (1)", out)
+        self.assertIn("2025-09-27", out)
+
+    def test_no_args_still_runs_default_download(self):
+        with patch.object(edgar, "main", return_value=(1, 0)) as m:
+            edgar.main_cli(["edgar.py"])
+        m.assert_called_once_with()
 
 
 if __name__ == "__main__":
