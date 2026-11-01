@@ -205,6 +205,8 @@ def main():
     client = OpenAI(
         api_key=os.environ["META_API_KEY"],
         base_url=os.environ["META_BASE_URL"],
+        timeout=120,
+        max_retries=2,
     )
 
     def request():

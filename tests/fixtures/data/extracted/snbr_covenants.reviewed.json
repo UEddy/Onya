@@ -87,7 +87,7 @@
           "condition": "for each Quarterly Reporting Period occurring thereafter"
         }
       ],
-      "quote": "The Borrower shall not suffer or permit at any time the Net Leverage Ratio, as of the end of any Quarterly Reporting Period, to exceed"
+      "quote": "The Borrower shall not suffer or permit at any time the Net Leverage Ratio, as of the end of any Quarterly Reporting Period, to exceed (i) 5.00 to 1.00 for the Quarterly Reporting Periods ending December 30, 2023 and March 30, 2024, (ii) 5.50 to 1.00 for the Quarterly Reporting Period ending June 29, 2024, (iii) 5.00 to 1.00 for the Quarterly Reporting Period ending September 28, 2024, (iv) 4.80 to 1.00 for the Quarterly Reporting Period ending December 28, 2024, (v) 4.75 to 1.00 for the Quarterly Reporting Periods ending March 29, 2025 and June 28, 2025, (vi) 5.25 to 1.00 for the Quarterly Reporting Period ending September 27, 2025, (vii) 4.50 to 1.00 for the Quarterly Reporting Period ending January 3, 2026, (viii) 4.75 to 1.00 for the Quarterly Reporting Period ending April 4, 2026, (ix) 4.80 to 1.00 for the Quarterly Reporting Period ending July 4, 2026, and (x) 4.00 to 1.00 for each Quarterly Reporting Period occurring thereafter."
     },
     {
       "id": "interest_coverage",
@@ -327,7 +327,7 @@
           "condition": "for each period thereafter"
         }
       ],
-      "quote": "the aggregate expenses and savings included as addbacks in any determination of Consolidated EBITDA under this clause (a)(ix) shall not exceed $60,000,000 for the trailing"
+      "quote": "the aggregate expenses and savings included as addbacks in any determination of Consolidated EBITDA under this clause (a)(ix) shall not exceed $60,000,000 for the trailing four consecutive Quarterly Reporting Periods ending January 3, 2026, $44,000,000 for the trailing four consecutive Quarterly Reporting Periods ending April 4, 2026, $26,000,000 for the trailing four consecutive Quarterly Reporting Periods ending July 4, 2026, $13,000,000 for the trailing four consecutive Quarterly Reporting Periods ending October 3, 2026, and if One Hundred Percent Lender Consent has been obtained, $4,000,000 for the trailing four consecutive Quarterly Reporting Periods ending January 2, 2027, and $0 for each period thereafter;"
     },
     {
       "id": "cap_ebitda_aiv_aviii",
@@ -421,7 +421,7 @@
           "condition": "for each Quarterly Reporting Period ending thereafter"
         }
       ],
-      "quote": "the aggregate amount of cash losses and cash expenses included as addbacks in any determination of Consolidated EBITDA under the foregoing clauses (a)(iv) and (a)(viii) shall not exceed"
+      "quote": "the aggregate amount of cash losses and cash expenses included as addbacks in any determination of Consolidated EBITDA under the foregoing clauses (a)(iv) and (a)(viii) shall not exceed the following amounts for the following periods: (w) $30,000,000 for the trailing four consecutive Quarterly Reporting Periods ending December 30, 2023, March 30, 2024, June 29, 2024, September 28, 2024, and December 28, 2024, (x) $20,000,000 for the trailing four consecutive Quarterly Reporting Periods ending March 29, 2025 and June 28, 2025, (y) $25,000,000 for the trailing four consecutive Quarterly Reporting Periods ending September 27, 2025, January 3, 2026, April 4, 2026, July 4, 2026, October 3, 2026 and, if One Hundred Percent Lender Consent has been obtained, January 2, 2027 and (z) $0 for each Quarterly Reporting Period ending thereafter;"
     }
   ],
   "definitions": [

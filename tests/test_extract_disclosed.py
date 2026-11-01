@@ -85,7 +85,7 @@ class ModelConfig(unittest.TestCase):
                          {"BASETEN_API_KEY": "k", "BASETEN_BASE_URL": "u"}),
               patch.object(extract_disclosed, "OpenAI") as factory):
             extract_disclosed.make_client()
-        factory.assert_called_once_with(api_key="k", base_url="u")
+        factory.assert_called_once_with(api_key="k", base_url="u", timeout=120, max_retries=2)
 
     def test_request_sends_schema_fields(self):
         for field in ("period_end", "covenants", "direction", "threshold",

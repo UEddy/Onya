@@ -1,0 +1,182 @@
+{
+  "ticker": "SNBR",
+  "period_end": "2026-04-04",
+  "as_of": "2026-05-19",
+  "memo": "Summary\nSleep Number fails two covenants at the Apr 4, 2026 test, with net leverage at 6.58x against a 4.75x maximum and interest coverage at 0.84x against a 2.10x minimum. The company did not disclose a leverage table this quarter, so no reconciliation is available and pro forma savings remain subject to administrative agent approval.\n\nCovenant tests\n| Covenant | Result | Limit | Headroom |\n| Net Leverage Ratio | 6.58x | 4.75x | -1.83x |\n| Interest Coverage Ratio | 0.84x | 2.10x | -1.26x |\n\nWhat drove it\nNet leverage reflects total debt including operating leases of $962,096,000 over Consolidated EBITDAR of $146,296,000. Interest coverage reflects Consolidated EBITDA of $43,230,000 over Consolidated Interest Expense of $51,404,000. Net leverage is 5.06x even with the maximum $44M of projected savings, and 6.58x without. Interest coverage is 1.70x even with the maximum $44M of projected savings, and 0.84x without.\n\nCure\nTo pass net leverage at 4.75x, debt must fall by $267.2 million or EBITDA must rise by $56.3 million. To pass interest coverage at 2.10x, EBITDA must rise by $64.7 million or interest must fall by $30.8 million. With the maximum $44M of projected savings, net leverage still needs debt down $58.2 million or EBITDA up $12.3 million and interest coverage still needs EBITDA up $20.7 million or interest down $9.9 million. No equity cure provision was found in the reviewed agreement.\n\nOutlook\nBaseline projection holds net leverage at 6.58x into the Jul 4, 2026 test against a 4.80x maximum, which is high risk. EBITDAR would need to rise by $54.1 million to pass the Jul 4, 2026 test at the baseline projection. Company reported Adjusted EBITDA fell on average by $12.5 million per quarter endpoint to endpoint from Jun 28, 2025 to Apr 4, 2026.\n\nRecommended actions\n- Reserve rights under the agreement for the Apr 4, 2026 failures\n- Review the forbearance terms, termination events and check the forbearance expiry date against the Jul 4, 2026 test\n- Request the compliance certificate and support for each add-back including projected savings\n- Tighten reporting to weekly liquidity and covenant forecasts through the next test",
+  "run_id": "7c2a49625f4e",
+  "tool_calls": 7,
+  "total_tokens": 43657,
+  "timestamp": "2026-11-01T13:45:14.460394+00:00",
+  "figure_fields": [
+    {
+      "raw": "$962,096,000",
+      "field": "total_debt",
+      "value": 962096000.0
+    },
+    {
+      "raw": "$146,296,000",
+      "field": "ebitdar",
+      "value": 146296000.0
+    },
+    {
+      "raw": "$43,230,000",
+      "field": "ebitda",
+      "value": 43230000.0
+    },
+    {
+      "raw": "$51,404,000",
+      "field": "interest_expense",
+      "value": 51404000.0
+    },
+    {
+      "raw": "$267.2 million",
+      "field": "cure.debt_reduction",
+      "value": 267200000.0
+    },
+    {
+      "raw": "$56.3 million",
+      "field": "cure.ebitda_increase",
+      "value": 56300000.0
+    },
+    {
+      "raw": "$64.7 million",
+      "field": "cure.interest_ebitda_increase",
+      "value": 64700000.0
+    },
+    {
+      "raw": "$58.2 million",
+      "field": "cure.debt_reduction",
+      "value": 58200000.0
+    },
+    {
+      "raw": "$12.3 million",
+      "field": "cure.ebitda_increase",
+      "value": 12300000.0
+    },
+    {
+      "raw": "$20.7 million",
+      "field": "cure.interest_ebitda_increase",
+      "value": 20700000.0
+    }
+  ],
+  "steps": [
+    {
+      "step": 0,
+      "timestamp": "2026-11-01T13:45:14.460394+00:00",
+      "type": "run_start",
+      "tool": null,
+      "arguments": {},
+      "result_summary": "Check Sleep Number's covenants as of the April 2026 test and tell me what to do.",
+      "total_tokens": 0
+    },
+    {
+      "step": 1,
+      "timestamp": "2026-11-01T13:45:18.685626+00:00",
+      "type": "tool_call",
+      "tool": "lookup_company",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "name_or_ticker": "SNBR"
+      },
+      "result_summary": "SNBR: 1 candidate(s), first Sleep Number Corp CIK 827187 via registry",
+      "total_tokens": 3494
+    },
+    {
+      "step": 2,
+      "timestamp": "2026-11-01T13:45:22.075694+00:00",
+      "type": "tool_call",
+      "tool": "find_agreements",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "company": "0000827187"
+      },
+      "result_summary": "base: 2026-04-28 8-K FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT TO AMENDED AND RESTATED CREDIT AND SECURITY AGREEMENT; 0 amendment(s)",
+      "total_tokens": 7040
+    },
+    {
+      "step": 3,
+      "timestamp": "2026-11-01T13:45:24.205672+00:00",
+      "type": "tool_call",
+      "tool": "extract_covenants",
+      "arguments": {
+        "agreement_url": "https://www.sec.gov/Archives/edgar/data/827187/000082718726000035/ex101thirteenthamendmentto.htm",
+        "as_of": "2026-05-19",
+        "company": "0000827187"
+      },
+      "result_summary": "reviewed file used: [redacted]",
+      "total_tokens": 10858
+    },
+    {
+      "step": 4,
+      "timestamp": "2026-11-01T13:45:27.650150+00:00",
+      "type": "tool_call",
+      "tool": "compute_covenants",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "company": "0000827187",
+        "period_end": "2026-04-04"
+      },
+      "result_summary": "0000827187 2026-04-04: leverage 6.58 vs 4.75 FAIL, coverage 0.84 vs 2.1 FAIL",
+      "total_tokens": 17599
+    },
+    {
+      "step": 5,
+      "timestamp": "2026-11-01T13:45:27.653082+00:00",
+      "type": "tool_call",
+      "tool": "project_next_test",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "base_period": "2026-04-04",
+        "company": "0000827187"
+      },
+      "result_summary": "0000827187 2026-04-04 -> next test 2026-07-04 (threshold 4.8): projected 6.58 FAIL; risk HIGH",
+      "total_tokens": 17599
+    },
+    {
+      "step": 6,
+      "timestamp": "2026-11-01T13:45:27.661110+00:00",
+      "type": "tool_call",
+      "tool": "cure_analysis",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "company": "0000827187",
+        "period_end": "2026-04-04"
+      },
+      "result_summary": "0000827187 2026-04-04: leverage FAIL, coverage FAIL; equity cure found=False",
+      "total_tokens": 17599
+    },
+    {
+      "step": 7,
+      "timestamp": "2026-11-01T13:45:43.201485+00:00",
+      "type": "tool_call",
+      "tool": "draft_memo",
+      "arguments": {
+        "as_of": "2026-05-19",
+        "company": "0000827187",
+        "draft": "Summary\nSleep Number fails two covenants at the Apr 4, 2026 test, with net leverage at 6.58x against a 4.75x maximum and interest coverage at 0.84x against a 2.10x minimum. The company did not disclose a leverage table this quarter, so no reconciliation is available and pro forma savings remain subject to administrative agent approval.\n\nCovenant tests\n| Covenant | Result | Limit | Headroom |\n| Net Leverage Ratio | 6.58x | 4.75x | -1.83x |\n| Interest Coverage Ratio | 0.84x | 2.10x | -1.26x |\n\nWhat drove it\nNet leverage reflects total debt including operating leases of $962,096,000 over Consolidated EBITDAR of $146,296,000. Interest coverage reflects Consolidated EBITDA of $43,230,000 over Consolidated Interest Expense of $51,404,000. Net leverage is 5.06x even with the maximum $44M of projected savings, and 6.58x without. Interest coverage is 1.70x even with the maximum $44M of projected savings, and 0.84x without.\n\nCure\nTo pass net leverage at 4.75x, debt must fall by $267.2 million or EBITDA must rise by $56.3 million. To pass interest coverage at 2.10x, EBITDA must rise by $64.7 million or interest must fall by $30.8 million. With the maximum $44M of projected savings, net leverage still needs debt down $58.2 million or EBITDA up $12.3 million and interest coverage still needs EBITDA up $20.7 million or interest down $9.9 million. No equity cure provision was found in the reviewed agreement.\n\nOutlook\nBaseline projection holds net leverage at 6.58x into the Jul 4, 2026 test against a 4.80x maximum, which is high risk. EBITDAR would need to rise by $54.1 million to pass the Jul 4, 2026 test at the baseline projection. Company reported Adjusted EBITDA fell on average by $12.5 million per quarter endpoint to endpoint from Jun 28, 2025 to Apr 4, 2026.\n\nRecommended actions\n- Reserve rights under the agreement for the Apr 4, 2026 failures\n- Review the forbearance terms, termination events and check the forbearance expiry date against the Jul 4, 2026 test\n- Request the compliance certificate and support for each add-back including projected savings\n- Tighten reporting to weekly liquidity and covenant forecasts through the next test",
+        "period_end": "2026-04-04"
+      },
+      "result_summary": "memo verified: all 42 numbers appear in tool outputs",
+      "total_tokens": 30694
+    },
+    {
+      "step": 8,
+      "timestamp": "2026-11-01T13:45:51.915211+00:00",
+      "type": "assistant_final",
+      "tool": null,
+      "arguments": {},
+      "result_summary": "Summary\nSleep Number fails two covenants at the Apr 4, 2026 test, with net leverage at 6.58x against a 4.75x maximum and interest coverage at 0.84x against a 2.10x minimum. The company did not disclose a leverage table this quarter, so no reconciliation is available and pro forma savings remain subj",
+      "total_tokens": 43657
+    },
+    {
+      "step": 8,
+      "timestamp": "2026-11-01T13:45:51.915476+00:00",
+      "type": "run_end",
+      "tool": null,
+      "arguments": {},
+      "result_summary": "done",
+      "total_tokens": 43657
+    }
+  ],
+  "figures_checked": 42
+}

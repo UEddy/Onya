@@ -105,6 +105,26 @@ class Schemas(unittest.TestCase):
         self.assertIn("lookup_company", prompt)
         self.assertIn("retry with the cik", prompt)
 
+    def test_system_prompt_memo_for_lender(self):
+        prompt = agent.SYSTEM_PROMPT
+        self.assertIn("credit analyst at the lender", prompt)
+        self.assertIn('Never advise "engaging lenders"', prompt)
+        self.assertIn("reserve rights", prompt)
+        self.assertIn("compliance certificate", prompt)
+        for heading in ("Summary", "Covenant tests", "What drove it",
+                        "Cure", "Outlook", "Recommended actions"):
+            self.assertIn(heading, prompt)
+        self.assertIn("Net leverage is 5.06x even with the maximum $44M "
+                      "of projected savings, and 6.58x without", prompt)
+        self.assertIn("sentence case", prompt)
+        self.assertIn("no em dashes", prompt)
+        self.assertIn("governing_doc_type", prompt)
+        self.assertIn("do not recommend opening forbearance", prompt)
+        self.assertIn("check the forbearance expiry date", prompt)
+        self.assertIn("endpoint to endpoint", prompt)
+        self.assertIn("EBITDAR would need to rise", prompt)
+        self.assertIn("Never pair Consolidated EBITDAR with interest", prompt)
+
 
 class CompanyHelpers(unittest.TestCase):
     def test_slug_known(self):
@@ -158,6 +178,161 @@ class FindAgreements(unittest.TestCase):
         self.assertEqual(result["ticker"], "SNBR")
         self.assertEqual(result["base"]["url"], "https://sec.gov/u1")
         self.assertNotIn("full_text", json.dumps(result))
+
+
+class GoverningDocType(unittest.TestCase):
+    def test_forbearance_amendment_and_base(self):
+        self.assertEqual(
+            agent.governing_doc_type({"is_forbearance": True}), "forbearance")
+        self.assertEqual(
+            agent.governing_doc_type({"title": "FIRST AMENDMENT"}),
+            "amendment")
+        self.assertEqual(
+            agent.governing_doc_type({"title": "CREDIT AGREEMENT"}), "base")
+
+    def test_find_agreements_returns_governing_doc_type(self):
+        base = _base_candidate()
+        base["is_forbearance"] = True
+        base["title"] = "FORBEARANCE AGREEMENT AND AMENDMENT"
+        with patch.dict(sys.modules, {"edgar": SimpleNamespace(
+                select_agreement=lambda *a, **k: (base, []))}):
+            agent.reset_corpus()
+            result = agent.tool_find_agreements("SNBR")
+        self.assertEqual(result["governing_doc_type"], "forbearance")
+
+
+class MemoValidators(unittest.TestCase):
+    def setUp(self):
+        agent.reset_corpus()
+
+    def test_interest_coverage_cannot_pair_ebitdar_with_interest(self):
+        draft = ("Consolidated EBITDAR of $146.3 million against interest "
+                 "of $51.4 million drives Interest Coverage to 0.84x.")
+        errors = agent.verify_memo_drivers(draft)
+        self.assertTrue(any("Consolidated EBITDA" in e for e in errors))
+
+    def test_net_leverage_uses_debt_over_ebitdar(self):
+        good = ("Total debt including operating leases of $962.1 million "
+                "over Consolidated EBITDAR of $146.3 million drives net "
+                "leverage to 6.58x.")
+        self.assertEqual(agent.verify_memo_drivers(good), [])
+        bad = good.replace("Consolidated EBITDAR", "Consolidated EBITDA")
+        self.assertTrue(agent.verify_memo_drivers(bad))
+
+    def test_no_sentence_repeats_six_word_phrase(self):
+        draft = ("With the maximum $44M of projected savings, Net Leverage "
+                 "Ratio is 5.06x even with the maximum $44M of projected "
+                 "savings; 6.58x without.")
+        self.assertTrue(agent.repeated_phrases_in_memo(draft))
+        good = ("Net leverage is 5.06x even with the maximum $44M of "
+                "projected savings, and 6.58x without.")
+        self.assertEqual(agent.repeated_phrases_in_memo(good), [])
+
+    def test_memo_format_rules(self):
+        draft = "Interest Coverage is 1.7x and HIGH risk with addbacks."
+        errors = agent.verify_memo_format(draft)
+        self.assertTrue(any("two decimals" in e for e in errors))
+        self.assertTrue(any("lowercase" in e for e in errors))
+        self.assertTrue(any("add-backs" in e for e in errors))
+        self.assertTrue(any("sentence case" in e for e in errors))
+        self.assertTrue(
+            agent.verify_memo_format("Memo \u2014 draft"))
+        good = ("Interest coverage is 1.70x at high risk after add-backs.")
+        self.assertEqual(agent.verify_memo_format(good), [])
+        raw = ("Reconciliation is not available (no company leverage "
+               "table disclosed).")
+        self.assertTrue(any("rewrite the raw tool wording" in e
+                            for e in agent.verify_memo_format(raw)))
+
+    def test_figure_fields_map_amounts_to_case_fields(self):
+        corpus = [{
+            "numerator": 962_096_000, "ebitdar": 146_296_000,
+            "ebitda": 43_230_000, "disallowed": -18_732_000,
+            "interest_coverage": {
+                "denominator_label": "Consolidated Interest Expense",
+                "denominator_value": 51_404_000},
+            "cure": {"base": {"net_leverage": {"figures": {
+                "debt_reduction_needed": {"value": 267_190_000}}}}},
+        }]
+        draft = ("Debt of $962.1 million over EBITDAR of $146.3 million, "
+                 "EBITDA of $43.2 million, interest of $51.4 million, "
+                 "disallowed $18.7 million, cure $267.2 million.")
+        report = agent.verify_memo_numbers(draft, corpus)
+        fields = {e["raw"]: e["field"] for e in report["figure_fields"]}
+        self.assertEqual(fields["$962.1 million"], "total_debt")
+        self.assertEqual(fields["$146.3 million"], "ebitdar")
+        self.assertEqual(fields["$43.2 million"], "ebitda")
+        self.assertEqual(fields["$51.4 million"], "interest_expense")
+        self.assertEqual(fields["$18.7 million"], "disallowed")
+        self.assertEqual(fields["$267.2 million"], "cure.debt_reduction")
+
+    def test_equity_cure_and_failures_wording(self):
+        errors = agent.verify_memo_format(
+            "The reviewed agreement provides no equity cure. Reserve "
+            "rights for the Apr 4, 2026 fails.")
+        self.assertTrue(any("No equity cure provision was found" in e
+                            for e in errors))
+        self.assertTrue(any("failures, not fails" in e for e in errors))
+        good = ("No equity cure provision was found in the reviewed "
+                "agreement. Reserve rights for the Apr 4, 2026 failures.")
+        self.assertEqual(agent.verify_memo_format(good), [])
+        self.assertIn("No equity cure provision was found in the "
+                      "reviewed agreement", agent.SYSTEM_PROMPT)
+
+
+class DashCharacters(unittest.TestCase):
+    def test_no_em_or_en_dash_in_web_app_or_components(self):
+        root = Path(__file__).resolve().parent.parent / "web"
+        banned = {"\u2014", "\u2013"}
+        failures = []
+        for area in ("app", "components"):
+            for path in (root / area).rglob("*"):
+                if path.is_file():
+                    text = path.read_text(encoding="utf-8")
+                    if banned.intersection(text):
+                        failures.append(str(path))
+        self.assertEqual(failures, [])
+
+    def test_summary_keeps_full_agreement_title(self):
+        result = {
+            "base": {
+                "filingDate": "2026-04-28",
+                "form": "8-K",
+                "title": ("FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT "
+                          "TO AMENDED AND RESTATED CREDIT AND SECURITY "
+                          "AGREEMENT"),
+            },
+            "amendments": [],
+        }
+        summary = agent.summarize_result("find_agreements", result)
+        self.assertIn("CREDIT AND SECURITY AGREEMENT", summary)
+        self.assertNotIn("credit an;", summary)
+
+    def test_truncation_cuts_at_word_boundary(self):
+        text = agent._truncate_at_word("one two three four five", 12)
+        self.assertEqual(text, "one two...")
+
+
+class FindAgreementsTimeout(unittest.TestCase):
+    def test_timeout_becomes_error_dict(self):
+        import time as time_mod
+
+        def slow_select(ticker, as_of=None, verbose=False):
+            time_mod.sleep(2)
+            return _base_candidate(), []
+
+        with patch.dict(sys.modules, {"edgar": SimpleNamespace(
+                select_agreement=slow_select)}):
+            agent.reset_corpus()
+            result = agent.dispatch_tool(
+                "find_agreements", {"company": "SNBR"}, timeout=0.2)
+        self.assertIn("timed out after", result["error"])
+        self.assertIn("find_agreements", result["error"])
+
+    def test_cached_discovery_flag(self):
+        self.assertTrue(agent._discovery_cache_present("SNBR"))
+        self.assertTrue(agent._discovery_cache_present("827187"))
+        self.assertFalse(agent._discovery_cache_present("ZZZZ"))
 
 
 class ExtractCovenantsReviewed(unittest.TestCase):
@@ -334,6 +509,19 @@ class DraftMemo(unittest.TestCase):
         result = agent.tool_draft_memo("SNBR", "2026-04-04", draft=draft)
         self.assertTrue(result["verified"])
 
+    def test_million_word_rounding_accepted(self):
+        agent._record({"figures": {"debt_reduction_needed": 267190000.0}})
+        draft = "Debt must fall by about $267.2 million to pass."
+        result = agent.tool_draft_memo("SNBR", "2026-04-04", draft=draft)
+        self.assertTrue(result["verified"], result)
+
+    def test_month_name_date_accepted(self):
+        agent._record({"period_end": "2026-04-04",
+                       "net_leverage": {"ratio_2dp": 6.58}})
+        draft = "As of Apr 4, 2026, leverage is 6.58x."
+        result = agent.tool_draft_memo("SNBR", "2026-04-04", draft=draft)
+        self.assertTrue(result["verified"], result)
+
     def test_memo_not_added_to_corpus(self):
         agent._record({"ratio_2dp": 6.58})
         agent.tool_draft_memo("SNBR", "2026-04-04",
@@ -342,6 +530,35 @@ class DraftMemo(unittest.TestCase):
             "SNBR", "2026-04-04", draft="Leverage is still 6.58x.")
         self.assertTrue(second["verified"])
         self.assertEqual(len(agent._TOOL_OUTPUTS), 1)
+
+
+class DedupeToolCalls(unittest.TestCase):
+    def test_identical_call_reuses_earlier_result(self):
+        script = [
+            _response(tool_calls=[_tool_call(
+                "c1", "compute_covenants",
+                {"company": "SNBR", "period_end": "2026-04-04"})]),
+            _response(tool_calls=[_tool_call(
+                "c2", "compute_covenants",
+                {"company": "SNBR", "period_end": "2026-04-04"})]),
+            _response(content="Leverage fails at 6.58x vs 4.75 max."),
+        ]
+        calls = []
+
+        def counting_dispatch(name, arguments, timeout=None):
+            calls.append((name, arguments))
+            return {"supported": True, "net_leverage": {"ratio_2dp": 6.58}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (patch.object(agent, "RUNS_DIR", Path(tmp)),
+                  patch.object(agent, "dispatch_tool",
+                               side_effect=counting_dispatch)):
+                outcome = agent.run_agent("Check SNBR",
+                                          client=FakeClient(script),
+                                          run_id="tdedupe")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(outcome["tool_calls"], 1)
+        self.assertEqual(outcome["reason"], "done")
 
 
 class AgentLoop(unittest.TestCase):
@@ -398,9 +615,11 @@ class AgentLoop(unittest.TestCase):
                 return agent.run_agent("hi", client=client, run_id="t0")
 
     def test_max_tool_calls_stops_with_summary(self):
+        # Distinct arguments each time: identical calls are deduplicated
+        # and would not consume the tool-call budget.
         script = [_response(tool_calls=[_tool_call(
             f"c{i}", "compute_covenants",
-            {"company": "Acme", "period_end": "2026-04-04"})])
+            {"company": f"Acme{i}", "period_end": "2026-04-04"})])
             for i in range(15)]
         script.append(_response(content="Summary after fifteen calls."))
         with tempfile.TemporaryDirectory() as tmp:
@@ -540,7 +759,7 @@ class RetryAfterError(unittest.TestCase):
                 "is_amendment": False, "is_complete": True,
                 "char_count": 200000}
 
-        def fake_select(ticker, as_of=None):
+        def fake_select(ticker, as_of=None, verbose=False):
             if ticker == "SNBR":
                 raise ValueError("Unknown ticker 'SNBR': company may be "
                                  "delisted; pass the CIK instead.")
@@ -677,7 +896,7 @@ class AsOfDiscipline(unittest.TestCase):
     def test_find_passes_as_of_to_select(self):
         seen = {}
 
-        def fake_select(ticker, as_of=None):
+        def fake_select(ticker, as_of=None, verbose=False):
             seen["ticker"] = ticker
             seen["as_of"] = as_of
             return _base_candidate(), []
@@ -828,16 +1047,20 @@ class ReconciliationUnavailable(unittest.TestCase):
         self.assertEqual(rec["status"], "reconciled")
 
     def test_system_prompt_no_break_rule(self):
-        self.assertIn("not available (no company leverage table disclosed)",
+        self.assertIn("rewrite it in your own words", agent.SYSTEM_PROMPT)
+        self.assertIn("The company did not disclose a leverage table",
+                      agent.SYSTEM_PROMPT)
+        self.assertIn("Never copy raw tool status strings",
                       agent.SYSTEM_PROMPT)
         self.assertIn('"no break"', agent.SYSTEM_PROMPT.lower())
 
 
 class QuietMode(unittest.TestCase):
     def test_tool_find_agreements_suppresses_progress(self):
-        def noisy_select(ticker, as_of=None):
-            print("Checking filing 1 of 3: 8-K 2025-11-10 abc")
-            print("Skipping 2 8-K(s) without item 1.01/2.03; checking 1 of 3 filings")
+        def noisy_select(ticker, as_of=None, verbose=False):
+            if verbose:
+                print("Checking filing 1 of 3: 8-K 2025-11-10 abc")
+                print("Skipping 2 8-K(s) without item 1.01/2.03; checking 1 of 3 filings")
             return _base_candidate(), []
 
         with patch.dict(sys.modules, {"edgar": SimpleNamespace(
@@ -940,7 +1163,8 @@ class EquityCureReporting(unittest.TestCase):
         self.assertFalse(summary["equity_cure"]["present"])
 
     def test_system_prompt_equity_cure_rule(self):
-        self.assertIn('never say "no equity cure available"',
+        self.assertIn("No equity cure provision was found in the "
+                      "reviewed agreement",
                       agent.SYSTEM_PROMPT)
         self.assertIn("equity_cure.present is false",
                       agent.SYSTEM_PROMPT)

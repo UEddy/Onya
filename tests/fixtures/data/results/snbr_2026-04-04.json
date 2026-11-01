@@ -6,35 +6,35 @@
       "name": "Borrowings under credit facility",
       "value": 605600000,
       "source": "xbrl:us-gaap:DebtCurrent",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Outstanding letters of credit",
       "value": 8300000,
       "source": "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Finance lease obligations",
       "value": 159000,
       "source": "estimate: carried forward from 2026-01-03",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "immaterial; not disclosed this period"
     },
     {
       "name": "Operating lease liabilities",
       "value": 348037000,
       "source": "xbrl:us-gaap:OperatingLeaseLiability",
-      "clause": "(a)(ii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "ASC 842 operating lease liabilities"
     },
     {
       "name": "Unrestricted US cash in excess of $40,000,000",
       "value": 0,
       "source": "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
-      "clause": "(a)(iii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "cash and equivalents = $1,484,000; excess over $40,000,000 deducted; no excess, deduction is zero"
     },
     {
@@ -119,16 +119,10 @@
       "value": 0,
       "source": "contract:(a)(ix)",
       "clause": "(a)(ix)",
-      "note": "schedule covers this period (cap $44,000,000, schedule entry for 2026-04-04) but no company-reported pro forma savings amount is available; base includes zero; see proforma_scenarios for savings=cap; unverifiable: requires agent approval"
+      "note": "schedule covers this period (cap $44,000,000, schedule entry for 2026-04-04) but no company-reported pro forma savings amount is available; base includes zero; see proforma_scenarios for savings=cap; unverifiable: requires administrative agent approval"
     }
   ],
   "data_quality_warnings": [
-    {
-      "concept": "us-gaap:RestructuringCosts",
-      "period_end": "2024-12-28",
-      "direct": 28374000,
-      "derived": 3006000
-    },
     {
       "concept": "us-gaap:RestructuringCosts",
       "period_end": "2026-01-03",
@@ -137,21 +131,9 @@
     },
     {
       "concept": "us-gaap:AssetImpairmentCharges",
-      "period_end": "2024-12-28",
-      "direct": 5420000,
-      "derived": 678000
-    },
-    {
-      "concept": "us-gaap:AssetImpairmentCharges",
       "period_end": "2026-01-03",
       "direct": 36363000,
       "derived": 803000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2021-10-02",
-      "direct": 24352000,
-      "derived": 25632000
     }
   ],
   "numerator": 962096000,
@@ -169,7 +151,11 @@
     "headroom": -1.8263657242850115,
     "headroom_2dp": -1.83,
     "pass": false,
-    "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+    "numerator_label": "total debt including operating leases",
+    "numerator_value": 962096000,
+    "denominator_label": "Consolidated EBITDAR",
+    "denominator_value": 146296000,
+    "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires administrative agent approval; see proforma_scenarios"
   },
   "interest_coverage": {
     "ratio": 0.8409851373433974,
@@ -178,7 +164,11 @@
     "headroom": -1.2590148626566027,
     "headroom_2dp": -1.26,
     "pass": false,
-    "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+    "numerator_label": "Consolidated EBITDA",
+    "numerator_value": 43230000,
+    "denominator_label": "Consolidated Interest Expense",
+    "denominator_value": 51404000,
+    "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires administrative agent approval; see proforma_scenarios"
   },
   "proforma_scenarios": [
     {
@@ -192,6 +182,10 @@
         "headroom": -1.8263657242850115,
         "headroom_2dp": -1.83,
         "pass": false,
+        "numerator_label": "total debt including operating leases",
+        "numerator_value": 962096000,
+        "denominator_label": "Consolidated EBITDAR",
+        "denominator_value": 146296000,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
@@ -201,9 +195,13 @@
         "headroom": -1.2590148626566027,
         "headroom_2dp": -1.26,
         "pass": false,
+        "numerator_label": "Consolidated EBITDA",
+        "numerator_value": 43230000,
+        "denominator_label": "Consolidated Interest Expense",
+        "denominator_value": 51404000,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
       },
-      "note": "unverifiable: requires agent approval"
+      "note": "unverifiable: requires administrative agent approval"
     },
     {
       "savings": 44000000,
@@ -216,6 +214,10 @@
         "headroom": -0.3057867742884772,
         "headroom_2dp": -0.31,
         "pass": false,
+        "numerator_label": "total debt including operating leases",
+        "numerator_value": 962096000,
+        "denominator_label": "Consolidated EBITDAR",
+        "denominator_value": 190296000,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
@@ -225,9 +227,13 @@
         "headroom": -0.40305034627655445,
         "headroom_2dp": -0.4,
         "pass": false,
+        "numerator_label": "Consolidated EBITDA",
+        "numerator_value": 87230000,
+        "denominator_label": "Consolidated Interest Expense",
+        "denominator_value": 51404000,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
       },
-      "note": "unverifiable: requires agent approval"
+      "note": "unverifiable: requires administrative agent approval"
     }
   ]
 }

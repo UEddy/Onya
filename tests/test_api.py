@@ -113,20 +113,46 @@ class Companies(ApiTestBase):
         self.assertEqual(len(rows), 12)
         self.assertEqual({c["ticker"] for c in rows}, TICKERS)
         for c in rows:
-            for key in ("ticker", "name", "period_end", "covenant",
+            for key in ("ticker", "name", "period_end", "as_of", "covenant",
                         "ratio", "threshold", "headroom", "status"):
                 self.assertIn(key, c, c["ticker"])
             self.assertIn(c["status"], ("pass", "fail", "unknown"))
+            self.assertEqual(c["as_of"], c["period_end"], c["ticker"])
+
+    def test_clean_names_and_covenant_labels(self):
+        rows = {c["ticker"]: c
+                for c in self.client.get("/companies").json()["companies"]}
+        expected_names = {
+            "SNBR": "Sleep Number", "GPK": "Graphic Packaging",
+            "HAIN": "Hain Celestial", "NUVR": "Nuvera Communications",
+            "STGW": "Stagwell", "AMCX": "AMC Networks",
+            "ORLY": "O'Reilly Automotive", "QUAD": "Quad",
+            "TRS": "TriMas", "AIN": "Albany International",
+            "CRS": "Carpenter Technology", "OPTX": "Syntec Optics",
+        }
+        for ticker, name in expected_names.items():
+            self.assertEqual(rows[ticker]["name"], name, ticker)
+        allowed = {"Net leverage", "Total leverage", "Secured leverage",
+                   "Interest coverage", "Fixed charge coverage",
+                   "Debt service coverage"}
+        for c in rows.values():
+            if c["covenant"] is not None:
+                self.assertIn(c["covenant"], allowed, c["ticker"])
 
     def test_snbr_row(self):
         rows = self.client.get("/companies").json()["companies"]
         snbr = next(c for c in rows if c["ticker"] == "SNBR")
-        self.assertEqual(snbr["name"], "Sleep Number Corp")
-        self.assertEqual(snbr["period_end"], "2025-09-27")
-        self.assertEqual(snbr["ratio"], 5.0)
-        self.assertEqual(snbr["threshold"], 5.25)
-        self.assertAlmostEqual(snbr["headroom"], 0.25)
-        self.assertEqual(snbr["status"], "pass")
+        self.assertEqual(snbr["name"], "Sleep Number")
+        self.assertEqual(snbr["period_end"], "2026-04-04")
+        self.assertEqual(snbr["as_of"], "2026-04-04")
+        self.assertEqual(snbr["covenant"], "Net leverage")
+        self.assertEqual(snbr["ratio_with_savings"], 5.06)
+        self.assertEqual(snbr["ratio_without_savings"], 6.58)
+        self.assertEqual(snbr["ratio"], 6.58)
+        self.assertEqual(snbr["threshold"], 4.75)
+        self.assertAlmostEqual(snbr["headroom"], -1.83)
+        self.assertEqual(snbr["status"], "fail")
+        self.assertEqual(len(snbr["scenarios"]), 2)
 
     def test_failed_company_without_ratio(self):
         rows = self.client.get("/companies").json()["companies"]
@@ -179,7 +205,18 @@ class PeriodDetail(ApiTestBase):
         for comp in body["components"]:
             for key in ("name", "value", "source", "clause", "note"):
                 self.assertIn(key, comp)
-        self.assertEqual(body["flags"]["warning_count"], 5)
+        self.assertEqual(body["flags"]["warning_count"], 2)
+        self.assertEqual(
+            {w["period_end"] for w in body["data_quality_warnings"]},
+            {"2026-01-03"})
+        self.assertEqual(body["covenant_clause"]["section"], "5.7(a)")
+        self.assertEqual(body["covenant_clause"]["threshold"], 4.75)
+        self.assertIn("4.75 to 1.00 for the Quarterly Reporting Period "
+                      "ending April 4, 2026", body["covenant_clause"]["quote"])
+        self.assertIn("4.80 to 1.00 for the Quarterly Reporting Period "
+                      "ending July 4, 2026", body["covenant_clause"]["quote"])
+        self.assertTrue(body["covenant_clause"]["quote"].endswith(
+            "for each Quarterly Reporting Period occurring thereafter."))
         self.assertEqual(
             body["flags"]["reconciliation"],
             "not available (no company leverage table disclosed)")
@@ -407,9 +444,12 @@ class AgentRun(ApiTestBase):
             run_id = r.json()["run_id"]
             done = _poll_done(self.client, run_id)
         body = done.json()
-        self.assertEqual(body["status"], "error")
+        self.assertEqual(body["status"], "failed")
         self.assertNotIn(str(PROJECT_ROOT), body["error"])
         self.assertNotIn("/home/", json.dumps(body))
+        self.assertTrue(
+            any(s["type"] == "error" for s in body["steps"]),
+            body["steps"])
 
     def test_unknown_run(self):
         self.assertEqual(
@@ -481,6 +521,17 @@ class AgentLimits(ApiTestBase):
                                      headers=self.auth())
         self.assertEqual(r.status_code, 429)
         self.assertIn("token budget", r.json()["detail"])
+
+
+class ReplayFlag(unittest.TestCase):
+    def test_replay_defaults_off(self):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ONYA_AGENT_REPLAY", None)
+            self.assertFalse(api._agent_replay_enabled())
+        with patch.dict(os.environ, {"ONYA_AGENT_REPLAY": "1"}):
+            self.assertTrue(api._agent_replay_enabled())
+        with patch.dict(os.environ, {"ONYA_AGENT_REPLAY": "true"}):
+            self.assertFalse(api._agent_replay_enabled())
 
 
 class Cors(ApiTestBase):

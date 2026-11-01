@@ -23,6 +23,7 @@ if not SEC_USER_AGENT:
     raise SystemExit("SEC_USER_AGENT missing from ~/.config/onya/.env")
 
 RAW_DIR = Path("data/raw")
+CACHE_DIR = Path("data/cache")
 
 FILES = [
     (
@@ -70,7 +71,7 @@ def fetch(url, filename):
     headers = {"User-Agent": SEC_USER_AGENT}
     for attempt in range(len(FETCH_RETRY_DELAYS) + 1):
         try:
-            resp = requests.get(url, headers=headers)
+            resp = requests.get(url, headers=headers, timeout=(10, 60))
         except requests.ConnectionError:
             if attempt == len(FETCH_RETRY_DELAYS):
                 raise
@@ -94,7 +95,7 @@ ARCHIVE_URL = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{docume
 
 EXHIBIT_HEAD_CHARS = 3000
 EXCLUDE_HEAD_CHARS = 500
-TITLE_MAX_CHARS = 150
+TITLE_MAX_CHARS = 200
 
 INCLUDE_PATTERNS = (
     r"\bcredit\s+(and\s+security\s+|and\s+guaranty\s+)?agreement\b",
@@ -338,16 +339,45 @@ def _is_complete_text(text):
     return _matches_any(FINANCIAL_COVENANT_RES, text)
 
 
+_TITLE_MID_WORDS = frozenset({"to", "of", "and", "the"})
+
+
+def _ends_mid_phrase(title):
+    """True when a title line ends mid-phrase (comma or dangling word)."""
+    text = (title or "").strip()
+    if not text:
+        return False
+    if text.endswith(","):
+        return True
+    words = text.replace(",", " ").split()
+    return bool(words) and words[-1].lower() in _TITLE_MID_WORDS
+
+
+def _complete_title(title, following_lines):
+    """Append following lines while the title ends mid-phrase (max 200)."""
+    result = title.strip()
+    for nxt in following_lines:
+        if not _ends_mid_phrase(result) or len(result) >= TITLE_MAX_CHARS:
+            break
+        nxt = (nxt or "").strip()
+        if not nxt:
+            continue
+        result = (result + " " + nxt)[:TITLE_MAX_CHARS]
+    return result[:TITLE_MAX_CHARS]
+
+
 def _extract_title(head):
     """Uppercase agreement/amendment/forbearance line, else INCLUDE match.
 
     Prefer the first line within the first 1,500 characters that is
     mostly uppercase (>=60% of letters uppercase) and contains
-    AGREEMENT, AMENDMENT, or FORBEARANCE. Fall back to the first
-    non-empty line matching an INCLUDE pattern, else the first
-    non-empty line. Trimmed to 150 chars.
+    AGREEMENT, AMENDMENT, or FORBEARANCE. When that line ends
+    mid-phrase, following lines are appended until the phrase
+    completes. Fall back to the first non-empty line matching an
+    INCLUDE pattern, else the first non-empty line. Max 200 chars.
     """
-    for line in head[:TITLE_UPPER_CHARS].splitlines():
+    lines = head[:TITLE_UPPER_CHARS].splitlines()
+    for i, line in enumerate(lines):
         s = line.strip()
         if not s:
             continue
@@ -355,7 +385,7 @@ def _extract_title(head):
             continue
         upper = s.upper()
         if any(k in upper for k in TITLE_KEYWORDS):
-            return s[:TITLE_MAX_CHARS]
+            return _complete_title(s, lines[i + 1:])
     fallback = ""
     for line in head.splitlines():
         s = line.strip()
@@ -567,6 +597,44 @@ def _as_of_str(as_of):
     return str(as_of).strip()[:10]
 
 
+def _select_cache_path(cik10, cutoff):
+    return CACHE_DIR / f"select_{cik10}_{cutoff or 'latest'}.json"
+
+
+def _candidate_for_cache(cand):
+    return {k: v for k, v in (cand or {}).items() if not k.startswith("_")}
+
+
+def _load_select_cache(cik10, cutoff):
+    """Cached (base, amendments) for a CIK/as_of pair, or None."""
+    path = _select_cache_path(cik10, cutoff)
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return AgreementSelection(data.get("base"),
+                              data.get("amendments") or [])
+
+
+def _save_select_cache(cik10, cutoff, base, amendments):
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _select_cache_path(cik10, cutoff).write_text(
+            json.dumps({
+                "cik": cik10,
+                "as_of": cutoff,
+                "base": _candidate_for_cache(base) if base else None,
+                "amendments": [_candidate_for_cache(c) for c in amendments],
+            }, indent=2) + "\n",
+            encoding="utf-8")
+    except OSError:
+        pass
+
+
 def select_agreement(ticker_or_cik, as_of=None, verbose=False):
     """Newest complete agreement on/before as_of plus newer amendments.
 
@@ -578,14 +646,30 @@ def select_agreement(ticker_or_cik, as_of=None, verbose=False):
     Returns AgreementSelection(base, amendments); base is None when no
     complete candidate qualifies. Progress lines print only when
     verbose is True.
+
+    Results are cached in data/cache/select_<cik>_<as_of>.json and
+    reused without any discovery work. On a cache miss, discovery
+    reuses files already in data/raw (edgar.fetch returns them without
+    a network call), so no network calls happen for a cached company.
     """
     cutoff = _as_of_str(as_of)
+    try:
+        cik10 = get_cik(ticker_or_cik)
+    except Exception:
+        cik10 = None
+    if cik10 is not None:
+        cached = _load_select_cache(cik10, cutoff)
+        if cached is not None:
+            return cached
     cands = find_credit_agreements(ticker_or_cik, verbose=verbose)
     if cutoff:
         cands = [c for c in cands if (c.get("filingDate") or "") <= cutoff]
     base = next((c for c in cands if c.get("is_complete")), None)
     if base is None:
-        return AgreementSelection(None, [])
+        selection = AgreementSelection(None, [])
+        if cik10 is not None:
+            _save_select_cache(cik10, cutoff, None, [])
+        return selection
     base_date = base.get("filingDate") or ""
     amendments = [
         c
@@ -595,6 +679,8 @@ def select_agreement(ticker_or_cik, as_of=None, verbose=False):
         and not c.get("is_complete")
     ]
     amendments.sort(key=lambda c: c.get("filingDate") or "")
+    if cik10 is not None:
+        _save_select_cache(cik10, cutoff, base, amendments)
     return AgreementSelection(base, amendments)
 
 

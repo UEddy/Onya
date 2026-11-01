@@ -309,7 +309,7 @@ class RealNumbers20260103(unittest.TestCase):
         # (Task text states 5.48; precise math gives 5.47.)
         sens = result.get("sensitivity_without_proforma")
         self.assertIsNotNone(sens)
-        self.assertIn("without lender-approved projected savings",
+        self.assertIn("without projected savings that require administrative agent approval",
                       sens["note"])
         slev = sens["net_leverage"]
         self.assertEqual(slev["ratio_2dp"], 5.47)
@@ -319,7 +319,7 @@ class RealNumbers20260103(unittest.TestCase):
         with redirect_stdout(buf):
             covenant.print_result(result)
         out = buf.getvalue()
-        self.assertIn("without lender-approved projected savings", out)
+        self.assertIn("without projected savings that require administrative agent approval", out)
         self.assertIn("5.47", out)
         self.assertIn("FAIL", out)
 
@@ -376,7 +376,7 @@ class ProformaScenarios(unittest.TestCase):
         self.assertEqual(scenarios[0]["savings"], 0)
         self.assertEqual(scenarios[1]["savings"], 60_000_000)
         for sc in scenarios:
-            self.assertIn("unverifiable: requires agent approval", sc["note"])
+            self.assertIn("unverifiable: requires administrative agent approval", sc["note"])
             for key in ("net_leverage", "interest_coverage"):
                 for field in ("ratio", "headroom", "pass"):
                     self.assertIn(field, sc[key])
@@ -531,6 +531,62 @@ class FinanceCarryForward(unittest.TestCase):
         fin = self._component(result, "Finance lease obligations")
         self.assertEqual(fin["value"], 123_000)
         self.assertIn("xbrl:", fin["source"])
+
+
+class RatioDriverFields(unittest.TestCase):
+    def test_defined_numerator_and_denominator(self):
+        lev = covenant.ratio_driver_fields(
+            "net_leverage", 962_096_000, 43_230_000,
+            146_296_000, 51_404_000)
+        self.assertEqual(lev["numerator_label"],
+                         "total debt including operating leases")
+        self.assertEqual(lev["numerator_value"], 962_096_000)
+        self.assertEqual(lev["denominator_label"], "Consolidated EBITDAR")
+        self.assertEqual(lev["denominator_value"], 146_296_000)
+        cov = covenant.ratio_driver_fields(
+            "interest_coverage", 962_096_000, 43_230_000,
+            146_296_000, 51_404_000)
+        self.assertEqual(cov["numerator_label"], "Consolidated EBITDA")
+        self.assertEqual(cov["numerator_value"], 43_230_000)
+        self.assertEqual(cov["denominator_label"],
+                         "Consolidated Interest Expense")
+        self.assertEqual(cov["denominator_value"], 51_404_000)
+
+
+class DebtComponentClauses(unittest.TestCase):
+    def test_debt_side_components_use_net_leverage_definition(self):
+        with (patch.object(covenant, "load_contract", return_value=_contract()),
+              patch.object(covenant, "load_release", return_value=_release()),
+              patch.object(covenant, "instant",
+                           side_effect=lambda c, e: INSTANT_VALS[c]),
+              patch.object(covenant, "ttm",
+                           side_effect=lambda c, e: TTM_VALS[c])):
+            result = covenant.compute("2026-01-03")
+        debt_names = [
+            "Borrowings under credit facility",
+            "Outstanding letters of credit",
+            "Finance lease obligations",
+            "Operating lease liabilities",
+            "Unrestricted US cash in excess of $40,000,000",
+        ]
+        by_name = {c["name"]: c for c in result["components"]}
+        for name in debt_names:
+            self.assertEqual(by_name[name]["clause"],
+                             "definition: Net Leverage Ratio", name)
+
+
+class WarningsForPeriod(unittest.TestCase):
+    def test_only_quarters_inside_ttm_window_are_kept(self):
+        warnings = [
+            ("us-gaap:RestructuringCosts", "2024-12-28", 28_374_000, 3_006_000),
+            ("us-gaap:RestructuringCosts", "2026-01-03", 48_128_000, 2_348_000),
+            ("us-gaap:OperatingLeaseCost", "2021-10-02", 24_352_000, 25_632_000),
+        ]
+        with patch.object(covenant, "ttm_window_ends",
+                          return_value=["2025-03-29", "2025-06-28",
+                                        "2025-09-27", "2026-01-03"]):
+            kept = covenant.warnings_for_period(warnings, "2026-01-03")
+        self.assertEqual([w[1] for w in kept], ["2026-01-03"])
 
 
 if __name__ == "__main__":

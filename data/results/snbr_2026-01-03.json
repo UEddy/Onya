@@ -6,35 +6,35 @@
       "name": "Borrowings under credit facility",
       "value": 588200000,
       "source": "xbrl:us-gaap:DebtCurrent",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Outstanding letters of credit",
       "value": 8800000,
       "source": "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Finance lease obligations",
       "value": 159000,
       "source": "release:Finance lease obligations",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Capitalized Lease Obligations are Indebtedness; company-reported"
     },
     {
       "name": "Operating lease liabilities",
       "value": 354302000,
       "source": "xbrl:us-gaap:OperatingLeaseLiability",
-      "clause": "(a)(ii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "ASC 842 operating lease liabilities"
     },
     {
       "name": "Unrestricted US cash in excess of $40,000,000",
       "value": 0,
       "source": "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
-      "clause": "(a)(iii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "cash and equivalents = $1,693,000; excess over $40,000,000 deducted; no excess, deduction is zero"
     },
     {
@@ -132,33 +132,15 @@
   "data_quality_warnings": [
     {
       "concept": "us-gaap:RestructuringCosts",
-      "period_end": "2024-12-28",
-      "direct": 28374000,
-      "derived": 3006000
-    },
-    {
-      "concept": "us-gaap:RestructuringCosts",
       "period_end": "2026-01-03",
       "direct": 48128000,
       "derived": 2348000
     },
     {
       "concept": "us-gaap:AssetImpairmentCharges",
-      "period_end": "2024-12-28",
-      "direct": 5420000,
-      "derived": 678000
-    },
-    {
-      "concept": "us-gaap:AssetImpairmentCharges",
       "period_end": "2026-01-03",
       "direct": 36363000,
       "derived": 803000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2021-10-02",
-      "direct": 24352000,
-      "derived": 25632000
     }
   ],
   "numerator": 951461000,
@@ -176,6 +158,10 @@
     "headroom": 0.24832540161315553,
     "headroom_2dp": 0.25,
     "pass": true,
+    "numerator_label": "total debt including operating leases",
+    "numerator_value": 951461000,
+    "denominator_label": "Consolidated EBITDAR",
+    "denominator_value": 223785000,
     "note": "Net Leverage Ratio max 4.5 (schedule entry for 2026-01-03)"
   },
   "interest_coverage": {
@@ -185,6 +171,10 @@
     "headroom": 0.3057753837430641,
     "headroom_2dp": 0.31,
     "pass": true,
+    "numerator_label": "Consolidated EBITDA",
+    "numerator_value": 118802000,
+    "denominator_label": "Consolidated Interest Expense",
+    "denominator_value": 49382000,
     "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-01-03)"
   },
   "reconciliation": {
@@ -243,7 +233,11 @@
       "threshold": 4.5,
       "headroom": -0.97493166844089,
       "headroom_2dp": -0.97,
-      "pass": false
+      "pass": false,
+      "numerator_label": "total debt including operating leases",
+      "numerator_value": 951461000,
+      "denominator_label": "Consolidated EBITDAR",
+      "denominator_value": 173785000
     },
     "interest_coverage": {
       "ratio": 1.393260702280183,
@@ -251,9 +245,13 @@
       "threshold": 2.1,
       "headroom": -0.706739297719817,
       "headroom_2dp": -0.71,
-      "pass": false
+      "pass": false,
+      "numerator_label": "Consolidated EBITDA",
+      "numerator_value": 68802000,
+      "denominator_label": "Consolidated Interest Expense",
+      "denominator_value": 49382000
     },
-    "note": "without lender-approved projected savings ((a)(ix)=0)"
+    "note": "without projected savings that require administrative agent approval ((a)(ix)=0)"
   },
   "cure": {
     "period_end": "2026-01-03",
@@ -327,6 +325,12 @@
     },
     "equity_cure": {
       "found": false,
+      "present": false,
+      "section": null,
+      "max_uses": null,
+      "limits": null,
+      "how_applied": null,
+      "quote": null,
       "note": "equity cure: not found in extracted terms"
     }
   }

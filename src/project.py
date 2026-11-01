@@ -194,12 +194,51 @@ def project_ratios(numerator, rent, onya_pre, company_pre, proforma,
 
 
 def cushions(projections, numerator, threshold):
-    """Return EBITDAR cushions in dollars for both bases."""
+    """Return EBITDAR cushions in dollars for both bases.
+
+    Cushion is projected EBITDAR minus the EBITDAR required at the
+    next threshold. A negative cushion is therefore an EBITDAR
+    shortfall: EBITDAR would need to rise by that amount to pass.
+    """
     required = numerator / threshold
+    onya = projections["onya"]["ebitdar"] - required
+    company = projections["company"]["ebitdar"] - required
     return {
         "required_ebitdar": required,
-        "onya": projections["onya"]["ebitdar"] - required,
-        "company": projections["company"]["ebitdar"] - required,
+        "onya": onya,
+        "company": company,
+        "onya_shortfall_to_pass": max(0, -onya),
+        "company_shortfall_to_pass": max(0, -company),
+        "meaning": ("projected EBITDAR minus EBITDAR required at the "
+                    "next threshold"),
+    }
+
+
+def avg_quarterly_change(series):
+    """Return endpoint-to-endpoint average quarterly change for a series."""
+    points = list(series or [])
+    if len(points) < 2:
+        return {
+            "value": None,
+            "absolute": None,
+            "method": "endpoint",
+            "method_label": "endpoint to endpoint",
+            "series": points,
+            "from_period": points[0]["period_end"] if points else None,
+            "to_period": points[-1]["period_end"] if points else None,
+            "intervals": 0,
+        }
+    value = ((points[-1]["adjusted_ebitda"] - points[0]["adjusted_ebitda"])
+             / (len(points) - 1))
+    return {
+        "value": value,
+        "absolute": abs(value),
+        "method": "endpoint",
+        "method_label": "endpoint to endpoint",
+        "series": points,
+        "from_period": points[0]["period_end"],
+        "to_period": points[-1]["period_end"],
+        "intervals": len(points) - 1,
     }
 
 
@@ -253,6 +292,7 @@ def load_trend(base):
         "changes": changes,
         "last_two": last_two,
         "avg_decline": avg_decline,
+        "avg_quarterly_change": avg_quarterly_change(series),
     }
 
 
@@ -396,6 +436,9 @@ def print_result(result):
     print(f"quarter-over-quarter TTM changes: {chg or 'n/a'}")
     print(f"avg_decline (mean of negative changes, last 2 quarters): "
           f"{_fmt_dollars(t['avg_decline'])}")
+    aqc = t.get("avg_quarterly_change") or {}
+    print(f"avg_quarterly_change ({aqc.get('method_label', 'endpoint to endpoint')}): "
+          f"{_fmt_dollars(aqc.get('value'))} per quarter")
     q = result["quarters_of_cushion"]
     r = result["risk"]
     print(f"quarters_of_cushion onya={_fmt_quarters(q['onya'])} ({r['onya']}) "

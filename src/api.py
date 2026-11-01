@@ -23,6 +23,8 @@ import re
 import secrets
 import sys
 import threading
+import time
+import traceback
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -189,6 +191,60 @@ def company_name(case):
     return name
 
 
+COMPANY_NAME_OVERRIDES = {
+    "SNBR": "Sleep Number",
+    "GPK": "Graphic Packaging",
+    "HAIN": "Hain Celestial",
+    "NUVR": "Nuvera Communications",
+    "STGW": "Stagwell",
+    "AMCX": "AMC Networks",
+    "ORLY": "O'Reilly Automotive",
+    "QUAD": "Quad",
+    "TRS": "TriMas",
+    "AIN": "Albany International",
+    "CRS": "Carpenter Technology",
+    "OPTX": "Syntec Optics",
+}
+
+
+def clean_company_name(ticker, raw_name):
+    """Title-case display name, with a small override map for known names."""
+    if ticker in COMPANY_NAME_OVERRIDES:
+        return COMPANY_NAME_OVERRIDES[ticker]
+    name = re.sub(r"\s+", " ", str(raw_name or ticker)).strip()
+    name = re.sub(r"\s*/DE/\s*$", "", name)
+    name = re.sub(r",?\s+(CORP|INC|INC\.|CORPORATION|CO|HOLDINGS, INC\.|"
+                  r"HOLDING CO)\.?$", "", name, flags=re.IGNORECASE)
+    return name.title() if name.isupper() else name
+
+
+def normalize_covenant_name(name):
+    """Short sentence-case covenant label for display."""
+    if not name:
+        return None
+    low = re.sub(r"\s+", " ", str(name).lower()).strip()
+    if "debt service" in low:
+        return "Debt service coverage"
+    if "fixed charge" in low:
+        return "Fixed charge coverage"
+    if "secured leverage" in low:
+        return "Secured leverage"
+    if "net leverage" in low:
+        return "Net leverage"
+    if "interest coverage" in low or "interest expense" in low:
+        return "Interest coverage"
+    if "leverage" in low:
+        return "Total leverage"
+    if "ebitda" in low:
+        return "Consolidated EBITDA"
+    text = low
+    for prefix in ("consolidated ", "minimum ", "maximum "):
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+    text = re.sub(r"\s+ratio$", "", text)
+    return text[:1].upper() + text[1:] if text else None
+
+
 # ---------------------------------------------------------------------------
 # Agent-run registry and rate limiting (in-memory, thread-safe)
 # ---------------------------------------------------------------------------
@@ -234,22 +290,91 @@ def _expected_token():
     return os.environ.get("ONYA_DEMO_TOKEN") or ""
 
 
+def _record_error_step(run_id, message):
+    """Append an error step to the run trace so the UI can show it."""
+    try:
+        path = _data_file("runs", f"{run_id}.jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        step = 0
+        if path.exists():
+            step = sum(1 for _ in path.open(encoding="utf-8"))
+        entry = {
+            "step": step,
+            "timestamp": _utcnow().isoformat(),
+            "type": "error",
+            "tool": None,
+            "arguments": {},
+            "result_summary": f"error: {message}",
+            "total_tokens": 0,
+        }
+        with path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except (OSError, ValueError):
+        pass
+
+
+def _fail_run(run_id, message, exc=None):
+    """Log to stderr, record an error step, and mark the run failed."""
+    if exc is not None:
+        print(f"[agent-run {run_id}] failed: "
+              f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+    else:
+        print(f"[agent-run {run_id}] failed: {message}",
+              file=sys.stderr, flush=True)
+    _record_error_step(run_id, message)
+    with _LOCK:
+        rec = _RUNS.get(run_id)
+        if rec is not None:
+            rec.update(status="failed", reason="failed",
+                       error=redact(message))
+
+
+def _agent_replay_enabled():
+    """True only when ONYA_AGENT_REPLAY=1 (never on unless explicitly set)."""
+    return os.environ.get("ONYA_AGENT_REPLAY") == "1"
+
+
+def _load_sample_memo():
+    try:
+        return _read_json(_data_file("samples", "snbr_memo.json"))
+    except (OSError, ValueError):
+        return None
+
+
+def _replay_in_background(run_id):
+    """Replay the saved sample run with short delays (no model calls)."""
+    sample = _load_sample_memo() or {}
+    steps = sample.get("steps") or []
+    try:
+        path = _data_file("runs", f"{run_id}.jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8") as f:
+            for entry in steps:
+                f.write(json.dumps(entry) + "\n")
+                f.flush()
+                time.sleep(0.35)
+    except (OSError, ValueError) as exc:
+        _fail_run(run_id, f"replay failed: {exc}", exc=exc)
+        return
+    with _LOCK:
+        rec = _RUNS.get(run_id)
+        if rec is not None:
+            rec.update(status="done", reason="replay",
+                       answer=sample.get("memo", ""),
+                       total_tokens=sample.get("total_tokens", 0),
+                       tool_calls=sample.get("tool_calls", 0),
+                       figure_fields=sample.get("figure_fields", []))
+
+
 def _run_in_background(run_id, question):
     try:
         outcome = agent.run_agent(question, run_id=run_id)
     except SystemExit:
-        with _LOCK:
-            rec = _RUNS.get(run_id)
-            if rec is not None:
-                rec.update(status="error", reason="error",
-                           error="model credentials not configured")
+        _fail_run(run_id, "model credentials not configured")
         return
     except Exception as exc:  # never leak tracebacks or paths to the UI
-        with _LOCK:
-            rec = _RUNS.get(run_id)
-            if rec is not None:
-                rec.update(status="error", reason="error",
-                           error=redact(f"{type(exc).__name__}: {exc}"))
+        _fail_run(run_id, f"{type(exc).__name__}: {exc}", exc=exc)
         return
     with _LOCK:
         rec = _RUNS.get(run_id)
@@ -257,7 +382,8 @@ def _run_in_background(run_id, question):
             rec.update(status="done", reason=outcome.get("reason", "done"),
                        answer=outcome.get("answer", ""),
                        total_tokens=outcome.get("total_tokens", 0),
-                       tool_calls=outcome.get("tool_calls", 0))
+                       tool_calls=outcome.get("tool_calls", 0),
+                       figure_fields=outcome.get("figure_fields", []))
 
 
 def _read_trace(run_id):
@@ -304,6 +430,15 @@ def get_health():
     return {"status": "ok"}
 
 
+@router.get("/samples/memo")
+def get_sample_memo():
+    sample = _load_sample_memo()
+    if sample is None:
+        return JSONResponse(status_code=404,
+                            content={"detail": "sample memo not found"})
+    return sample
+
+
 def _primary_covenant(covenants):
     """Headline covenant: first max-direction (leverage), else first."""
     if not covenants:
@@ -326,12 +461,89 @@ def _headroom(cov):
     return threshold - actual
 
 
+def _latest_snbr_result():
+    """Newest filed SNBR covenant result, or None when absent."""
+    best = None
+    for path in RESULTS_DIR.glob("snbr_*.json"):
+        if path.name.startswith("snbr_projection_"):
+            continue
+        try:
+            result = _read_json(path)
+        except (OSError, ValueError):
+            continue
+        period = result.get("period_end")
+        if period and (best is None or period > best.get("period_end", "")):
+            best = result
+    return best
+
+
+def _snbr_company_row(case):
+    """Watchlist row from the latest SNBR result (both savings scenarios)."""
+    result = _latest_snbr_result()
+    if result is None:
+        return None
+    lev = result.get("net_leverage") or {}
+    scenarios = result.get("proforma_scenarios") or []
+    with_savings = None
+    without_savings = None
+    if scenarios:
+        high = max(scenarios, key=lambda s: s.get("savings") or 0)
+        low = min(scenarios, key=lambda s: s.get("savings") or 0)
+        with_savings = (high.get("net_leverage") or {}).get("ratio_2dp")
+        if with_savings is None:
+            with_savings = (high.get("net_leverage") or {}).get("ratio")
+        without_savings = (low.get("net_leverage") or {}).get("ratio_2dp")
+        if without_savings is None:
+            without_savings = (low.get("net_leverage") or {}).get("ratio")
+    ratio = without_savings if without_savings is not None else lev.get("ratio")
+    threshold = lev.get("threshold")
+    headroom = (threshold - ratio
+                if threshold is not None and ratio is not None else None)
+    # Breach when even the maximum-savings scenario fails; fail on the
+    # conservative (no-savings) ratio otherwise.
+    best_pass = None
+    if scenarios:
+        best_pass = max(
+            scenarios, key=lambda s: s.get("savings") or 0
+        ).get("net_leverage", {}).get("pass")
+    if best_pass is False:
+        status = "fail"
+    elif ratio is not None and threshold is not None:
+        status = "pass" if ratio <= threshold else "fail"
+    elif lev.get("pass") is True:
+        status = "pass"
+    elif lev.get("pass") is False:
+        status = "fail"
+    else:
+        status = "unknown"
+    period_end = result.get("period_end")
+    return {
+        "ticker": "SNBR",
+        "name": clean_company_name("SNBR", company_name(case)),
+        "period_end": period_end,
+        "as_of": period_end,
+        "covenant": "Net leverage",
+        "ratio": ratio,
+        "threshold": threshold,
+        "headroom": headroom,
+        "status": status,
+        "scenarios": scenarios or None,
+        "ratio_with_savings": with_savings,
+        "ratio_without_savings": without_savings,
+    }
+
+
 @router.get("/companies")
 def list_companies():
     cases = _read_json(BACKTEST_DIR / "companies.json")
     companies = []
     for case in cases:
         ticker = case["ticker"]
+        if ticker.upper() == "SNBR":
+            row = _snbr_company_row(case)
+            if row is not None:
+                companies.append(row)
+                continue
         try:
             disclosed = score_disclosed.load_disclosed(ticker)
         except (OSError, ValueError):
@@ -346,12 +558,13 @@ def list_companies():
             status = "fail"
         else:
             status = "unknown"
+        period_end = (disclosed or {}).get("period_end") or case.get("period_end")
         companies.append({
             "ticker": ticker,
-            "name": company_name(case),
-            "period_end": (disclosed or {}).get("period_end")
-            or case.get("period_end"),
-            "covenant": (primary or {}).get("name"),
+            "name": clean_company_name(ticker, company_name(case)),
+            "period_end": period_end,
+            "as_of": period_end,
+            "covenant": normalize_covenant_name((primary or {}).get("name")),
             "ratio": (primary or {}).get("actual"),
             "threshold": (primary or {}).get("threshold"),
             "headroom": _headroom(primary),
@@ -431,7 +644,27 @@ def get_period(ticker: str, period_end: str):
     body["flags"] = flags
     body["scenarios"] = result.get("proforma_scenarios")
     body["projection"] = projection
+    body["covenant_clause"] = _net_leverage_clause(result)
     return body
+
+
+def _net_leverage_clause(result):
+    """Net Leverage covenant clause (section 5.7(a)) for the evidence margin."""
+    try:
+        contract = _read_json(EXTRACTED_DIR / "snbr_covenants.reviewed.json")
+    except (OSError, ValueError):
+        return None
+    for cov in contract.get("financial_covenants", []) or []:
+        if cov.get("name") == "Net Leverage Ratio":
+            lev = result.get("net_leverage") or {}
+            return {
+                "name": cov.get("name"),
+                "section": cov.get("section"),
+                "quote": cov.get("quote"),
+                "threshold": lev.get("threshold"),
+                "period_end": result.get("period_end"),
+            }
+    return None
 
 
 def _contract_evidence(clause_refs):
@@ -456,6 +689,23 @@ def _contract_evidence(clause_refs):
             "quote": comp.get("quote"),
         })
     return clauses
+
+
+def _cap_evidence(clause_refs):
+    """Shared cap clause covering all clause_refs, or None."""
+    try:
+        contract = _read_json(EXTRACTED_DIR / "snbr_covenants.reviewed.json")
+    except (OSError, ValueError):
+        return None
+    wanted = set(clause_refs)
+    for group in contract.get("cap_groups", []) or []:
+        if wanted and wanted <= set(group.get("applies_to_clauses", [])):
+            return {
+                "applies_to_clauses": group.get("applies_to_clauses"),
+                "quote": group.get("quote"),
+                "schedule": group.get("schedule"),
+            }
+    return None
 
 
 def _xbrl_evidence(concept, period_end):
@@ -555,7 +805,8 @@ def get_source(ref: str = Query(...),
         if clauses is None:
             return JSONResponse(status_code=404,
                                 content={"detail": "clause not found"})
-        return {"ref": ref, "kind": "contract", "clauses": clauses}
+        return {"ref": ref, "kind": "contract", "clauses": clauses,
+                "cap": _cap_evidence(clause_refs)}
     if kind == "xbrl":
         try:
             label, facts = _xbrl_evidence(rest, period_end)
@@ -700,8 +951,12 @@ def start_agent_run(body: RunRequest, request: Request,
                          "started_at": now.isoformat(), "ip": ip}
         _RUN_STARTS.append(now)
         _IP_STARTS.setdefault(ip, []).append(now)
-    thread = threading.Thread(target=_run_in_background,
-                              args=(run_id, question), daemon=True)
+    if _agent_replay_enabled():
+        thread = threading.Thread(target=_replay_in_background,
+                                  args=(run_id,), daemon=True)
+    else:
+        thread = threading.Thread(target=_run_in_background,
+                                  args=(run_id, question), daemon=True)
     thread.start()
     return {"run_id": run_id, "status": "running"}
 
@@ -725,6 +980,7 @@ def get_agent_run(run_id: str):
         total_tokens = record.get("total_tokens", 0)
         tool_calls = record.get("tool_calls", 0)
         error = record.get("error")
+        figure_fields = record.get("figure_fields", [])
     else:
         reason = None
         status = "done" if steps else "running"
@@ -732,10 +988,12 @@ def get_agent_run(run_id: str):
         total_tokens = steps[-1].get("total_tokens", 0) if steps else 0
         tool_calls = sum(1 for s in steps if s.get("type") == "tool_call")
         error = None
+        figure_fields = []
     return {"run_id": run_id, "status": status, "reason": reason,
             "steps": steps,
             "answer": redact(answer) if answer else None,
             "total_tokens": total_tokens, "tool_calls": tool_calls,
+            "figure_fields": figure_fields,
             "error": redact(error) if error else None}
 
 

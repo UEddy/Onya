@@ -120,6 +120,20 @@ class ScoreCompany(unittest.TestCase):
             self.assertFalse(row["actual_match"])
             self.assertFalse(row["threshold_match"])
 
+    def test_rows_carry_direction_and_waived_threshold(self):
+        key_entry = {"covenants": [
+            _key_cov("interest expense ratio", "min", 3.0, 4.86),
+            _key_cov("debt service coverage", "min", 2.0, 1.99,
+                     waived_threshold=1.75)]}
+        ext = {"covenants": [
+            _ext_cov("Consolidated Interest Expense Ratio", "min", 3.0, 4.86),
+            _ext_cov("Minimum Debt Service Coverage Ratio", "min", 2.0, 1.99)]}
+        rows, _ = score_disclosed.score_company("GPK", key_entry, ext)
+        self.assertEqual(rows[0]["direction"], "min")
+        self.assertIsNone(rows[0]["waived_threshold"])
+        self.assertEqual(rows[1]["direction"], "min")
+        self.assertEqual(rows[1]["waived_threshold"], 1.75)
+
     def test_optx_null_actual_matches(self):
         key_entry = {"covenants": [
             _key_cov("fixed charge coverage", "min", 1.1, None)]}

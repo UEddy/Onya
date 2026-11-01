@@ -38,9 +38,13 @@
   "cushion": {
     "required_ebitdar": 200307578.9473684,
     "onya": 17477421.052631587,
-    "company": 26930421.052631587
+    "company": 26930421.052631587,
+    "onya_shortfall_to_pass": 0,
+    "company_shortfall_to_pass": 0,
+    "meaning": "projected EBITDAR minus EBITDAR required at the next threshold"
   },
   "trend": {
+    "label": "company-reported Adjusted EBITDA (TTM, before covenant caps)",
     "series": [
       {
         "period_end": "2025-06-28",
@@ -79,7 +83,30 @@
         "change": -6807000
       }
     ],
-    "avg_decline": -10619500.0
+    "avg_decline": -10619500.0,
+    "avg_quarterly_change": {
+      "value": -10619500.0,
+      "absolute": 10619500.0,
+      "method": "endpoint",
+      "method_label": "endpoint to endpoint",
+      "series": [
+        {
+          "period_end": "2025-06-28",
+          "adjusted_ebitda": 99494000
+        },
+        {
+          "period_end": "2025-09-27",
+          "adjusted_ebitda": 85062000
+        },
+        {
+          "period_end": "2026-01-03",
+          "adjusted_ebitda": 78255000
+        }
+      ],
+      "from_period": "2025-06-28",
+      "to_period": "2026-01-03",
+      "intervals": 2
+    }
   },
   "quarters_of_cushion": {
     "onya": 1.6457856822479011,
@@ -102,7 +129,11 @@
       "headroom": -1.8263657242850115,
       "headroom_2dp": -1.83,
       "pass": false,
-      "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires agent approval; see proforma_scenarios"
+      "numerator_label": "total debt including operating leases",
+      "numerator_value": 962096000,
+      "denominator_label": "Consolidated EBITDAR",
+      "denominator_value": 146296000,
+      "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04); pro forma savings unverifiable: requires administrative agent approval; see proforma_scenarios"
     },
     "file_proforma": 0,
     "matched_savings": 44000000,
@@ -117,6 +148,10 @@
         "headroom": -0.3057867742884772,
         "headroom_2dp": -0.31,
         "pass": false,
+        "numerator_label": "total debt including operating leases",
+        "numerator_value": 962096000,
+        "denominator_label": "Consolidated EBITDAR",
+        "denominator_value": 190296000,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
@@ -126,9 +161,13 @@
         "headroom": -0.40305034627655445,
         "headroom_2dp": -0.4,
         "pass": false,
+        "numerator_label": "Consolidated EBITDA",
+        "numerator_value": 87230000,
+        "denominator_label": "Consolidated Interest Expense",
+        "denominator_value": 51404000,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
       },
-      "note": "unverifiable: requires agent approval"
+      "note": "unverifiable: requires administrative agent approval"
     },
     "without_savings": {
       "savings": 0,
@@ -141,6 +180,10 @@
         "headroom": -1.8263657242850115,
         "headroom_2dp": -1.83,
         "pass": false,
+        "numerator_label": "total debt including operating leases",
+        "numerator_value": 962096000,
+        "denominator_label": "Consolidated EBITDAR",
+        "denominator_value": 146296000,
         "note": "Net Leverage Ratio max 4.75 (schedule entry for 2026-04-04)"
       },
       "interest_coverage": {
@@ -150,9 +193,13 @@
         "headroom": -1.2590148626566027,
         "headroom_2dp": -1.26,
         "pass": false,
+        "numerator_label": "Consolidated EBITDA",
+        "numerator_value": 43230000,
+        "denominator_label": "Consolidated Interest Expense",
+        "denominator_value": 51404000,
         "note": "Interest Coverage Ratio min 2.1 (schedule entry for 2026-04-04)"
       },
-      "note": "unverifiable: requires agent approval"
+      "note": "unverifiable: requires administrative agent approval"
     }
   }
 }

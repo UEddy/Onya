@@ -104,6 +104,8 @@ def make_client():
     return OpenAI(
         api_key=os.environ["BASETEN_API_KEY"],
         base_url=os.environ["BASETEN_BASE_URL"],
+        timeout=120,
+        max_retries=2,
     )
 
 

@@ -89,6 +89,7 @@ class FetchRetry(unittest.TestCase):
                 with self.assertRaises(requests.HTTPError):
                     edgar.fetch("http://example.invalid/a", "a.htm")
         get.assert_called_once()
+        self.assertEqual(get.call_args.kwargs.get("timeout"), (10, 60))
         sleep.assert_not_called()
 
     def test_cached_file_returns_without_network(self):

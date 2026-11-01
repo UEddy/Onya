@@ -505,7 +505,7 @@ class FindCreditAgreements(DiscoverTestBase):
         # Uppercase AMENDMENT line wins even without an INCLUDE match.
         self.assertEqual(
             by_url["ex101creditagreement.htm"]["title"],
-            "THIRTEENTH AMENDMENT TO",
+            "THIRTEENTH AMENDMENT TO CREDIT AND SECURITY AGREEMENT",
         )
         self.assertEqual(
             by_url["ex102.htm"]["title"],
@@ -581,11 +581,28 @@ class FindCreditAgreements(DiscoverTestBase):
         # in the first 500 characters excludes it.
         self.assertNotIn("ex103-consulting", urls)
 
-    def test_title_trimmed_to_150_chars(self):
-        long_line = "CREDIT AGREEMENT " + "X" * 200
+    def test_title_trimmed_to_200_chars(self):
+        long_line = "CREDIT AGREEMENT " + "X" * 300
         title = edgar._extract_title(long_line + "\nsecond line\n")
-        self.assertEqual(len(title), 150)
+        self.assertEqual(len(title), 200)
         self.assertTrue(title.startswith("CREDIT AGREEMENT"))
+
+    def test_title_completed_when_ends_mid_phrase(self):
+        head = (
+            "FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT TO\n"
+            "AMENDED AND RESTATED CREDIT AND SECURITY AGREEMENT\n"
+            "Dated as of April 27, 2026.\n"
+        )
+        self.assertEqual(
+            edgar._extract_title(head),
+            "FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT TO "
+            "AMENDED AND RESTATED CREDIT AND SECURITY AGREEMENT")
+
+    def test_title_completed_after_comma(self):
+        head = "AMENDMENT TO CREDIT AGREEMENT,\nDATED AS OF MAY 1, 2026\n"
+        title = edgar._extract_title(head)
+        self.assertTrue(title.startswith("AMENDMENT TO CREDIT AGREEMENT,"))
+        self.assertLessEqual(len(title), 200)
 
 
 class ClassifyPatterns(unittest.TestCase):
@@ -963,6 +980,47 @@ class SelectAgreement(unittest.TestCase):
             base, amendments = edgar.select_agreement("SNBR", as_of="2023-01-01")
         self.assertIsNone(base)
         self.assertEqual(amendments, [])
+
+
+class SelectAgreementCache(unittest.TestCase):
+    def _fake(self):
+        return [
+            _cand("2025-11-10", complete=False, amendment=True, name="amend2.htm"),
+            _cand("2025-09-27", complete=False, amendment=True, name="amend1.htm"),
+            _cand("2025-03-01", complete=True, amendment=False, name="base.htm"),
+        ]
+
+    def test_second_call_reuses_cache_without_discovery(self):
+        calls = []
+
+        def fake_find(ticker, verbose=False):
+            calls.append(ticker)
+            return self._fake()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (patch.object(edgar, "CACHE_DIR", Path(tmp)),
+                  patch.object(edgar, "find_credit_agreements",
+                               side_effect=fake_find)):
+                base1, amend1 = edgar.select_agreement("827187")
+                base2, amend2 = edgar.select_agreement("827187")
+                cached = Path(tmp) / "select_0000827187_latest.json"
+                self.assertTrue(cached.exists())
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(base1["filingDate"], base2["filingDate"])
+        self.assertEqual(
+            [c["filingDate"] for c in amend1],
+            [c["filingDate"] for c in amend2])
+
+    def test_cache_is_keyed_by_as_of(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with (patch.object(edgar, "CACHE_DIR", Path(tmp)),
+                  patch.object(edgar, "find_credit_agreements",
+                               return_value=self._fake())):
+                edgar.select_agreement("827187", as_of="2025-10-01")
+                self.assertTrue(
+                    (Path(tmp) / "select_0000827187_2025-10-01.json").exists())
+                self.assertFalse(
+                    (Path(tmp) / "select_0000827187_latest.json").exists())
 
 
 class SelectCli(unittest.TestCase):

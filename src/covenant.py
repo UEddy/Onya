@@ -38,7 +38,7 @@ CASH_DEDUCTION_THRESHOLD = 40_000_000
 PERIOD_END = "2025-09-27"
 WARNING_ABS_THRESHOLD = 100_000
 WARNING_PCT_THRESHOLD = 0.005
-UNVERIFIABLE_LABEL = "unverifiable: requires agent approval"
+UNVERIFIABLE_LABEL = "unverifiable: requires administrative agent approval"
 RECONCILIATION_TOLERANCE_DOLLARS = 1_000_000  # 1,000 thousands
 
 
@@ -208,6 +208,63 @@ def filter_data_quality_warnings(warnings):
     return [w for w in warnings if is_material_warning(w[2], w[3])]
 
 
+def ttm_window_ends(period_end):
+    """Return the four quarter ends used for the period's TTM test.
+
+    Derived from the fiscal quarter ends of NetIncomeLoss. Returns None
+    when the quarters cannot be determined (callers fall back to a
+    date window).
+    """
+    try:
+        from ttm import quarterly
+
+        ends = sorted(quarterly("us-gaap:NetIncomeLoss"))
+        idx = ends.index(period_end)
+    except Exception:
+        return None
+    if idx < 3:
+        return None
+    return ends[idx - 3:idx + 1]
+
+
+def warnings_for_period(warnings, period_end):
+    """Keep only warnings whose quarter is inside the period's TTM window."""
+    window = ttm_window_ends(period_end)
+    material = filter_data_quality_warnings(warnings)
+    if window is not None:
+        keep = set(window)
+        return [w for w in material if w[1] in keep]
+    # Fallback: the four quarters ending at period_end span at most
+    # about 300 days (three quarterly intervals, 53-week years included).
+    from datetime import date, timedelta
+
+    try:
+        end = date.fromisoformat(period_end)
+    except (TypeError, ValueError):
+        return material
+    earliest = (end - timedelta(days=300)).isoformat()
+    return [w for w in material if earliest < w[1] <= period_end]
+
+
+def ratio_driver_fields(kind, numerator, ebitda, ebitdar, interest):
+    """Return the defined numerator and denominator for one covenant."""
+    if kind == "net_leverage":
+        return {
+            "numerator_label": "total debt including operating leases",
+            "numerator_value": numerator,
+            "denominator_label": "Consolidated EBITDAR",
+            "denominator_value": ebitdar,
+        }
+    if kind == "interest_coverage":
+        return {
+            "numerator_label": "Consolidated EBITDA",
+            "numerator_value": ebitda,
+            "denominator_label": "Consolidated Interest Expense",
+            "denominator_value": interest,
+        }
+    raise ValueError(f"unknown covenant kind: {kind}")
+
+
 def ratio_verdicts(numerator, ebitda, ebitdar, interest,
                    lev_threshold, cov_threshold):
     """Compute leverage and coverage ratios, headroom, and pass/fail."""
@@ -218,11 +275,15 @@ def ratio_verdicts(numerator, ebitda, ebitdar, interest,
             "ratio": lev_ratio,
             "headroom": lev_threshold - lev_ratio,
             "pass": lev_ratio <= lev_threshold,
+            **ratio_driver_fields(
+                "net_leverage", numerator, ebitda, ebitdar, interest),
         },
         "interest_coverage": {
             "ratio": cov_ratio,
             "headroom": cov_ratio - cov_threshold,
             "pass": cov_ratio >= cov_threshold,
+            **ratio_driver_fields(
+                "interest_coverage", numerator, ebitda, ebitdar, interest),
         },
     }
 
@@ -301,16 +362,19 @@ def compute(period_end):
         return f"release {table}[{line}] missing for {period_end}, used XBRL fallback"
 
     # -- Numerator: funded indebtedness + operating leases - excess cash --
+    # Debt-side components belong to the Net Leverage Ratio definition,
+    # not the Consolidated EBITDA clause (a) numbers.
     borrowings = add(
         "Borrowings under credit facility",
         instant("us-gaap:DebtCurrent", period_end),
-        "xbrl:us-gaap:DebtCurrent", "(a)(i)",
+        "xbrl:us-gaap:DebtCurrent", "definition: Net Leverage Ratio",
         "Consolidated Funded Indebtedness component",
     )
     letters = add(
         "Outstanding letters of credit",
         instant("us-gaap:LettersOfCreditOutstandingAmount", period_end),
-        "xbrl:us-gaap:LettersOfCreditOutstandingAmount", "(a)(i)",
+        "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
+        "definition: Net Leverage Ratio",
         "Consolidated Funded Indebtedness component",
     )
     fin_val = try_release_line(release, "leverage_table_ttm", "Finance lease obligations")
@@ -318,7 +382,8 @@ def compute(period_end):
         finance_leases = add(
             "Finance lease obligations",
             fin_val,
-            "release:Finance lease obligations", "(a)(i)",
+            "release:Finance lease obligations",
+            "definition: Net Leverage Ratio",
             "Capitalized Lease Obligations are Indebtedness; company-reported",
         )
     else:
@@ -329,7 +394,8 @@ def compute(period_end):
             finance_leases = add(
                 "Finance lease obligations",
                 carried_val,
-                f"estimate: carried forward from {carried_date}", "(a)(i)",
+                f"estimate: carried forward from {carried_date}",
+                "definition: Net Leverage Ratio",
                 "immaterial; not disclosed this period",
             )
         else:
@@ -344,14 +410,16 @@ def compute(period_end):
             finance_leases = add(
                 "Finance lease obligations",
                 fin_xbrl,
-                "xbrl:us-gaap:CapitalLeaseObligations", "(a)(i)",
+                "xbrl:us-gaap:CapitalLeaseObligations",
+                "definition: Net Leverage Ratio",
                 missing_note("leverage_table_ttm", "Finance lease obligations")
                 + ": us-gaap:CapitalLeaseObligations",
             )
     op_lease_liab = add(
         "Operating lease liabilities",
         instant("us-gaap:OperatingLeaseLiability", period_end),
-        "xbrl:us-gaap:OperatingLeaseLiability", "(a)(ii)",
+        "xbrl:us-gaap:OperatingLeaseLiability",
+        "definition: Net Leverage Ratio",
         "ASC 842 operating lease liabilities",
     )
     cash = instant("us-gaap:CashAndCashEquivalentsAtCarryingValue", period_end)
@@ -359,7 +427,8 @@ def compute(period_end):
     add(
         "Unrestricted US cash in excess of $40,000,000",
         -cash_excess,
-        "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue", "(a)(iii)",
+        "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
+        "definition: Net Leverage Ratio",
         f"cash and equivalents = ${cash:,}; excess over "
         f"${CASH_DEDUCTION_THRESHOLD:,} deducted"
         + ("" if cash_excess else "; no excess, deduction is zero"),
@@ -623,6 +692,9 @@ def compute(period_end):
                     "headroom": lh,
                     "headroom_2dp": round(lh, 2),
                     "pass": lr <= lev_threshold,
+                    **ratio_driver_fields(
+                        "net_leverage", numerator, sce_ebitda,
+                        sce_ebitdar, interest),
                     "note": f"Net Leverage Ratio max {lev_threshold} ({lev_note})",
                 },
                 "interest_coverage": {
@@ -632,6 +704,9 @@ def compute(period_end):
                     "headroom": ch,
                     "headroom_2dp": round(ch, 2),
                     "pass": cr >= cov_threshold,
+                    **ratio_driver_fields(
+                        "interest_coverage", numerator, sce_ebitda,
+                        sce_ebitdar, interest),
                     "note": f"Interest Coverage Ratio min {cov_threshold} ({cov_note})",
                 },
                 "note": UNVERIFIABLE_LABEL,
@@ -758,6 +833,9 @@ def compute(period_end):
                 "headroom": lev_threshold - sens_lev,
                 "headroom_2dp": round(lev_threshold - sens_lev, 2),
                 "pass": sens_lev <= lev_threshold,
+                **ratio_driver_fields(
+                    "net_leverage", numerator, sens_ebitda,
+                    sens_ebitdar, interest),
             },
             "interest_coverage": {
                 "ratio": sens_cov,
@@ -766,13 +844,17 @@ def compute(period_end):
                 "headroom": sens_cov - cov_threshold,
                 "headroom_2dp": round(sens_cov - cov_threshold, 2),
                 "pass": sens_cov >= cov_threshold,
+                **ratio_driver_fields(
+                    "interest_coverage", numerator, sens_ebitda,
+                    sens_ebitdar, interest),
             },
-            "note": "without lender-approved projected savings ((a)(ix)=0)",
+            "note": "without projected savings that require administrative agent approval ((a)(ix)=0)",
         }
 
     warnings = [
         {"concept": c, "period_end": e, "direct": d, "derived": v}
-        for c, e, d, v in filter_data_quality_warnings(DATA_QUALITY_WARNINGS)
+        for c, e, d, v in warnings_for_period(DATA_QUALITY_WARNINGS,
+                                              period_end)
     ]
 
     lev_suffix = ""
@@ -802,6 +884,8 @@ def compute(period_end):
             "headroom": lev_headroom,
             "headroom_2dp": round(lev_headroom, 2),
             "pass": lev_ratio <= lev_threshold,
+            **ratio_driver_fields(
+                "net_leverage", numerator, ebitda, ebitdar, interest),
             "note": f"Net Leverage Ratio max {lev_threshold} ({lev_note}){lev_suffix}",
         },
         "interest_coverage": {
@@ -811,6 +895,8 @@ def compute(period_end):
             "headroom": cov_headroom,
             "headroom_2dp": round(cov_headroom, 2),
             "pass": cov_ratio >= cov_threshold,
+            **ratio_driver_fields(
+                "interest_coverage", numerator, ebitda, ebitdar, interest),
             "note": f"Interest Coverage Ratio min {cov_threshold} ({cov_note}){cov_suffix}",
         },
     }
@@ -880,7 +966,7 @@ def print_result(result):
     if sens:
         slev = sens["net_leverage"]
         scov = sens["interest_coverage"]
-        print(f"Sensitivity without lender-approved projected savings "
+        print(f"Sensitivity without projected savings that require administrative agent approval "
               f"((a)(ix)=0): Net Leverage ratio={slev['ratio']:.2f} "
               f"{'PASS' if slev['pass'] else 'FAIL'}; "
               f"Interest Coverage ratio={scov['ratio']:.2f} "

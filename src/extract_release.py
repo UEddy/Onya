@@ -33,7 +33,7 @@ SCHEMA = """{
  "footnotes": [{"text": str, "quote": str}]
 }"""
 
-DASHES = ("—", "–", "-")
+DASHES = ("\u2014", "\u2013", "-")
 DASH_CELLS = frozenset(DASHES)
 
 INSTRUCTIONS = """You are extracting figures from the full earnings-release document above.
@@ -52,7 +52,7 @@ Rules:
 - Every "quote" must be copied verbatim from the document above (max 40 words each). Copy the exact characters; do not paraphrase, fix, or normalize them. Keep all original punctuation.
 - "line" labels must be copied as printed in the table.
 - Cover the TTM column (Adjusted EBITDA reconciliation) and the current-period column (Net Leverage Ratio table) ONLY. Ignore all other periods and columns.
-- If the target-column cell for a line is printed as a dash (em dash —, en dash –, or hyphen -), return "value_thousands": 0 for that line and set "printed_as_dash": true. The "quote" must still be copied verbatim from the document.
+- If the target-column cell for a line is printed as a dash (em dash \u2014, en dash \u2013, or hyphen -), return "value_thousands": 0 for that line and set "printed_as_dash": true. The "quote" must still be copied verbatim from the document.
 - Omit "printed_as_dash" (or set it false) for every other entry.
 - Never infer or compute numbers. Only report values explicitly stated in the document.
 - Use null when something is not stated (e.g. a line with no dollar amount or no ratio). A dash in the target column is stated as zero (0 with "printed_as_dash": true), not null.
@@ -117,7 +117,7 @@ def line_cells_contain_dash(document, label, window=8):
     The textified release puts each table cell on its own line. Scan the
     `window` lines after each exact label match, stopping at the next
     label-like line (one containing letters), and report whether any cell
-    is exactly a dash (—, –, or -).
+    is exactly a dash (\u2014, \u2013, or -).
     """
     target = (label or "").strip()
     if not target:
@@ -172,6 +172,8 @@ def main():
     client = OpenAI(
         api_key=os.environ["META_API_KEY"],
         base_url=os.environ["META_BASE_URL"],
+        timeout=120,
+        max_retries=2,
     )
 
     def request():

@@ -127,7 +127,7 @@ class ModelConfig(unittest.TestCase):
                          {"BASETEN_API_KEY": "k", "BASETEN_BASE_URL": "u"}),
               patch.object(backtest_terms, "OpenAI") as factory):
             backtest_terms.make_client()
-        factory.assert_called_once_with(api_key="k", base_url="u")
+        factory.assert_called_once_with(api_key="k", base_url="u", timeout=120, max_retries=2)
 
     def test_reuses_extract_logic(self):
         self.assertIs(backtest_terms.INSTRUCTIONS, extract.INSTRUCTIONS)

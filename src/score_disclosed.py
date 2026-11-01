@@ -126,6 +126,8 @@ def score_company(ticker, key_entry, ext):
             {
                 "ticker": ticker,
                 "covenant": key_cov.get("name", "?"),
+                "direction": key_cov.get("direction"),
+                "waived_threshold": key_cov.get("waived_threshold"),
                 "actual_ext": actual_ext,
                 "actual_key": actual_key,
                 "actual_match": actual_ok,

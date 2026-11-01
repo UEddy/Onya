@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  scrollbar-gutter: stable;
+}
+
+:root {
+  --paper: #f2f5f3;
+  --ink: #15222c;
+  --ink-muted: #4a5a63;
+  --rule: #c7d1cd;
+  --pass: #2e6a4e;
+  --watch: #a8711c;
+  --breach: #b3242d;
+  --surface: #ffffff;
+}
+
+.dark {
+  --paper: #101a21;
+  --ink: #e6ece9;
+  --ink-muted: #9aa9a3;
+  --rule: #2a3a43;
+  --pass: #5fa883;
+  --watch: #d49a3e;
+  --breach: #e05a60;
+  --surface: #16232c;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-rule: var(--rule);
+  --color-pass: var(--pass);
+  --color-watch: var(--watch);
+  --color-breach: var(--breach);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.quote {
+  font-family: var(--font-serif);
+  line-height: 1.7;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+[id^="fig-"] {
+  scroll-margin-top: 1.5rem;
+}
+
+.figure-highlight {
+  background: color-mix(in srgb, var(--watch) 22%, transparent);
+  transition: background-color 300ms ease;
+}
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  body:has(.memo-print-area) * {
+    visibility: hidden;
+  }
+
+  body:has(.memo-print-area) .memo-print-area,
+  body:has(.memo-print-area) .memo-print-area * {
+    visibility: visible;
+  }
+
+  .memo-print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .memo-print-area .memo-actions {
+    order: -1;
+  }
+
+  .no-print,
+  header,
+  footer,
+  nav,
+  button,
+  input,
+  textarea {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: none;
+  }
+}
+
+.index-label,
+.filing-date {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+.fade-up {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.fade-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

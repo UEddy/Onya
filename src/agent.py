@@ -15,13 +15,12 @@ Run from the project root::
     python src/agent.py "Check Sleep Number's covenants as of the April 2026 test and tell me what to do."
 """
 
-import io
+import concurrent.futures
 import json
 import os
 import re
 import sys
 import uuid
-from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -44,6 +43,7 @@ TIER = "standard"  # base model name selects the standard tier (vs -contributor)
 MAX_TOKENS = 8000  # per agent turn
 MAX_TOOL_CALLS = 15
 TOKEN_BUDGET = 400_000  # per run
+TOOL_TIMEOUT_SECONDS = 45  # per tool call; a timeout becomes an error step
 
 USAGE = 'Usage: python src/agent.py "<request>"'
 
@@ -82,15 +82,22 @@ to every other tool call in the run.
 example, call lookup_company to resolve the company and retry with the CIK) \
 before giving up.
 - Always cite tool outputs for facts and figures. Never invent numbers.
-- Every number in prose must come from a tool result: exact dollar figures with \
-commas, ratios to two decimals, dates as YYYY-MM-DD.
+- Every number in the memo must come from a tool result. Tool call arguments keep \
+dates as YYYY-MM-DD, but memo prose uses dates like "Apr 4, 2026", ratios like \
+"6.58x", and dollars like "$267.2 million" in prose; exact dollar figures with \
+commas belong in the Covenant tests table.
 - Describe documents and figures only with the exact titles and labels from tool \
 outputs; never name or number an amendment yourself (no invented "first amendment", \
 "13th amendment", or document title).
-- When compute_covenants reports reconciliation as "not available (no company leverage \
-table disclosed)", say exactly that in the memo; never write "no break".
-- Report equity-cure status only from the reviewed file's equity_cure field: never say \
-"no equity cure available" unless equity_cure.present is false in the reviewed file.
+- When compute_covenants reports that no company leverage table was \
+disclosed, rewrite it in your own words, for example "The company did not \
+disclose a leverage table this quarter, so no reconciliation is available." \
+Never copy raw tool status strings into the memo, and never write "no break".
+- Report equity-cure status only from the reviewed file's equity_cure field. \
+When equity_cure.present is false, write exactly "No equity cure provision \
+was found in the reviewed agreement". Never write "the reviewed agreement \
+provides no equity cure" or "no equity cure available": the extraction can \
+only show that none was found.
 - Spell out small counts ("two covenants") instead of using digits that never appeared \
 in tool outputs.
 - If a tool says "unsupported" (anything beyond SNBR for compute/project/cure), say \
@@ -98,6 +105,50 @@ in tool outputs.
 - Prefer reviewed extractions and filed results over estimates.
 - Keep going until the user's question is answered or you run out of tool calls \
 (15 max), then summarize.
+
+Memo (the draft you submit to draft_memo, and your final answer):
+- The reader is a credit analyst at the lender. Never advise "engaging lenders" \
+or asking the lender to act. Recommended actions are lender actions, for \
+example: reserve rights under the agreement, request the compliance certificate \
+and support for each add-back, and tighten reporting.
+- Use governing_doc_type from find_agreements. When it is "forbearance", do \
+not recommend opening forbearance or amendment discussions. Recommend instead: \
+review the forbearance terms, termination events, and expiry date against the \
+next test; reserve rights; request the compliance certificate and add-back \
+support; and tighten reporting. Do not invent the expiry date: say "check the \
+forbearance expiry date" unless the extraction states it. Only when \
+governing_doc_type is "amendment" or "base" may you recommend amendment \
+discussions with the borrower.
+- Use these short headings, in this order: Summary, Covenant tests, What drove \
+it, Cure, Outlook, Recommended actions. Summary is two sentences.
+- Under Covenant tests, give a small markdown table with columns Covenant, \
+Result, Limit, Headroom. Exact figures go in this table.
+- Build every What drove it sentence only from that covenant's \
+numerator_label, numerator_value, denominator_label, and denominator_value. \
+Net leverage uses total debt including operating leases over Consolidated \
+EBITDAR. Interest coverage uses Consolidated EBITDA over Consolidated Interest \
+Expense. Never pair Consolidated EBITDAR with interest.
+- Always report projected-savings scenarios when scenarios are present, and \
+write each covenant once: "Net leverage is 5.06x even with the maximum $44M \
+of projected savings, and 6.58x without." Use the same single-sentence form \
+for interest coverage, with its own ratios.
+- When avg_quarterly_change is present, report its value and name the method \
+in plain words, for example "endpoint to endpoint". Do not present \
+trend_avg_decline as the average quarterly change.
+- When a projected cushion is negative, do not call the cushion negative. Say \
+"EBITDAR would need to rise by $54.1 million to pass the Jul 4, 2026 test at \
+the baseline projection", using the shortfall field and next test date from \
+the tool output.
+- End with Recommended actions as three to five bullets, each a lender action.
+- After a test date, use the plural noun "failures", as in "Reserve rights \
+under the agreement for the Apr 4, 2026 failures", never "the Apr 4, 2026 \
+fails".
+- Format ratios always with two decimals and x, such as 2.10x, 4.80x, and \
+1.70x. Write risk in lowercase, such as "high risk". Write "add-backs" \
+hyphenated. Use sentence case covenant names in prose, such as "net leverage" \
+and "interest coverage"; the table may keep the agreement's defined terms.
+- Write document titles in sentence case, never ALL CAPS. Use plain words: \
+write "fails", not "result fail". Use no em dashes anywhere.
 """
 
 SUPPORTED_PIPELINES = frozenset({"snbr"})
@@ -273,8 +324,16 @@ def reset_corpus():
 # ---------------------------------------------------------------------------
 
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+MONTH_DATE_RE = re.compile(
+    r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+"
+    r"(\d{1,2}),\s+(\d{4})")
+_MONTH_NUMBERS = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5,
+                  "Jun": 6, "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10,
+                  "Nov": 11, "Dec": 12}
 NUMBER_RE = re.compile(
     r"\d{4}-\d{2}-\d{2}"  # ISO date first, so it stays one token
+    r"|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+"
+    r"\d{1,2},\s+\d{4}"  # "Apr 4, 2026" stays one date token
     r"|(?<![A-Za-z0-9/])\$?\d[\d,]*(?:\.\d+)?"  # number, optional $/commas/decimals
     r"%?"  # optional percent
     r"(?:\s?(?:x|million|billion|thousand|[KMB]))?"  # optional ratio/scale suffix
@@ -293,6 +352,13 @@ def _parse_number_token(token):
     t = token.strip()
     if DATE_RE.fullmatch(t):
         return {"raw": token, "kind": "date", "text": t, "value": None,
+                "tolerance": 0.0}
+    month_match = MONTH_DATE_RE.fullmatch(t)
+    if month_match:
+        month = _MONTH_NUMBERS[month_match.group(1)]
+        iso = "%s-%02d-%02d" % (month_match.group(3), month,
+                                int(month_match.group(2)))
+        return {"raw": token, "kind": "date", "text": iso, "value": None,
                 "tolerance": 0.0}
     t = t.replace("$", "").replace(",", "").strip()
     m = _SUFFIX_RE.match(t)
@@ -319,6 +385,55 @@ def numbers_in_text(text):
     return out
 
 
+def canonical_figure_fields(tool_outputs):
+    """Map canonical case-page fields to values from tool outputs."""
+    found = []
+
+    def add(field, value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return
+        if value == 0:
+            return
+        entry = (field, abs(value))
+        if entry not in found:
+            found.append(entry)
+
+    def walk(node, context=""):
+        if isinstance(node, dict):
+            if node.get("denominator_label") == "Consolidated Interest Expense":
+                add("interest_expense", node.get("denominator_value"))
+            if node.get("name") == "Interest expense":
+                add("interest_expense", node.get("value"))
+            for key, value in node.items():
+                if key == "numerator" and context != "cure":
+                    add("total_debt", value)
+                elif key == "ebitdar":
+                    add("ebitdar", value)
+                elif key == "ebitda":
+                    add("ebitda", value)
+                elif key == "disallowed":
+                    add("disallowed", value)
+                elif key == "debt_reduction_needed":
+                    add("cure.debt_reduction",
+                        value.get("value") if isinstance(value, dict)
+                        else value)
+                elif key == "ebitda_increase_needed":
+                    amount = (value.get("value") if isinstance(value, dict)
+                              else value)
+                    if context == "interest_coverage":
+                        add("cure.interest_ebitda_increase", amount)
+                    else:
+                        add("cure.ebitda_increase", amount)
+                walk(value, key if key in (
+                    "net_leverage", "interest_coverage") else context)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, context)
+
+    walk(tool_outputs or [])
+    return found
+
+
 def verify_memo_numbers(draft, tool_outputs):
     """Check every number in the draft against prior tool outputs.
 
@@ -336,7 +451,9 @@ def verify_memo_numbers(draft, tool_outputs):
     corpus_values = [n["value"] for n in corpus_nums
                      if n["value"] is not None]
     draft_nums = numbers_in_text(draft)
+    canonical = canonical_figure_fields(tool_outputs)
     unverified = []
+    figure_fields = []
     for n in draft_nums:
         if n["kind"] == "date":
             ok = n["text"] in corpus_dates
@@ -347,6 +464,14 @@ def verify_memo_numbers(draft, tool_outputs):
         else:
             ok = any(abs(n["value"] - v) <= n["tolerance"]
                      for v in corpus_values)
+        if ok and n["value"] is not None:
+            for field, value in canonical:
+                if abs(abs(n["value"]) - value) <= n["tolerance"]:
+                    entry = {"raw": n["raw"].strip(), "field": field,
+                             "value": n["value"]}
+                    if entry not in figure_fields:
+                        figure_fields.append(entry)
+                    break
         if not ok:
             raw = n["raw"].strip()
             if raw not in unverified:
@@ -359,6 +484,7 @@ def verify_memo_numbers(draft, tool_outputs):
                 % len(draft_nums))
     return {"numbers_checked": len(draft_nums),
             "unverified_numbers": unverified,
+            "figure_fields": figure_fields,
             "verified": not unverified,
             "note": note}
 
@@ -436,6 +562,102 @@ def verify_memo_labels(draft, tool_outputs):
                          if t.lower() not in corpus]
     return {"unverified_ordinals": unverified_ordinals,
             "unverified_titles": unverified_titles}
+
+
+def _memo_sentences(text):
+    """Split memo prose into sentences without splitting decimals."""
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", text or "")
+    return [p.strip() for p in parts if p.strip()]
+
+
+def verify_memo_drivers(draft):
+    """Flag covenant driver sentences that pair the wrong fields."""
+    errors = []
+    for sentence in _memo_sentences(draft):
+        low = sentence.lower()
+        if "interest coverage" in low:
+            wrong_pair = (
+                re.search(r"\bebitdar\b.{0,120}?\b(?:against|over|/)\s+"
+                          r"(?:consolidated\s+)?interest\b", low)
+                or re.search(r"\bebitdar\b.{0,80}?\binterest\s+expense\b"
+                             r".{0,80}?\binterest coverage\b", low)
+                or ("ebitdar" in low and "interest of" in low
+                    and "interest coverage" in low)
+            )
+            if wrong_pair:
+                errors.append(
+                    "interest coverage must use Consolidated EBITDA over "
+                    "Consolidated Interest Expense, not Consolidated EBITDAR")
+        if "net leverage" in low:
+            wrong_pair = re.search(
+                r"total debt including operating leases.{0,120}?"
+                r"\b(?:against|over|/)\s+consolidated ebitda(?!r)\b", low)
+            if wrong_pair:
+                errors.append(
+                    "net leverage must use total debt including operating "
+                    "leases over Consolidated EBITDAR")
+    return errors
+
+
+def repeated_phrases_in_memo(draft, min_words=6):
+    """Return 6+ word phrases repeated inside a single memo sentence."""
+    repeated = []
+    for sentence in _memo_sentences(draft):
+        words = re.findall(r"[a-z0-9$%.]+", sentence.lower())
+        seen = {}
+        for i in range(0, len(words) - min_words + 1):
+            phrase = " ".join(words[i:i + min_words])
+            if phrase in seen and phrase not in repeated:
+                repeated.append(phrase)
+            seen[phrase] = i
+    return repeated
+
+
+def verify_memo_format(draft):
+    """Flag memo formatting that violates the house style."""
+    errors = []
+    low_draft = (draft or "").lower()
+    if "\u2014" in draft or "\u2013" in draft:
+        errors.append("memo contains an em dash or en dash")
+    for match in re.finditer(r"\b\d+(?:\.(\d+))?x\b", draft or ""):
+        decimals = match.group(1) or ""
+        if len(decimals) != 2:
+            errors.append(f"ratio {match.group(0)} must have two decimals")
+    if re.search(r"\b(?:HIGH|MEDIUM|LOW)\s+risk\b", draft or ""):
+        errors.append("risk must be lowercase, such as high risk")
+    if re.search(r"\baddbacks?\b|\badd backs?\b", draft or "",
+                 re.IGNORECASE):
+        errors.append("use add-backs, hyphenated")
+    if "provides no equity cure" in low_draft or (
+            "no equity cure available" in low_draft):
+        errors.append(
+            "write: No equity cure provision was found in the reviewed "
+            "agreement")
+    if re.search(r"\b\d{4} fails\b", draft or ""):
+        errors.append("after a test date, write failures, not fails")
+    raw_phrases = (
+        "not available (no company leverage table disclosed)",
+        "sensitivity without lender-approved projected savings",
+        "without lender-approved projected savings",
+        "consolidated adjusted ebitda forecast",
+        "lesser of consolidated adjusted ebitda",
+        "public filings",
+    )
+    for phrase in raw_phrases:
+        if phrase in low_draft:
+            errors.append(f"rewrite the raw tool wording: {phrase}")
+    if re.search(r"requires agent approval", low_draft):
+        errors.append("say requires administrative agent approval")
+    prose = "\n".join(
+        line for line in (draft or "").splitlines()
+        if not line.lstrip().startswith("|"))
+    for name in ("Net Leverage Ratio", "Interest Coverage Ratio",
+                 "Net Leverage", "Interest Coverage"):
+        if re.search(rf"\b{name}\b", prose):
+            errors.append(
+                f"covenant name {name} must be sentence case in prose")
+            break
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -719,23 +941,82 @@ def _compact_candidate(cand):
     }
 
 
+def _call_with_timeout(func, timeout, label):
+    """Run func in a worker thread, raising TimeoutError after `timeout`s."""
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(func)
+    try:
+        return future.result(timeout=timeout)
+    except concurrent.futures.TimeoutError:
+        executor.shutdown(wait=False, cancel_futures=True)
+        raise TimeoutError(
+            f"{label} timed out after {timeout} seconds") from None
+    finally:
+        executor.shutdown(wait=False)
+
+
+def _discovery_cache_present(ticker):
+    """True when EDGAR discovery inputs for this ticker are already cached.
+
+    Discovery is cached under data/raw by edgar.fetch (the submissions
+    index plus filing index pages and exhibits), so a present submissions
+    file means select_agreement reuses those files instead of fetching.
+    """
+    cik10 = ""
+    tok = str(ticker or "").strip()
+    if tok.isdigit():
+        cik10 = tok.zfill(10)[-10:]
+    else:
+        for key, info in _load_companies_registry().items():
+            if not isinstance(info, dict):
+                continue
+            if str(key).upper() == tok.upper() and info.get("cik"):
+                cik10 = _cik10(info["cik"])
+                break
+    if not cik10:
+        return False
+    return (DATA_DIR / "raw" / f"submissions_CIK{cik10}.json").exists()
+
+
+def governing_doc_type(base, amendments=None):
+    """Classify the governing document as forbearance, amendment, or base."""
+    base = base or {}
+    title = str(base.get("title") or "").lower()
+    description = str(base.get("description") or "").lower()
+    if (base.get("is_forbearance") or "forbearance" in title
+            or "forbearance" in description):
+        return "forbearance"
+    if (base.get("is_amendment") or "amendment" in title
+            or "amendment" in description):
+        return "amendment"
+    return "base"
+
+
 def tool_find_agreements(company, as_of=None):
     """select_agreement results: base agreement + amendments (metadata only).
 
     Filings dated after as_of are excluded by select_agreement. EDGAR
     discovery progress lines are suppressed here; they print only in the
-    CLI discover/select commands.
+    CLI discover/select commands. Cached discovery data under data/raw
+    is reused when present (edgar.fetch returns cached files without a
+    network fetch). The call is bounded by TOOL_TIMEOUT_SECONDS via
+    dispatch_tool; a timeout becomes an error result the UI can show.
     """
     import edgar
 
     ticker = resolve_ticker(company)
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        base, amendments = edgar.select_agreement(ticker, as_of=as_of)
+    cached = _discovery_cache_present(ticker)
+    # verbose=False keeps discovery quiet; stdout is never redirected
+    # here because this runs in a worker thread and redirect_stdout is
+    # process-wide.
+    base, amendments = edgar.select_agreement(
+        ticker, as_of=as_of, verbose=False)
     return _record({
         "company": company,
         "ticker": ticker,
         "as_of": as_of,
+        "cached_discovery": cached,
+        "governing_doc_type": governing_doc_type(base, amendments),
         "base": _compact_candidate(base) if base is not None else None,
         "amendments": [_compact_candidate(c) for c in (amendments or [])],
     })
@@ -891,7 +1172,11 @@ def _compact_verdict(block):
             "threshold": block.get("threshold"),
             "headroom": block.get("headroom"),
             "headroom_2dp": block.get("headroom_2dp"),
-            "pass": block.get("pass"), "note": block.get("note")}
+            "pass": block.get("pass"), "note": block.get("note"),
+            "numerator_label": block.get("numerator_label"),
+            "numerator_value": block.get("numerator_value"),
+            "denominator_label": block.get("denominator_label"),
+            "denominator_value": block.get("denominator_value")}
 
 
 COVENANT_LABELS = {
@@ -1037,6 +1322,7 @@ def tool_project_next_test(company, base_period, as_of=None):
         "risk": result.get("risk"), "risk_rule": result.get("risk_rule"),
         "trend_label": trend.get("label", project.TREND_LABEL),
         "trend_avg_decline": trend.get("avg_decline"),
+        "avg_quarterly_change": trend.get("avg_quarterly_change"),
         "trend_series": trend.get("series", []),
         "backtest": back,
         "saved_path": saved,
@@ -1117,15 +1403,52 @@ def tool_draft_memo(company, period_end, draft="", as_of=None):
             "period_end": period_end,
             "as_of": as_of,
             "instruction": ("Call draft_memo again with your full memo prose "
-                            "in the 'draft' argument. Use only numbers, "
-                            "amendment ordinals, and document titles from "
-                            "prior tool outputs; every one is verified "
-                            "and any invented figure is flagged."),
+                            "in the 'draft' argument. Write for a credit "
+                            "analyst at the lender: lender actions only, never "
+                            "advise engaging lenders. Use governing_doc_type: "
+                            "when it is forbearance, do not recommend opening "
+                            "forbearance or amendment discussions; recommend "
+                            "reviewing forbearance terms, termination events, "
+                            "and expiry, reserving rights, requesting the "
+                            "compliance certificate and add-back support, and "
+                            "tightening reporting. Use the headings Summary "
+                            "(two sentences), Covenant tests (a small table: "
+                            "Covenant, Result, Limit, Headroom, with exact "
+                            "figures), What drove it, Cure, Outlook, and "
+                            "Recommended actions (three to five bullets). "
+                            "Build What drove it only from each covenant's "
+                            "numerator and denominator labels and values: "
+                            "total debt including operating leases over "
+                            "Consolidated EBITDAR for net leverage, and "
+                            "Consolidated EBITDA over Consolidated Interest "
+                            "Expense for interest coverage. Write scenarios "
+                            "once, for example: Net leverage is 5.06x even "
+                            "with the maximum $44M of projected savings, and "
+                            "6.58x without. Name the avg_quarterly_change "
+                            "method in plain words. If cushion is negative, "
+                            "state the EBITDAR rise needed to pass the next "
+                            "test. When equity_cure.present is false, write "
+                            "exactly: No equity cure provision was found in "
+                            "the reviewed agreement. After a test date use "
+                            "the plural noun failures, never fails. Prose "
+                            "style: dates as Apr 4, 2026, ratios "
+                            "always two decimals with x, dollars as $267.2 "
+                            "million, risk in lowercase, add-backs "
+                            "hyphenated, covenant names in sentence case, "
+                            "document titles in sentence case, plain words, "
+                            "no em dashes. Use only numbers, amendment "
+                            "ordinals, and document titles from prior tool "
+                            "outputs; every one is verified and any invented "
+                            "figure is flagged."),
         }
     report = verify_memo_numbers(draft, _TOOL_OUTPUTS)
     labels = verify_memo_labels(draft, _TOOL_OUTPUTS)
+    drivers = verify_memo_drivers(draft)
+    repeated = repeated_phrases_in_memo(draft)
+    format_errors = verify_memo_format(draft)
     verified = (report["verified"] and not labels["unverified_ordinals"]
-                and not labels["unverified_titles"])
+                and not labels["unverified_titles"] and not drivers
+                and not repeated and not format_errors)
     note = report["note"]
     flagged = labels["unverified_ordinals"] + labels["unverified_titles"]
     if flagged:
@@ -1133,12 +1456,22 @@ def tool_draft_memo(company, period_end, draft="", as_of=None):
                  "in tool outputs: %s; use only the exact titles and "
                  "labels from tool outputs"
                  % (len(flagged), flagged))
+    if drivers:
+        note += "; covenant driver errors: " + "; ".join(drivers)
+    if repeated:
+        note += "; repeated phrases in a sentence: " + "; ".join(repeated)
+    if format_errors:
+        note += "; formatting errors: " + "; ".join(format_errors)
     return {"memo": draft, "company": company, "period_end": period_end,
             "as_of": as_of,
             "numbers_checked": report["numbers_checked"],
             "unverified_numbers": report["unverified_numbers"],
             "unverified_ordinals": labels["unverified_ordinals"],
             "unverified_titles": labels["unverified_titles"],
+            "figure_fields": report["figure_fields"],
+            "unverified_drivers": drivers,
+            "repeated_phrases": repeated,
+            "format_errors": format_errors,
             "verified": verified,
             "note": note}
 
@@ -1271,13 +1604,21 @@ TOOL_FUNCS = {
 }
 
 
-def dispatch_tool(name, arguments):
-    """Run one tool by name; unknown tools and crashes become error dicts."""
+def dispatch_tool(name, arguments, timeout=TOOL_TIMEOUT_SECONDS):
+    """Run one tool by name; unknown tools and crashes become error dicts.
+
+    Each call is bounded by `timeout` seconds (45 by default). A timeout
+    returns an error dict, which run_agent records as a tool step so the
+    UI can show what happened instead of spinning.
+    """
     func = TOOL_FUNCS.get(name)
     if func is None:
         return {"error": f"unknown tool: {name}"}
     try:
-        result = func(**(arguments or {}))
+        result = _call_with_timeout(
+            lambda: func(**(arguments or {})), timeout, name)
+    except TimeoutError as exc:
+        return {"error": str(exc)}
     except TypeError as exc:
         return {"error": f"bad arguments for {name}: {exc}"}
     except Exception as exc:
@@ -1295,6 +1636,17 @@ def _pass_fail(value):
     if value is False:
         return "FAIL"
     return "n/a"
+
+
+def _truncate_at_word(text, max_chars=300):
+    """Shorten text at a word boundary with an ASCII ellipsis."""
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars - 3]
+    boundary = cut.rfind(" ")
+    if boundary > 0:
+        cut = cut[:boundary]
+    return cut.rstrip(" ,;:") + "..."
 
 
 def summarize_result(tool, result, max_chars=300):
@@ -1320,7 +1672,7 @@ def summarize_result(tool, result, max_chars=300):
         if base:
             text = ("base: %s %s %s; %d amendment(s)" % (
                 base.get("filingDate"), base.get("form"),
-                (base.get("title") or "")[:80], n))
+                base.get("title") or "", n))
         else:
             text = "no complete agreement found"
     elif tool == "extract_covenants":
@@ -1375,9 +1727,7 @@ def summarize_result(tool, result, max_chars=300):
                 text += "; unverified labels: %s" % (flagged_labels,)
     else:
         text = json.dumps(result, default=str)
-    if len(text) > max_chars:
-        text = text[:max_chars - 1] + "…"
-    return text
+    return _truncate_at_word(text, max_chars)
 
 
 # ---------------------------------------------------------------------------
@@ -1481,6 +1831,8 @@ def run_agent(user_prompt, client=None, run_id=None,
     tool_calls = 0
     step = 0
     history = []
+    seen_results = {}
+    last_figure_fields = []
 
     def _log_final(content, turn):
         step_nl = step + 1
@@ -1556,6 +1908,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                         return {"answer": retry_content, "reason": "done",
                                 "run_id": run_id, "tool_calls": tool_calls,
                                 "total_tokens": total_tokens,
+                                "figure_fields": last_figure_fields,
                                 "trace_path": str(trace_path)}
                     fallback = _fallback_answer(user_prompt, history)
                     step = _log_final(fallback, retry_turn)
@@ -1583,6 +1936,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                                       "reason": "done"})
                 return {"answer": content, "reason": "done", "run_id": run_id,
                         "tool_calls": tool_calls, "total_tokens": total_tokens,
+                        "figure_fields": last_figure_fields,
                         "trace_path": str(trace_path)}
 
         messages.append({
@@ -1600,12 +1954,23 @@ def run_agent(user_prompt, client=None, run_id=None,
                 arguments = {}
                 result = {"error": "tool arguments were not valid JSON"}
             else:
-                if tool_calls >= max_tool_calls:
+                cache_key = (name, json.dumps(arguments, sort_keys=True,
+                                              default=str))
+                if cache_key in seen_results:
+                    # Identical call already made this run: reuse its
+                    # result instead of running the tool again.
+                    result = json.loads(json.dumps(seen_results[cache_key],
+                                                   default=str))
+                elif tool_calls >= max_tool_calls:
                     result = {"error": ("tool-call budget exhausted "
                                         "(max %d)" % max_tool_calls)}
                 else:
                     result = dispatch_tool(name, arguments)
+                    seen_results[cache_key] = result
                     tool_calls += 1
+                    if name == "draft_memo" and isinstance(result, dict):
+                        last_figure_fields = (
+                            result.get("figure_fields") or last_figure_fields)
             messages.append({"role": "tool", "tool_call_id": call.id,
                              "content": json.dumps(result, default=str)[:20000]})
             step += 1
@@ -1659,6 +2024,7 @@ def run_agent(user_prompt, client=None, run_id=None,
             return {"answer": content, "reason": "max_tool_calls",
                     "run_id": run_id, "tool_calls": tool_calls,
                     "total_tokens": total_tokens,
+                    "figure_fields": last_figure_fields,
                     "trace_path": str(trace_path)}
 
 
@@ -1675,7 +2041,8 @@ def build_client():
         raise SystemExit("META_API_KEY missing from ~/.config/onya/.env")
     if not base_url:
         raise SystemExit("META_BASE_URL missing from ~/.config/onya/.env")
-    return OpenAI(api_key=api_key, base_url=base_url)
+    return OpenAI(api_key=api_key, base_url=base_url,
+                  timeout=120, max_retries=2)
 
 
 def main(argv=None):

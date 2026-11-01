@@ -6,35 +6,35 @@
       "name": "Borrowings under credit facility",
       "value": 579500000,
       "source": "xbrl:us-gaap:DebtCurrent",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Outstanding letters of credit",
       "value": 8847000,
       "source": "xbrl:us-gaap:LettersOfCreditOutstandingAmount",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Consolidated Funded Indebtedness component"
     },
     {
       "name": "Finance lease obligations",
       "value": 180000,
       "source": "release:Finance lease obligations",
-      "clause": "(a)(i)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "Capitalized Lease Obligations are Indebtedness; company-reported"
     },
     {
       "name": "Operating lease liabilities",
       "value": 361029000,
       "source": "xbrl:us-gaap:OperatingLeaseLiability",
-      "clause": "(a)(ii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "ASC 842 operating lease liabilities"
     },
     {
       "name": "Unrestricted US cash in excess of $40,000,000",
       "value": 0,
       "source": "xbrl:us-gaap:CashAndCashEquivalentsAtCarryingValue",
-      "clause": "(a)(iii)",
+      "clause": "definition: Net Leverage Ratio",
       "note": "cash and equivalents = $1,264,000; excess over $40,000,000 deducted; no excess, deduction is zero"
     },
     {
@@ -137,28 +137,10 @@
       "derived": 3006000
     },
     {
-      "concept": "us-gaap:RestructuringCosts",
-      "period_end": "2026-01-03",
-      "direct": 48128000,
-      "derived": 2348000
-    },
-    {
       "concept": "us-gaap:AssetImpairmentCharges",
       "period_end": "2024-12-28",
       "direct": 5420000,
       "derived": 678000
-    },
-    {
-      "concept": "us-gaap:AssetImpairmentCharges",
-      "period_end": "2026-01-03",
-      "direct": 36363000,
-      "derived": 803000
-    },
-    {
-      "concept": "us-gaap:OperatingLeaseCost",
-      "period_end": "2021-10-02",
-      "direct": 24352000,
-      "derived": 25632000
     }
   ],
   "numerator": 949556000,
@@ -176,6 +158,10 @@
     "headroom": 0.28076609083820436,
     "headroom_2dp": 0.28,
     "pass": true,
+    "numerator_label": "total debt including operating leases",
+    "numerator_value": 949556000,
+    "denominator_label": "Consolidated EBITDAR",
+    "denominator_value": 191087000,
     "note": "Net Leverage Ratio max 5.25 (schedule entry for 2025-09-27)"
   },
   "interest_coverage": {
@@ -185,6 +171,10 @@
     "headroom": 0.2906400812801626,
     "headroom_2dp": 0.29,
     "pass": true,
+    "numerator_label": "Consolidated EBITDA",
+    "numerator_value": 84597000,
+    "denominator_label": "Consolidated Interest Expense",
+    "denominator_value": 47244000,
     "note": "Interest Coverage Ratio min 1.5 (schedule entry for 2025-09-27)"
   },
   "reconciliation": {

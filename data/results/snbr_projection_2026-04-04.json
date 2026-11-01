@@ -38,9 +38,13 @@
   "cushion": {
     "required_ebitdar": 200436666.6666667,
     "onya": -54140666.66666669,
-    "company": -54140666.66666669
+    "company": -54140666.66666669,
+    "onya_shortfall_to_pass": 54140666.66666669,
+    "company_shortfall_to_pass": 54140666.66666669,
+    "meaning": "projected EBITDAR minus EBITDAR required at the next threshold"
   },
   "trend": {
+    "label": "company-reported Adjusted EBITDA (TTM, before covenant caps)",
     "series": [
       {
         "period_end": "2025-06-28",
@@ -88,7 +92,34 @@
         "change": -16292000
       }
     ],
-    "avg_decline": -11549500.0
+    "avg_decline": -11549500.0,
+    "avg_quarterly_change": {
+      "value": -12510333.333333334,
+      "absolute": 12510333.333333334,
+      "method": "endpoint",
+      "method_label": "endpoint to endpoint",
+      "series": [
+        {
+          "period_end": "2025-06-28",
+          "adjusted_ebitda": 99494000
+        },
+        {
+          "period_end": "2025-09-27",
+          "adjusted_ebitda": 85062000
+        },
+        {
+          "period_end": "2026-01-03",
+          "adjusted_ebitda": 78255000
+        },
+        {
+          "period_end": "2026-04-04",
+          "adjusted_ebitda": 61963000
+        }
+      ],
+      "from_period": "2025-06-28",
+      "to_period": "2026-04-04",
+      "intervals": 3
+    }
   },
   "quarters_of_cushion": {
     "onya": -4.687706538522593,

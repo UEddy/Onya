@@ -183,6 +183,35 @@ class TrendAvgDecline(unittest.TestCase):
         self.assertIsNone(trend["avg_decline"])
 
 
+class AvgQuarterlyChange(unittest.TestCase):
+    def test_endpoint_method_pinned_to_four_points(self):
+        series = [
+            {"period_end": "2025-06-28", "adjusted_ebitda": 99_494_000},
+            {"period_end": "2025-09-27", "adjusted_ebitda": 85_062_000},
+            {"period_end": "2026-01-03", "adjusted_ebitda": 78_255_000},
+            {"period_end": "2026-04-04", "adjusted_ebitda": 61_963_000},
+        ]
+        result = project.avg_quarterly_change(series)
+        self.assertAlmostEqual(result["value"], -12_510_333.33, places=2)
+        self.assertAlmostEqual(result["absolute"], 12_510_333.33, places=2)
+        self.assertEqual(result["method"], "endpoint")
+        self.assertEqual(result["method_label"], "endpoint to endpoint")
+        self.assertEqual(result["series"], series)
+        self.assertEqual(result["intervals"], 3)
+
+    def test_shortfall_to_pass_is_explicit(self):
+        projections = {
+            "onya": {"ebitdar": 146_296_000},
+            "company": {"ebitdar": 146_296_000},
+        }
+        result = project.cushions(projections, 962_096_000, 4.8)
+        self.assertAlmostEqual(result["onya_shortfall_to_pass"],
+                               54_140_666.67, places=2)
+        self.assertAlmostEqual(result["company_shortfall_to_pass"],
+                               54_140_666.67, places=2)
+        self.assertIn("projected EBITDAR minus", result["meaning"])
+
+
 def _scenario(savings, ebitdar, ratio_2dp):
     return {
         "savings": savings,
