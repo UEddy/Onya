@@ -1,0 +1,23 @@
+{
+  "period_end": "2026-09-30",
+  "covenants": [
+    {
+      "name": "minimum interest coverage ratio",
+      "direction": "min",
+      "threshold": 3.0,
+      "actual": 27.79,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "minimum interest coverage ratio of 3.00 to 1.00"
+    },
+    {
+      "name": "consolidated net leverage ratio",
+      "direction": "max",
+      "threshold": 3.5,
+      "actual": 0.59,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "consolidated net leverage ratio of no more than 3.50 to 1.00"
+    }
+  ]
+}

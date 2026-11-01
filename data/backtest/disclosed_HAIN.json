@@ -1,0 +1,49 @@
+{
+  "period_end": "2025-09-30",
+  "covenants": [
+    {
+      "name": "consolidated secured leverage ratio",
+      "direction": "max",
+      "threshold": 5.5,
+      "actual": 4.81,
+      "in_compliance": true,
+      "waiver_or_amendment_note": "Amended via Fourth Amendment to 5.50:1.00 for quarter ending September 30, 2025 and thereafter (was 5.00:1.00 for quarter ended June 30, 2025)",
+      "quote": "Following the Fourth Amendment, the Company\u2019s maximum consolidated secured leverage ratio under the Credit Agreement was 5.00:1.00 until June 30, 2025 and is 5.50:1.00 for the quarter ending September 30, 2025 and thereafter.",
+      "quote_verified": true,
+      "repaired": true
+    },
+    {
+      "name": "consolidated leverage ratio",
+      "direction": "max",
+      "threshold": 6.0,
+      "actual": 4.81,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "Pursuant to the Credit Agreement, the Company\u2019s maximum consolidated leverage ratio is 6.00:1.00 and, through June 30, 2025, its minimum interest coverage ratio was 2.50:1.00.",
+      "quote_verified": true,
+      "repaired": true
+    },
+    {
+      "name": "consolidated interest coverage ratio",
+      "direction": "min",
+      "threshold": 2.0,
+      "actual": 2.92,
+      "in_compliance": true,
+      "waiver_or_amendment_note": "Amended via Fourth Amendment to 2.00:1.00 for quarter ending September 30, 2025 and thereafter (was 2.50:1.00 through June 30, 2025)",
+      "quote": "the Company\u2019s minimum consolidated interest coverage ratio was amended to be 2.00:1.00 for the quarter ending September 30, 2025 and thereafter",
+      "quote_verified": true,
+      "repaired": false
+    },
+    {
+      "name": "minimum Consolidated EBITDA",
+      "direction": "min",
+      "threshold": 17000,
+      "actual": null,
+      "in_compliance": true,
+      "waiver_or_amendment_note": "Added via Fourth Amendment; also requires $52,000 for cumulative two quarters ending September 30, 2025 and December 31, 2025",
+      "quote": "Pursuant to the Fourth Amendment, (x) the Company\u2019s maximum consolidated secured leverage ratio was amended to be 5.00:1.00 for the quarter ending June 30, 2025 and 5.50:1.00 for the quarter ending September 30, 2025 and thereafter, (y) the Company\u2019s minimum consolidated interest coverage ratio was amended to be 2.00:1.00 for the quarter ending September 30, 2025 and thereafter and (z) a covenant was added requiring the Company to maintain a minimum Consolidated EBITDA (as such term is defined in the Credit Agreement as amended by the Fourth Amendment) of (i) $17,000 for the quarter ending September 30, 2025 and (ii) $52,000 for the cumulative two quarters ending September 30, 2025 and on December 31, 2025.",
+      "quote_verified": false,
+      "repaired": true
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "AIN": {
+    "covenants": [
+      {
+        "actual": 1.71,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "leverage",
+        "threshold": 3.75
+      },
+      {
+        "actual": 8.07,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest coverage",
+        "threshold": 3.0
+      }
+    ],
+    "period_end": "2026-06-30"
+  },
+  "AMCX": {
+    "covenants": [
+      {
+        "actual": 4.33,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total net leverage",
+        "threshold": 5.75
+      },
+      {
+        "actual": 2.2,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest coverage",
+        "threshold": 2.0
+      }
+    ],
+    "period_end": "2025-09-30"
+  },
+  "CRS": {
+    "covenants": [
+      {
+        "actual": 0.59,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "net leverage",
+        "threshold": 3.5
+      },
+      {
+        "actual": 27.79,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest coverage",
+        "threshold": 3.0
+      }
+    ],
+    "period_end": "2026-09-30"
+  },
+  "GPK": {
+    "covenants": [
+      {
+        "actual": 4.37,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total leverage",
+        "threshold": 5.0
+      },
+      {
+        "actual": 4.86,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest expense ratio",
+        "threshold": 3.0
+      }
+    ],
+    "period_end": "2026-06-30"
+  },
+  "HAIN": {
+    "covenants": [
+      {
+        "actual": 4.81,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "secured leverage",
+        "threshold": 5.5
+      },
+      {
+        "actual": 4.81,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total leverage",
+        "threshold": 6.0
+      },
+      {
+        "actual": 2.92,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest coverage",
+        "threshold": 2.0
+      }
+    ],
+    "period_end": "2025-09-30"
+  },
+  "NUVR": {
+    "covenants": [
+      {
+        "actual": 4.99,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total leverage",
+        "threshold": 6.0
+      },
+      {
+        "actual": 1.99,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "debt service coverage",
+        "note": "Below the 2.00 minimum; waived to 1.75.",
+        "threshold": 2.0,
+        "waived_threshold": 1.75
+      }
+    ],
+    "period_end": "2026-06-30"
+  },
+  "OPTX": {
+    "covenants": [
+      {
+        "actual": null,
+        "direction": "min",
+        "in_compliance": false,
+        "name": "fixed charge coverage",
+        "note": "Not in compliance; no ratio value disclosed.",
+        "threshold": 1.1
+      },
+      {
+        "actual": null,
+        "direction": "max",
+        "in_compliance": false,
+        "name": "total leverage",
+        "note": "Not in compliance; no ratio value disclosed.",
+        "threshold": 4.75
+      }
+    ],
+    "period_end": "2026-03-31"
+  },
+  "ORLY": {
+    "covenants": [
+      {
+        "actual": 2.07,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "leverage",
+        "threshold": 3.5
+      },
+      {
+        "actual": 6.11,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "fixed charge coverage",
+        "threshold": 2.5
+      }
+    ],
+    "period_end": "2026-06-30"
+  },
+  "QUAD": {
+    "covenants": [
+      {
+        "actual": 2.0,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total leverage",
+        "threshold": 3.5
+      },
+      {
+        "actual": 1.99,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "senior secured leverage",
+        "threshold": 3.0
+      }
+    ],
+    "period_end": "2026-06-30"
+  },
+  "SNBR": {
+    "covenants": [
+      {
+        "actual": 5.0,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "net leverage",
+        "threshold": 5.25
+      }
+    ],
+    "period_end": "2025-09-27"
+  },
+  "STGW": {
+    "covenants": [
+      {
+        "actual": 3.16,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total leverage",
+        "threshold": 4.25
+      }
+    ],
+    "period_end": "2025-06-30"
+  },
+  "TRS": {
+    "covenants": [
+      {
+        "actual": 2.29,
+        "direction": "max",
+        "in_compliance": true,
+        "name": "total net leverage",
+        "threshold": 4.0
+      },
+      {
+        "actual": 10.46,
+        "direction": "min",
+        "in_compliance": true,
+        "name": "interest expense coverage",
+        "threshold": 3.0
+      }
+    ],
+    "period_end": "2025-09-30"
+  }
+}

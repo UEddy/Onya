@@ -1,0 +1,23 @@
+{
+  "period_end": "2026-03-31",
+  "covenants": [
+    {
+      "name": "fixed charge coverage ratio",
+      "direction": "min",
+      "threshold": 1.1,
+      "actual": null,
+      "in_compliance": false,
+      "waiver_or_amendment_note": "Waived on May 13, 2026; covenant removed from Credit Agreement",
+      "quote": "As of March 31, 2026, the Company was not in compliance with certain financial covenants under its Amended and Restated Credit Agreement with M&T Bank, including the minimum fixed charge coverage ratio of 1.10:1.00"
+    },
+    {
+      "name": "total leverage ratio",
+      "direction": "max",
+      "threshold": 4.75,
+      "actual": null,
+      "in_compliance": false,
+      "waiver_or_amendment_note": "Waived on May 13, 2026; covenant removed from Credit Agreement",
+      "quote": "was not in compliance with certain financial covenants under its Amended and Restated Credit Agreement with M&T Bank, including the minimum fixed charge coverage ratio of 1.10:1.00 and the maximum total leverage ratio of 4.75:1.00."
+    }
+  ]
+}

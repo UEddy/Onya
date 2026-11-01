@@ -1,0 +1,64 @@
+[
+  {
+    "ticker": "TRS",
+    "period_end": "2025-09-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/842633/000084263325000125/trs-20250930.htm"
+  },
+  {
+    "ticker": "AIN",
+    "period_end": "2026-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0000819793/000162828026052329/ain-20260630.htm"
+  },
+  {
+    "ticker": "AMCX",
+    "period_end": "2025-09-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/1514991/000151499125000055/amcx-20250930.htm"
+  },
+  {
+    "ticker": "STGW",
+    "period_end": "2025-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/876883/000087688325000024/stgw-20250630.htm"
+  },
+  {
+    "ticker": "QUAD",
+    "period_end": "2026-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0001481792/000148179226000130/quad-20260630.htm"
+  },
+  {
+    "ticker": "CRS",
+    "period_end": "2026-09-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0000017843/000001784326000045/crs-20260930.htm"
+  },
+  {
+    "ticker": "ORLY",
+    "period_end": "2026-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0000898173/000089817326000045/orly-20260630x10q.htm"
+  },
+  {
+    "ticker": "GPK",
+    "period_end": "2026-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0001408075/000140807526000029/gpk-20260630.htm"
+  },
+  {
+    "ticker": "NUVR",
+    "period_end": "2026-06-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0000071557/000143774926027827/nuvr20260630_10q.htm"
+  },
+  {
+    "ticker": "HAIN",
+    "period_end": "2025-09-30",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312525272288/hain-20250930.htm"
+  },
+  {
+    "ticker": "SNBR",
+    "cik": "827187",
+    "period_end": "2025-09-27",
+    "local_doc": "data/extracted/snbr_earnings_q3_2025.txt",
+    "note": "Delisted; use the existing release data instead of a filing download."
+  },
+  {
+    "ticker": "OPTX",
+    "period_end": "2026-03-31",
+    "filing_url": "https://www.sec.gov/Archives/edgar/data/0001866816/000149315226023833/form10-q.htm"
+  }
+]

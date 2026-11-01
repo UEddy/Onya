@@ -1,0 +1,16 @@
+{
+  "period_end": "2025-09-27",
+  "covenants": [
+    {
+      "name": "leverage ratio",
+      "direction": "max",
+      "threshold": 5.25,
+      "actual": 5.0,
+      "in_compliance": true,
+      "waiver_or_amendment_note": "Amended and extended bank agreement through 2027 - amended covenant maximum of 5.25x",
+      "quote": "The Company's leverage ratio was 5.0x EBITDAR on a trailing 12-month basis at the end of the quarter versus the amended covenant maximum of 5.25x.",
+      "quote_verified": true,
+      "repaired": false
+    }
+  ]
+}

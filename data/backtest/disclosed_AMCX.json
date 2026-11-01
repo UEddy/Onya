@@ -1,0 +1,27 @@
+{
+  "period_end": "2025-09-30",
+  "covenants": [
+    {
+      "name": "maximum total net leverage ratio",
+      "direction": "max",
+      "threshold": 5.75,
+      "actual": 4.33,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "maximum total net leverage ratio of 5.75:1.00 from April 9, 2024 through March 31, 2026,",
+      "quote_verified": true,
+      "repaired": false
+    },
+    {
+      "name": "minimum interest coverage ratio",
+      "direction": "min",
+      "threshold": 2.0,
+      "actual": 2.2,
+      "in_compliance": true,
+      "waiver_or_amendment_note": "reduction from 2.00:1.00 to 1.50:1.00, with step-up to 1.75:1.00 for fiscal quarters ending on or after December 31, 2028",
+      "quote": "In addition, the Credit Agreement requires a minimum interest coverage ratio, which prior to Amendment No. 5 described below, was 2.00:1.00 for AMC Networks Inc. and its restricted subsidiaries on a consolidated basis.",
+      "quote_verified": false,
+      "repaired": true
+    }
+  ]
+}

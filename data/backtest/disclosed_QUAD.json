@@ -1,0 +1,41 @@
+{
+  "period_end": "2026-06-30",
+  "covenants": [
+    {
+      "name": "Total Leverage Ratio",
+      "direction": "max",
+      "threshold": 3.5,
+      "actual": 2.0,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "shall not exceed 3.50 to 1.00 (for the twelve months ended June 30, 2026, the Company\u2019s Total Leverage Ratio was 2.00 to 1.00)"
+    },
+    {
+      "name": "Senior Secured Leverage Ratio",
+      "direction": "max",
+      "threshold": 3.0,
+      "actual": 1.99,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "shall not exceed 3.00 to 1.00 for any fiscal quarter ending on or after September 30, 2024 (for the twelve months ended June 30, 2026, the Company\u2019s Senior Secured Leverage Ratio was 1.99 to 1.00)"
+    },
+    {
+      "name": "Interest Coverage Ratio",
+      "direction": "min",
+      "threshold": 3.0,
+      "actual": 5.23,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "shall not be less than 3.00 to 1.00 (for the twelve months ended June 30, 2026, the Company\u2019s Interest Coverage Ratio was 5.23 to 1.00)"
+    },
+    {
+      "name": "Total Net Leverage Ratio",
+      "direction": "max",
+      "threshold": 3.5,
+      "actual": 2.14,
+      "in_compliance": true,
+      "waiver_or_amendment_note": null,
+      "quote": "The limitations described above are not currently applicable, as the Company\u2019s Senior Secured Leverage Ratio was 1.99 to 1.00 and the Total Net Leverage Ratio was 2.14 to 1.00, as of June 30, 2026."
+    }
+  ]
+}

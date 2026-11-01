@@ -1,0 +1,1 @@
+{"period_end":"2025-06-30","covenants":[{"name":"Total Leverage Ratio","direction":"max","threshold":4.25,"actual":3.16,"in_compliance":true,"waiver_or_amendment_note":null,"quote":"Pursuant to the Credit Agreement, the Company must maintain a Total Leverage Ratio (as defined in the Credit Agreement) below an established threshold."}]}
