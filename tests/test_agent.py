@@ -296,6 +296,30 @@ class MemoValidators(unittest.TestCase):
         self.assertIn("do not start the memo with any date line",
                       agent.SYSTEM_PROMPT)
 
+    def test_sample_memo_verifies_42_of_42(self):
+        sample = json.loads(
+            (PROJECT_ROOT / "data" / "samples" / "snbr_memo.json")
+            .read_text(encoding="utf-8"))
+        self.assertEqual(sample["run_id"], "7c2a49625f4e")
+        corpus = [
+            json.loads((PROJECT_ROOT / "data" / "results" /
+                        "snbr_2026-04-04.json").read_text(
+                            encoding="utf-8")),
+            json.loads((PROJECT_ROOT / "data" / "results" /
+                        "snbr_projection_2026-04-04.json").read_text(
+                            encoding="utf-8")),
+            json.loads((PROJECT_ROOT / "data" / "extracted" /
+                        "snbr_covenants.reviewed.json").read_text(
+                            encoding="utf-8")),
+            json.loads((PROJECT_ROOT / "data" / "cache" /
+                        "select_0000827187_2026-05-19.json").read_text(
+                            encoding="utf-8")),
+        ]
+        report = agent.verify_memo_numbers(sample["memo"], corpus)
+        self.assertEqual(report["numbers_checked"], 42)
+        self.assertEqual(report["unverified_numbers"], [])
+        self.assertEqual(sample["figures_checked"], 42)
+
     def test_request_wording_style_rules(self):
         self.assertTrue(any("every" in e for e in agent.verify_memo_format(
             "Review every covenant test.")))

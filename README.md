@@ -125,9 +125,11 @@ sit in `data/backtest/` and the site accuracy page reads them. See
   quotes or they are flagged.
 - Python does all math; the model cites tool outputs and invents no
   numbers.
-- Memo numbers are verified against tool output, and the memo style
-  check plus wording tests pin the date line and risk phrasing
-  (`tests/test_agent.py` MemoValidators).
+- Memo numbers are verified against tool output: the sample run
+  `7c2a49625f4e` (`data/samples/snbr_memo.json`) traces 42 of 42 memo
+  figures to tool output, and the site proof strip cites the same
+  count. The memo style check plus wording tests pin the date line
+  and risk phrasing (`tests/test_agent.py` MemoValidators).
 
 ## Security and limits
 
@@ -168,7 +170,7 @@ npm run dev
 Tests, with counts from a real run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 538 passed
+.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 542 passed
 cd web && npm run test:what-if   # 17 passed
 cd web && npx playwright test    # 11 passed
 ```
@@ -197,7 +199,7 @@ Oct 30, 2026 ("Project setup and Meta API test").
 ## License and notices
 
 Built with Muse Spark Open. Use of the model is subject to the
-[Muse Model License](https://www.meta.com/legal/muse-model-license-agreement/).
+[Muse Model License](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md).
 
 Onya supports review by credit professionals. It is not financial, legal
 or investment advice.

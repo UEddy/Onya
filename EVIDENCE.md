@@ -32,7 +32,7 @@ its source, and the command or test that reproduces it.
 | Cure: EBITDA increase to pass Apr 4 | $56,250,526.32 | `data/results/snbr_2026-04-04.json` (cure.figures.ebitda_increase_needed) | `.venv/bin/python -m unittest tests.test_cure` |
 | Next test | Jul 4, 2026, limit 4.80x, projected 6.58x, high risk | `data/results/snbr_projection_2026-04-04.json` | `.venv/bin/python -m unittest tests.test_api` |
 | Filings after May 19, 2026 | 8 8-K rows, May 27 to Aug 3, 2026, with SEC links, cache only | `data/raw/submissions_CIK0000827187.json` | `.venv/bin/python -m unittest tests.test_api.FilingsSince` |
-| Memo verifier on Apr 4 figures | 9 figures checked, 0 unverified | `src/agent.py` (`verify_memo_numbers`) | `.venv/bin/python -m unittest tests.test_agent.MemoValidators` (8 passed) |
+| Memo verifier on sample run `7c2a49625f4e` | 42 of 42 memo figures traced to tool output | `data/samples/snbr_memo.json` (`figures_checked`); corpus `data/results/snbr_2026-04-04.json`, `data/results/snbr_projection_2026-04-04.json`, `data/extracted/snbr_covenants.reviewed.json`, `data/cache/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_agent.MemoValidators.test_sample_memo_verifies_42_of_42` |
 
 ## Back-test tables
 
@@ -79,7 +79,7 @@ Contract thresholds per company, from `data/backtest/terms_<TICKER>.json`
 
 | Suite | Count | Command |
 |---|---|---|
-| Python | 538 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
+| Python | 542 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
 | JS | 17 passed | `npm run test:what-if` in `web/` |
 | Playwright | 11 passed | `npx playwright test` in `web/` |
 | Watch storage | passed | `web/lib/watch.test.ts` via `test:what-if` |
