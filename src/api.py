@@ -1172,6 +1172,159 @@ def stream_info_request(body: InfoRequestBody, request: Request,
                              headers={"Cache-Control": "no-store"})
 
 
+class CompareBody(BaseModel):
+    ticker: str = ""
+    period_end: str = ""
+    text: str | None = None
+    file_b64: str | None = None
+    filename: str | None = None
+
+
+def _private_replay_figures():
+    """Saved extraction for tests, or None outside replay mode."""
+    if os.environ.get("ONYA_PRIVATE_REPLAY") != "1":
+        return None
+    try:
+        saved = _read_json(
+            _data_file("samples", "private_compare_replay.json"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(saved, dict) or "figures" not in saved:
+        return None
+    return saved
+
+
+def _iter_private_compare(ticker, period_end, text, file_b64, filename,
+                          store):
+    """Stream progress events, then the comparison result."""
+    import private_compare
+
+    events = queue.Queue()
+    box = {}
+
+    def worker():
+        try:
+            replay = _private_replay_figures()
+            if replay is not None:
+                figures = replay["figures"]
+                tokens = 0
+                events.put({"type": "progress",
+                            "step": "reading upload"})
+                events.put({"type": "progress",
+                            "step": "extracting figures"})
+                result = private_compare.compare_with_onya(
+                    ticker, period_end, figures)
+                result["figures"] = figures
+            else:
+                events.put({"type": "progress",
+                            "step": "reading upload"})
+                events.put({"type": "progress",
+                            "step": "extracting figures"})
+                result, tokens, _timings = private_compare.run_compare(
+                    ticker, period_end, text=text, file_b64=file_b64,
+                    filename=filename)
+            box["result"] = result
+            box["tokens"] = tokens
+        except private_compare.PrivateUnavailable as exc:
+            events.put({"type": "unavailable", "error": str(exc)})
+        except private_compare.PrivateInputError as exc:
+            events.put({"type": "error", "error": str(exc)})
+        except Exception:  # never leak tracebacks, paths, or content
+            events.put({"type": "error",
+                        "error": "comparison failed"})
+        finally:
+            events.put(None)
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    while True:
+        event = events.get()
+        if event is None:
+            break
+        yield event
+    result = box.get("result")
+    if result is None:
+        return
+    _record_tokens(store, box.get("tokens") or 0)
+    yield {"type": "private_result", "reason": "private_compare",
+           "total_tokens": box.get("tokens") or 0,
+           "comparison": _redact_json(result)}
+
+
+@router.post("/private/compare")
+def stream_private_compare(body: CompareBody, request: Request,
+                           x_onya_token: str | None = Header(default=None)):
+    """Compare a certificate with Onya, streamed, counted in limits."""
+    expected = _expected_token()
+    if not expected:
+        return JSONResponse(status_code=500,
+                            content={"detail": "server token not configured"})
+    if not secrets.compare_digest(x_onya_token or "", expected):
+        return JSONResponse(status_code=401,
+                            content={"detail": "invalid token"})
+    import private_compare
+
+    if os.environ.get("ONYA_PRIVATE_REPLAY") != "1":
+        try:
+            private_compare.make_baseten_client().close()
+        except private_compare.PrivateUnavailable as exc:
+            return JSONResponse(status_code=503,
+                                content={"detail": str(exc)})
+        except Exception:
+            pass
+    ticker = (body.ticker or "").strip()
+    period_end = (body.period_end or "").strip()
+    if not ticker or not period_end:
+        return JSONResponse(status_code=422,
+                            content={"detail": "ticker and period_end "
+                                               "are required"})
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", period_end):
+        return JSONResponse(status_code=422,
+                            content={"detail": "period_end must be "
+                                               "YYYY-MM-DD"})
+    if not body.text and not body.file_b64:
+        return JSONResponse(status_code=422,
+                            content={"detail": "pasted text or a file "
+                                               "is required"})
+    try:
+        store = limits.resolve_store()
+    except limits.RedisUnavailable:
+        return _paused()
+    ip = _client_ip(request, token_valid=True)
+    claimed = _claim_limits(store, ip)
+    if claimed is not None:
+        return claimed
+    if _budget_exhausted(store):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "The daily token budget is used up for today. "
+                               "See a saved run."})
+
+    def body_lines():
+        for event in _iter_private_compare(
+                ticker, period_end, body.text, body.file_b64,
+                body.filename, store):
+            yield json.dumps(event, default=str) + "\n"
+
+    return StreamingResponse(body_lines(),
+                             media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store"})
+
+
+@router.get("/private/sample")
+def get_private_sample():
+    """The illustrative sample certificate text (public demo data)."""
+    import private_compare
+
+    try:
+        text = (_data_file("samples", private_compare.SAMPLE_NAME)
+                .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return JSONResponse(status_code=404,
+                            content={"detail": "sample not found"})
+    return {"filename": private_compare.SAMPLE_NAME, "text": text}
+
+
 def allowed_origins():
     if _is_production():
         origin = (os.environ.get("ONYA_FRONTEND_ORIGIN") or "").strip()

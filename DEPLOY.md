@@ -50,6 +50,10 @@ the Production environment only (server-only, never `NEXT_PUBLIC_`):
   Value form: `OnyaDemo/1.0 you@example.com`. The API refuses to
   start in production when it is missing or has no `@`.
 - `META_BASE_URL` = `https://api.meta.ai/v1`
+- `BASETEN_API_KEY` and `BASETEN_BASE_URL` - the Muse Spark Open
+  model endpoint used only by private mode (`POST /private/compare`).
+  Both are Sensitive, Production-only; when either is missing the
+  endpoint returns 503 and the site says private mode is unavailable.
 - `ONYA_ENV` = `production`
 - `ONYA_FRONTEND_ORIGIN` = the site URL from step 5
   (for example `https://onya.vercel.app`)

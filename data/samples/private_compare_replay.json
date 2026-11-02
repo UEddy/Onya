@@ -1,0 +1,54 @@
+{
+ "figures": {
+  "covenants": [
+   {
+    "name": "Net Leverage Ratio",
+    "direction": "max",
+    "threshold": 4.75,
+    "actual": 5.06,
+    "quote": "Net Leverage Ratio: 5.06 to 1.00, against a maximum of 4.75 to 1.00.",
+    "verified": true
+   },
+   {
+    "name": "Interest Coverage Ratio",
+    "direction": "min",
+    "threshold": 2.1,
+    "actual": 1.7,
+    "quote": "Interest Coverage Ratio: 1.70 to 1.00, against a minimum of 2.10 to 1.00.",
+    "verified": true
+   }
+  ],
+  "components": [
+   {
+    "name": "Total debt including operating leases",
+    "value": 962096000,
+    "quote": "Total debt including operating leases of $962,096,000 over Consolidated EBITDAR of $190,296,000 gives a Net Leverage Ratio of 5.06 to 1.00.",
+    "verified": true
+   },
+   {
+    "name": "Consolidated EBITDAR",
+    "value": 190296000,
+    "quote": "Total debt including operating leases of $962,096,000 over Consolidated EBITDAR of $190,296,000 gives a Net Leverage Ratio of 5.06 to 1.00.",
+    "verified": true
+   },
+   {
+    "name": "Consolidated EBITDA",
+    "value": 87230000,
+    "quote": "Consolidated EBITDA of $87,230,000 over Consolidated Interest Expense of $51,404,000 gives an Interest Coverage Ratio of 1.70 to 1.00.",
+    "verified": true
+   },
+   {
+    "name": "Consolidated Interest Expense",
+    "value": 51404000,
+    "quote": "Consolidated EBITDA of $87,230,000 over Consolidated Interest Expense of $51,404,000 gives an Interest Coverage Ratio of 1.70 to 1.00.",
+    "verified": true
+   },
+   {
+    "name": "projected pro forma cost savings",
+    "value": 44000000,
+    "quote": "Consolidated EBITDA of $87,230,000 includes $44,000,000 of projected pro forma cost savings.",
+    "verified": true
+   }
+  ]
+ }
+}

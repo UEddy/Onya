@@ -33,6 +33,7 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         ONYA_AGENT_REPLAY: "1",
+        ONYA_PRIVATE_REPLAY: "1",
         ONYA_FRONTEND_ORIGIN: "http://localhost:3001",
         ONYA_DEMO_TOKEN: localEnv("ONYA_DEMO_TOKEN") ?? "",
       },

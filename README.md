@@ -131,6 +131,25 @@ sit in `data/backtest/` and the site accuracy page reads them. See
   count. The memo style check plus wording tests pin the date line
   and risk phrasing (`tests/test_agent.py` MemoValidators).
 
+## Private check
+
+The private page (`/app/private`, sidebar "Private check") compares a
+borrower's compliance certificate with the public filings. Paste the
+text or upload a PDF or .txt file (up to 2 MB, judged by content, not
+the extension). Muse Spark Open extracts the reported figures on
+Baseten with verbatim quote verification; Onya lines each one up
+against its recalculation (certificate, Onya, difference) and flags
+the gaps: add-backs above the shared cap and savings counted without
+administrative agent approval. The compare streams progress events
+and the result through the site proxy, counted in the Redis limits
+and budget. Uploads stay in memory for the request: nothing reaches
+disk, traces, logs, or caches. An illustrative sample built from
+public Sleep Number filings
+(`data/samples/sample_certificate_snbr.txt`) shows the real gap
+(reported 5.06x against Onya's 6.58x). Without model configuration
+the endpoint returns 503 and the page says private mode is
+unavailable. Code: `src/private_compare.py`.
+
 ## Security and limits
 
 - The demo token never reaches the browser: the browser only calls the
@@ -151,7 +170,8 @@ sit in `data/backtest/` and the site accuracy page reads them. See
 Prerequisites: Python 3.14 and Node 24 (the versions this repo runs
 under). Secrets live outside the repo in `~/.config/onya/.env`; only
 variable names appear here: `META_API_KEY`, `META_BASE_URL`,
-`ONYA_DEMO_TOKEN`, plus `UPSTASH_REDIS_REST_URL` and
+`ONYA_DEMO_TOKEN`, `BASETEN_API_KEY` and `BASETEN_BASE_URL` for the
+private check, plus `UPSTASH_REDIS_REST_URL` and
 `UPSTASH_REDIS_REST_TOKEN` for limits in production.
 
 API:
@@ -170,9 +190,9 @@ npm run dev
 Tests, with counts from a real run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 542 passed
+.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 559 passed
 cd web && npm run test:what-if   # 17 passed
-cd web && npx playwright test    # 11 passed
+cd web && npx playwright test    # 12 passed
 ```
 
 (The Python suite runs as named `tests.test_*` modules; bare discovery
@@ -192,9 +212,12 @@ Oct 30, 2026 ("Project setup and Meta API test").
 
 - Sleep Number is the one fully worked case. The other eleven borrowers
   are back-tested on disclosed figures and contract thresholds only.
-- Private mode is not built: there is no compare endpoint and no
-  document upload path.
-- The demo runs on public data only.
+- Private mode compares one borrower and period per request against
+  the committed SNBR results; only SNBR periods with computed results
+  are supported.
+- The demo runs on public data only, except for text the visitor
+  pastes or uploads on the private page, which stays in memory for
+  that request.
 
 ## License and notices
 

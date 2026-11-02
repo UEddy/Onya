@@ -13,12 +13,14 @@ const APP_NAV = [
   { href: "/app/company/SNBR", label: "Sleep Number", match: "/app/company" },
   { href: "/app/agent", label: "Agent", match: "/app/agent" },
   { href: "/app/accuracy", label: "Accuracy", match: "/app/accuracy" },
+  { href: "/app/private", label: "Private check", match: "/app/private" },
 ];
 
 function pageTitle(pathname: string): string {
   if (pathname.startsWith("/app/company")) return "Sleep Number";
   if (pathname.startsWith("/app/agent")) return "Agent";
   if (pathname.startsWith("/app/accuracy")) return "Accuracy";
+  if (pathname.startsWith("/app/private")) return "Private check";
   return "Watchlist";
 }
 

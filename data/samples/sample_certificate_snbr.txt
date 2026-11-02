@@ -1,0 +1,28 @@
+ILLUSTRATIVE SAMPLE. Not a real compliance certificate. Built from public Sleep Number filings for demonstration.
+
+Compliance Certificate (illustrative figures)
+
+Borrower: Sleep Number Corporation
+Test date: April 4, 2026
+
+The borrower reports the following covenant calculations for the
+quarter ended April 4, 2026:
+
+1. Net Leverage Ratio: 5.06 to 1.00, against a maximum of 4.75 to 1.00.
+   Reported as in compliance with forbearance.
+
+   Total debt including operating leases of $962,096,000 over
+   Consolidated EBITDAR of $190,296,000 gives a Net Leverage Ratio
+   of 5.06 to 1.00.
+
+2. Interest Coverage Ratio: 1.70 to 1.00, against a minimum of
+   2.10 to 1.00.
+
+   Consolidated EBITDA of $87,230,000 over Consolidated Interest
+   Expense of $51,404,000 gives an Interest Coverage Ratio of
+   1.70 to 1.00.
+
+3. Consolidated EBITDA of $87,230,000 includes $44,000,000 of
+   projected pro forma cost savings.
+
+Borrower contact for follow-up: [lender to fill]

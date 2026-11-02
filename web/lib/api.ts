@@ -357,6 +357,24 @@ export interface AgentRunState {
   info_request?: string | null;
 }
 
+export interface PrivateComparisonRow {
+  name: string;
+  certificate: number | null;
+  onya: number | null;
+  threshold: number | null;
+  difference: number | null;
+  explanation: string;
+  verified: boolean;
+}
+
+export interface PrivateComparison {
+  ticker: string;
+  period_end: string;
+  rows: PrivateComparisonRow[];
+  flags: string[];
+  summary: string[];
+}
+
 export interface NextTest {
   date: string;
   limit: number | null;

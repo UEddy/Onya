@@ -75,12 +75,25 @@ Contract thresholds per company, from `data/backtest/terms_<TICKER>.json`
 | TRS | 2 matched |
 | Total | 12 matched, 3 amended after agreement, 1 mismatch |
 
+## Private check
+
+| Claim | Value | Source | Reproduce |
+|---|---|---|---|
+| Sample certificate figures | EBITDA $87,230,000 incl. $44,000,000 savings; debt $962,096,000; reported 5.06x as in compliance with forbearance | `data/samples/sample_certificate_snbr.txt` | `GET /private/sample` |
+| Real run on the sample | Net leverage cert 5.06 vs Onya 6.58 (diff -1.52); interest coverage cert 1.7 vs Onya 0.84 (diff +0.86); both figures verified; 5,572 tokens | `src/private_compare.py` (`run_compare`) | Baseten run logged in the H report; replay file below pins the extraction |
+| Replay extraction | 2 covenants, 5 components, all quotes verified | `data/samples/private_compare_replay.json` | `.venv/bin/python -m unittest tests.test_private_compare.Endpoint.test_replay_stream_returns_result` |
+| Gap flags | $18,732,000 disallowed over the cap; $87,230,000 cert EBITDA over $43,230,000 pre-savings needs administrative agent approval | `src/private_compare.py` (`compare_with_onya`) | `.venv/bin/python -m unittest tests.test_private_compare.ComparisonMath` |
+| File validation | PDF/text sniffed by content; 2 MB cap; encrypted and malformed PDFs rejected with content-free errors | `src/private_compare.py` | `.venv/bin/python -m unittest tests.test_private_compare.FileValidation` |
+| No persistence | Data dir unchanged; upload marker absent from logs; errors carry no content | `src/private_compare.py` (logs sizes only) | `.venv/bin/python -m unittest tests.test_private_compare.NoPersistence` |
+| Missing model config | 503 with an unavailable notice | `src/api.py` (`stream_private_compare`) | `.venv/bin/python -m unittest tests.test_private_compare.Endpoint.test_503_without_baseten_key` |
+| Sample flow in the browser | Sample loads; table shows 5.06 vs 6.58 with Verified marks | `web/e2e/private.spec.ts` | `npx playwright test e2e/private.spec.ts` in `web/` |
+
 ## Suite counts
 
 | Suite | Count | Command |
 |---|---|---|
-| Python | 542 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
+| Python | 559 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
 | JS | 17 passed | `npm run test:what-if` in `web/` |
-| Playwright | 11 passed | `npx playwright test` in `web/` |
+| Playwright | 12 passed | `npx playwright test` in `web/` |
 | Watch storage | passed | `web/lib/watch.test.ts` via `test:what-if` |
 | Watch plus request flow | 3 passed | `web/e2e/watch-request.spec.ts` |
