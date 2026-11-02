@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BrandLockup } from "./marketing";
 import { ThemeToggle } from "./theme";
 import { apiGet, type CompanyRow } from "../lib/api";
+import { useWatch } from "../lib/watch";
 
 const APP_NAV = [
   { href: "/app/watchlist", label: "Watchlist", match: "/app/watchlist" },
@@ -25,6 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/app/watchlist";
   const [companies, setCompanies] = useState<CompanyRow[] | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { watched } = useWatch();
   useEffect(() => {
     let cancelled = false;
     apiGet<{ companies: CompanyRow[] }>("/companies").then(
@@ -65,6 +67,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="index-label rounded-full bg-[var(--hairline)] px-1.5 text-[12px] text-ink-muted">
                   {companies.length}
                 </span>
+                {watched.length > 0 && (
+                  <span
+                    className="index-label rounded-full px-1.5 text-[12px] text-ink-muted"
+                    style={{
+                      background:
+                        "color-mix(in srgb, var(--watch) 16%, transparent)",
+                    }}
+                    title={`${watched.length} watching`}
+                  >
+                    {watched.length} watching
+                  </span>
+                )}
                 {breaches !== null && (
                   <span
                     className="flex items-center gap-1 rounded-full px-1.5 text-[12px]"

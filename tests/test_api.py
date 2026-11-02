@@ -519,6 +519,97 @@ class AgentLimits(ApiTestBase):
         self.assertIn("paused", r.json()["detail"])
 
 
+class FilingsSince(ApiTestBase):
+    def test_snbr_filings_after_as_of(self):
+        r = self.client.get(
+            "/company/SNBR/filings-since?date=2026-05-19")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body["cached"])
+        self.assertTrue(body["filings"])
+        for row in body["filings"]:
+            self.assertIn(row["form"], ("10-K", "10-Q", "8-K"))
+            self.assertGreater(row["filingDate"], "2026-05-19")
+            self.assertTrue(
+                row["sec_url"].startswith(
+                    "https://www.sec.gov/Archives/edgar/data/827187/"))
+        dates = [row["filingDate"] for row in body["filings"]]
+        self.assertTrue(any(d.startswith("2026-06") for d in dates),
+                        dates)
+
+    def test_no_live_call_in_request_path(self):
+        import edgar
+
+        def dead(*args, **kwargs):
+            raise AssertionError("network call attempted")
+
+        with patch.object(edgar.requests, "get", side_effect=dead), \
+             patch.object(edgar.requests, "post", side_effect=dead), \
+             patch.object(edgar, "fetch", side_effect=dead):
+            r = self.client.get(
+                "/company/SNBR/filings-since?date=2026-05-19")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["cached"])
+
+    def test_missing_cache_says_so(self):
+        with patch("edgar.filings_since", return_value=None):
+            r = self.client.get(
+                "/company/SNBR/filings-since?date=2026-05-19")
+        body = r.json()
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(body["cached"])
+        self.assertEqual(body["filings"], [])
+        self.assertIn("note", body)
+
+    def test_bad_date_and_unknown_company(self):
+        r = self.client.get("/company/SNBR/filings-since?date=May")
+        self.assertEqual(r.status_code, 422)
+        r = self.client.get("/company/ZZZ/filings-since?date=2026-05-19")
+        self.assertEqual(r.status_code, 404)
+
+
+class InfoRequestEndpoint(ApiTestBase):
+    def test_streams_request(self):
+        r = self.client.post("/agent/info-request",
+                             json={"company": "SNBR",
+                                   "period_end": "2026-04-04"},
+                             headers=self.auth())
+        self.assertEqual(r.status_code, 200)
+        events = _stream_events(r)
+        self.assertEqual(events[0]["type"], "tool_call")
+        self.assertEqual(events[0]["tool"], "draft_info_request")
+        result = events[-1]
+        self.assertEqual(result["type"], "run_result")
+        self.assertEqual(result["reason"], "info_request")
+        text = result["info_request"]
+        self.assertIn("FORBEARANCE", text.upper())
+        self.assertIn("[lender to fill]", text)
+        self.assertNotIn("FOURTEENTH", text.upper())
+
+    def test_counts_toward_limits(self):
+        with patch.object(limits, "MAX_RUNS_PER_HOUR_PER_IP", 0):
+            r = self.client.post("/agent/info-request",
+                                 json={"company": "SNBR",
+                                       "period_end": "2026-04-04"},
+                                 headers=self.auth())
+        self.assertEqual(r.status_code, 429)
+
+    def test_auth_and_validation(self):
+        r = self.client.post("/agent/info-request",
+                             json={"company": "SNBR",
+                                   "period_end": "2026-04-04"})
+        self.assertEqual(r.status_code, 401)
+        r = self.client.post("/agent/info-request",
+                             json={"company": "SNBR"},
+                             headers=self.auth())
+        self.assertEqual(r.status_code, 422)
+        r = self.client.post("/agent/info-request",
+                             json={"company": "SNBR",
+                                   "period_end": "April"},
+                             headers=self.auth())
+        self.assertEqual(r.status_code, 422)
+
+
 class ReplayFlag(unittest.TestCase):
     def test_replay_defaults_off(self):
         with patch.dict(os.environ, {}, clear=False):

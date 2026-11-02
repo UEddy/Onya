@@ -26,10 +26,13 @@ import {
   formatShortMoney,
   formatSignedRatio,
   type ComponentRow,
+  type FilingsSince,
   type PeriodDetail,
   type PeriodSummary,
   type Verdict,
 } from "../lib/api";
+import { RequestActions, RequestView } from "./request";
+import { useWatch } from "../lib/watch";
 
 function savingsLabel(savings: number): string {
   if (savings >= 1_000_000 && savings % 1_000_000 === 0) {
@@ -687,7 +690,180 @@ export function ProjectionPanel({ detail }: { detail: PeriodDetail }) {
   );
 }
 
+function FiledSinceList({ ticker, date }: { ticker: string; date: string }) {
+  const [data, setData] = useState<FilingsSince | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<FilingsSince>(
+      `/company/${ticker}/filings-since?date=${date}`,
+    ).then(
+      (res) => {
+        if (!cancelled) setData(res);
+      },
+      () => {
+        if (!cancelled) setData(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [ticker, date]);
+  if (data === null) {
+    return <LoadingLine text="Checking for newer filings." />;
+  }
+  if (!data.cached) {
+    return (
+      <p className="max-w-[75ch] text-[15px] text-ink-muted">
+        {data.note ?? "The filings cache is missing for this company."}
+      </p>
+    );
+  }
+  if (data.filings.length === 0) {
+    return (
+      <p className="max-w-[75ch] text-[15px] text-ink-muted">
+        No 10-K, 10-Q or 8-K filings since {formatDateLong(date)}.
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-2">
+      {data.filings.map((row) => (
+        <li key={row.accessionNumber} className="text-[15px]">
+          <a
+            href={row.sec_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-link underline decoration-hairline underline-offset-4 hover:text-ink"
+          >
+            {row.form}, filed {formatDateLong(row.filingDate)}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CaseRequestButton({
+  ticker,
+  periodEnd,
+}: {
+  ticker: string;
+  periodEnd: string;
+}) {
+  const [request, setRequest] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  const start = () => {
+    setRequest(null);
+    setRunning(true);
+    setFailed(false);
+    setAttempt((n) => n + 1);
+  };
+
+  useEffect(() => {
+    if (attempt === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company: ticker, period_end: periodEnd }),
+          cache: "no-store",
+        });
+        if (!res.ok || !res.body) {
+          if (!cancelled) {
+            setRunning(false);
+            setFailed(true);
+          }
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done || cancelled) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line) as {
+                type?: string;
+                info_request?: string;
+              };
+              if (event.type === "run_result" && event.info_request) {
+                setRequest(event.info_request);
+              } else if (event.type === "error") {
+                setFailed(true);
+              }
+            } catch {
+              /* Partial line waits for the next chunk. */
+            }
+          }
+        }
+        if (!cancelled) setRunning(false);
+      } catch {
+        if (!cancelled) {
+          setRunning(false);
+          setFailed(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt, ticker, periodEnd]);
+
+  return (
+    <div className="mt-5">
+      {!request && !running && !failed && (
+        <button
+          type="button"
+          onClick={start}
+          className="btn btn-secondary btn-sm"
+        >
+          Draft information request
+        </button>
+      )}
+      {running && !request && (
+        <LoadingLine text="Drafting the information request." />
+      )}
+      {failed && !request && (
+        <ErrorLine title="The request could not be drafted." onRetry={start}>
+          The data service may be waking up. Then try again.
+        </ErrorLine>
+      )}
+      {request && (
+        <>
+          <p className="text-[13px] text-ink-muted">
+            Draft. Review before sending. Nothing has been sent anywhere.
+          </p>
+          <div className="mt-3">
+            <RequestView
+              request={request}
+              ticker={ticker}
+              periodEnd={periodEnd}
+            />
+          </div>
+          <RequestActions
+            request={request}
+            ticker={ticker}
+            periodEnd={periodEnd}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function CaseView({ ticker }: { ticker: string }) {
+  const { watched, toggle } = useWatch();
+  const watching = watched.includes(ticker);
   const [periods, setPeriods] = useState<PeriodSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<PeriodDetail | null>(null);
@@ -796,6 +972,17 @@ export default function CaseView({ ticker }: { ticker: string }) {
           <p className="mt-1 text-[15px] text-ink-muted">
             SNBR, quarter ended {selected ? formatPeriod(selected) : ""}
           </p>
+          <p className="mt-2">
+            <button
+              type="button"
+              aria-pressed={watching}
+              aria-label={watching ? "Stop watching SNBR" : "Watch SNBR"}
+              onClick={() => toggle(ticker)}
+              className="text-[15px] text-link underline decoration-hairline underline-offset-4 hover:text-ink"
+            >
+              {watching ? "Watching" : "Watch"}
+            </button>
+          </p>
         </div>
         {!failed && periods !== null && (
           <div
@@ -856,6 +1043,11 @@ export default function CaseView({ ticker }: { ticker: string }) {
               <Reveal onLoad delay={160}>
                 <section aria-label="Verdict" className="card p-5 sm:p-7">
                   <VerdictBlock detail={visibleDetail} />
+                  <CaseRequestButton
+                    key={visibleDetail.period_end}
+                    ticker={ticker}
+                    periodEnd={visibleDetail.period_end}
+                  />
                 </section>
               </Reveal>
               <Reveal>
@@ -892,6 +1084,20 @@ export default function CaseView({ ticker }: { ticker: string }) {
               <Reveal>
                 <Panel id="projection" title="Projection">
                   <ProjectionPanel detail={visibleDetail} />
+                </Panel>
+              </Reveal>
+
+              <Reveal>
+                <Panel
+                  id="filed-since"
+                  title="Filed since this check"
+                  description="10-K, 10-Q and 8-K filings after the test date, from the filings Onya already holds."
+                >
+                  <FiledSinceList
+                    key={visibleDetail.period_end}
+                    ticker={ticker}
+                    date={visibleDetail.period_end}
+                  />
                 </Panel>
               </Reveal>
             </div>

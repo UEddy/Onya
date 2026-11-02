@@ -18,7 +18,7 @@ const MEMO_HEADINGS = [
   "Recommended actions",
 ];
 
-function linkify(
+export function linkify(
   text: string,
   figureFields: FigureField[] | undefined,
   ticker: string,

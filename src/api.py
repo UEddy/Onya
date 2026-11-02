@@ -436,8 +436,64 @@ def _iter_live(question, run_id, store):
            "answer": redact(outcome.get("answer", "")),
            "total_tokens": total,
            "tool_calls": outcome.get("tool_calls", 0),
-           "figure_fields": outcome.get("figure_fields", [])}
+           "figure_fields": outcome.get("figure_fields", []),
+           "info_request": redact(outcome.get("info_request") or None)}
     _record_tokens(store, total)
+
+
+def _iter_info_request(company, period_end, store):
+    """Run only the draft_info_request tool, streaming one step."""
+    events = queue.Queue()
+    box = {}
+
+    def worker():
+        try:
+            outcome = agent.tool_draft_info_request(
+                company, period_end)
+            box["outcome"] = outcome
+            summary = agent.summarize_result("draft_info_request",
+                                             outcome)
+            events.put({"run_id": "", "step": 1,
+                        "timestamp": _utcnow().isoformat(),
+                        "type": "tool_call", "tool": "draft_info_request",
+                        "arguments": {"company": company,
+                                      "period_end": period_end},
+                        "result_summary": summary,
+                        "tokens": {"prompt": 0, "completion": 0,
+                                   "total": 0},
+                        "total_tokens": 0})
+        except Exception as exc:  # never leak tracebacks or paths
+            events.put({"type": "error",
+                        "error": f"{type(exc).__name__}: {exc}"})
+        finally:
+            events.put(None)
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    while True:
+        event = events.get()
+        if event is None:
+            break
+        if event.get("type") == "error":
+            yield {"type": "error",
+                   "error": redact(event.get("error") or "")}
+            continue
+        step = _sanitize_step(event)
+        if step is not None:
+            yield step
+    outcome = box.get("outcome")
+    if outcome is None:
+        yield {"type": "error", "error": "the check was lost"}
+        return
+    if outcome.get("error"):
+        yield {"type": "error",
+               "error": redact(outcome.get("error"))}
+        return
+    yield {"type": "run_result", "reason": "info_request",
+           "answer": "", "total_tokens": 0, "tool_calls": 1,
+           "figure_fields": [],
+           "info_request": redact(outcome.get("request") or "")}
+    _record_tokens(store, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -478,6 +534,27 @@ def _headroom(cov):
     if cov.get("direction") == "min":
         return actual - threshold
     return threshold - actual
+
+
+def _snbr_next_test(period_end):
+    """Next-test outlook from the projection file, or None."""
+    if not period_end:
+        return None
+    try:
+        projection = _read_json(
+            RESULTS_DIR / f"snbr_projection_{period_end}.json")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(projection, dict):
+        return None
+    onya = (projection.get("projections") or {}).get("onya") or {}
+    risk = (projection.get("risk") or {}).get("onya")
+    if not projection.get("next_test"):
+        return None
+    return {"date": projection.get("next_test"),
+            "limit": projection.get("next_threshold"),
+            "ratio_2dp": onya.get("ratio_2dp"),
+            "risk": risk}
 
 
 def _latest_snbr_result():
@@ -536,11 +613,13 @@ def _snbr_company_row(case):
     else:
         status = "unknown"
     period_end = result.get("period_end")
+    next_test = _snbr_next_test(period_end)
     return {
         "ticker": "SNBR",
         "name": clean_company_name("SNBR", company_name(case)),
         "period_end": period_end,
         "as_of": period_end,
+        "next_test": next_test,
         "covenant": "Net leverage",
         "ratio": ratio,
         "threshold": threshold,
@@ -990,6 +1069,107 @@ def get_agent_run(run_id: str):
         status_code=404,
         content={"detail": "run polling was removed; "
                            "POST /agent/run streams the run"})
+
+
+def _offline_cik(ticker):
+    """CIK with no network: digits or the local registry, else None."""
+    import edgar
+
+    s = str(ticker or "").strip()
+    if s.isdigit():
+        try:
+            return edgar._cik_10(s)
+        except ValueError:
+            return None
+    try:
+        registry = _read_json(DATA_DIR / "companies.json")
+    except (OSError, ValueError):
+        return None
+    info = (registry or {}).get(s.upper())
+    if isinstance(info, dict) and info.get("cik"):
+        try:
+            return edgar._cik_10(info["cik"])
+        except ValueError:
+            return None
+    return None
+
+
+@router.get("/company/{ticker}/filings-since")
+def get_filings_since(ticker: str, date: str = Query(default="")):
+    """10-K/10-Q/8-K filings after date, from the cached submissions.
+
+    Never calls EDGAR: when the submissions cache is missing the
+    answer says so instead.
+    """
+    import edgar
+
+    day = (date or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
+        return JSONResponse(status_code=422,
+                            content={"detail": "date=YYYY-MM-DD is required"})
+    cik = _offline_cik(ticker)
+    if cik is None:
+        return JSONResponse(status_code=404,
+                            content={"detail": "unknown company"})
+    rows = edgar.filings_since(cik, day)
+    if rows is None:
+        return {"ticker": str(ticker).upper(), "date": day,
+                "cached": False, "filings": [],
+                "note": ("submissions cache is missing for this company; "
+                         "no live lookup was attempted")}
+    return {"ticker": str(ticker).upper(), "date": day,
+            "cached": True, "filings": rows}
+
+
+class InfoRequestBody(BaseModel):
+    company: str = ""
+    period_end: str = ""
+
+
+@router.post("/agent/info-request")
+def stream_info_request(body: InfoRequestBody, request: Request,
+                        x_onya_token: str | None = Header(default=None)):
+    """Run only draft_info_request, streamed, counted in limits."""
+    expected = _expected_token()
+    if not expected:
+        return JSONResponse(status_code=500,
+                            content={"detail": "server token not configured"})
+    if not secrets.compare_digest(x_onya_token or "", expected):
+        return JSONResponse(status_code=401,
+                            content={"detail": "invalid token"})
+    if not _agent_enabled():
+        return _paused()
+    company = (body.company or "").strip()
+    period_end = (body.period_end or "").strip()
+    if not company or not period_end:
+        return JSONResponse(status_code=422,
+                            content={"detail": "company and period_end "
+                                               "are required"})
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", period_end):
+        return JSONResponse(status_code=422,
+                            content={"detail": "period_end must be "
+                                               "YYYY-MM-DD"})
+    try:
+        store = limits.resolve_store()
+    except limits.RedisUnavailable:
+        return _paused()
+    ip = _client_ip(request, token_valid=True)
+    claimed = _claim_limits(store, ip)
+    if claimed is not None:
+        return claimed
+    if _budget_exhausted(store):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "The daily token budget is used up for today. "
+                               "See a saved run."})
+
+    def body_lines():
+        for event in _iter_info_request(company, period_end, store):
+            yield json.dumps(event, default=str) + "\n"
+
+    return StreamingResponse(body_lines(),
+                             media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store"})
 
 
 def allowed_origins():

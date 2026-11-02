@@ -299,6 +299,68 @@ def list_filings(cik, forms=("8-K", "10-K", "10-Q"), since="2024-01-01"):
     return rows
 
 
+def cached_submissions(cik):
+    """Parsed submissions JSON from the bundled/overlay cache, or None.
+
+    Never touches the network: returns None when the cache file is
+    missing or unreadable, so request paths can say so instead.
+    """
+    try:
+        cik10 = _cik_10(cik)
+    except ValueError:
+        return None
+    path = _read_first(RAW_DIR, f"submissions_CIK{cik10}.json")
+    if path is None:
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def filings_since(cik, after_date):
+    """10-K/10-Q/8-K rows filed after after_date, cached data only.
+
+    Returns None when the submissions cache is missing. Only the
+    cached recent-filings block is read; older archive files are
+    never fetched in a request path.
+    """
+    data = cached_submissions(cik)
+    if data is None:
+        return None
+    after = str(after_date or "")[:10]
+    recent = (data.get("filings") or {}).get("recent") or {}
+    forms = recent.get("form", []) or []
+    dates = recent.get("filingDate", []) or []
+    accessions = recent.get("accessionNumber", []) or []
+    primaries = recent.get("primaryDocument", []) or []
+    try:
+        plain = _cik_plain(cik)
+    except ValueError:
+        return []
+    rows = []
+    for form, filed, accession, primary in zip(
+            forms, dates, accessions, primaries):
+        if form not in ("10-K", "10-Q", "8-K"):
+            continue
+        if (filed or "") <= after:
+            continue
+        nodash = str(accession or "").replace("-", "")
+        if not nodash or not primary:
+            continue
+        rows.append({
+            "form": form,
+            "filingDate": filed,
+            "accessionNumber": accession,
+            "primaryDocument": primary,
+            "sec_url": ("https://www.sec.gov/Archives/edgar/data/"
+                        f"{plain}/{nodash}/{primary}"),
+        })
+    rows.sort(key=lambda r: r["filingDate"], reverse=True)
+    return rows
+
+
 def _parse_index_html(html):
     soup = BeautifulSoup(html, "html.parser")
     docs = []

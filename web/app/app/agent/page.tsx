@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MemoActions, MemoView } from "../../../components/memo";
+import { RequestActions, RequestView } from "../../../components/request";
 import { formatClock, formatInt, isWakingStatus, type AgentRunState, type AgentStep } from "../../../lib/api";
 import { stepSentence } from "../../../lib/step-sentences";
 
@@ -136,6 +137,10 @@ export default function AgentPage() {
             figure_fields: Array.isArray(record.figure_fields)
               ? (record.figure_fields as AgentRunState["figure_fields"])
               : [],
+            info_request:
+              typeof record.info_request === "string"
+                ? record.info_request
+                : null,
           }));
           setRunning(false);
         } else {
@@ -409,6 +414,34 @@ export default function AgentPage() {
           <p className="no-print mt-6 text-[13px] text-ink-muted">
             {formatInt(run.tool_calls)} tool calls, {formatInt(run.total_tokens)} tokens.
           </p>
+        </section>
+      )}
+
+      {finished && run.status === "done" && run.info_request && (
+        <section
+          aria-label="Information request"
+          className="card enter pop-out memo-print-area mt-5 p-5 sm:p-8"
+          style={{ ["--pop-x" as string]: "0px" }}
+        >
+          <h2 className="text-[22px] font-semibold tracking-tight">
+            Information request
+          </h2>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Draft. Review before sending. Nothing has been sent anywhere.
+          </p>
+          <div className="mt-4">
+            <RequestView
+              request={run.info_request}
+              figureFields={run.figure_fields}
+              ticker="SNBR"
+              periodEnd="2026-04-04"
+            />
+          </div>
+          <RequestActions
+            request={run.info_request}
+            ticker="SNBR"
+            periodEnd="2026-04-04"
+          />
         </section>
       )}
     </div>

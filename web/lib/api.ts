@@ -138,6 +138,7 @@ export interface CompanyRow {
   scenarios?: Scenario[] | null;
   ratio_with_savings?: number | null;
   ratio_without_savings?: number | null;
+  next_test?: NextTest | null;
 }
 
 export interface Verdict {
@@ -234,6 +235,22 @@ export interface PeriodDetail {
     unverifiable_proforma: boolean;
   } | null;
   scenarios?: Scenario[] | null;
+}
+
+export interface FilingRow {
+  form: string;
+  filingDate: string;
+  accessionNumber: string;
+  primaryDocument: string;
+  sec_url: string;
+}
+
+export interface FilingsSince {
+  ticker: string;
+  date: string;
+  cached: boolean;
+  filings: FilingRow[];
+  note?: string | null;
 }
 
 export interface CureBlock {
@@ -337,6 +354,14 @@ export interface AgentRunState {
   tool_calls: number;
   error: string | null;
   figure_fields?: { raw: string; field: string; value: number }[];
+  info_request?: string | null;
+}
+
+export interface NextTest {
+  date: string;
+  limit: number | null;
+  ratio_2dp: number | null;
+  risk: string | null;
 }
 
 export interface SampleMemo {

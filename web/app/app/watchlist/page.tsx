@@ -12,12 +12,14 @@ import {
 import { Reveal } from "../../../components/fade-up";
 import {
   apiGet,
+  formatDateLong,
   formatPeriod,
   formatRatio,
   formatSignedRatio,
   type Backtest,
   type CompanyRow,
 } from "../../../lib/api";
+import { useWatch } from "../../../lib/watch";
 
 type Tone = "pass" | "watch" | "breach" | "neutral";
 
@@ -32,6 +34,7 @@ function toneFor(company: CompanyRow): { tone: Tone; word: string } {
 
 export default function HomePage() {
   const router = useRouter();
+  const { watched, toggle } = useWatch();
   const [noticeDismissed, setNoticeDismissed] = useState(true);
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -198,6 +201,7 @@ export default function HomePage() {
                   <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-[13px]">
                     <thead>
                       <tr className="text-ink-muted">
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Watch</th>
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Ticker</th>
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Company</th>
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Covenant</th>
@@ -206,12 +210,14 @@ export default function HomePage() {
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 text-right font-medium">Headroom</th>
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">As of</th>
                         <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Status</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Next test</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(companies ?? []).map((c) => {
                         const { tone, word } = toneFor(c);
                         const linked = c.ticker === "SNBR";
+                        const watching = watched.includes(c.ticker);
                         return (
                           <tr
                             key={c.ticker}
@@ -222,7 +228,21 @@ export default function HomePage() {
                             }
                             className={`group ${linked ? "cursor-pointer" : ""}`}
                           >
-                            <td className={`border-b border-hairline px-3 py-3 font-medium group-last:border-0 ${linked ? "rounded-l-xl group-hover:bg-inset" : ""}`}>
+                            <td className={`border-b border-hairline px-3 py-3 group-last:border-0 ${linked ? "rounded-l-xl group-hover:bg-inset" : ""}`}>
+                              <button
+                                type="button"
+                                aria-pressed={watching}
+                                aria-label={watching ? `Stop watching ${c.ticker}` : `Watch ${c.ticker}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggle(c.ticker);
+                                }}
+                                className="text-link text-[13px] underline decoration-hairline underline-offset-4 hover:text-ink"
+                              >
+                                {watching ? "Watching" : "Watch"}
+                              </button>
+                            </td>
+                            <td className={`border-b border-hairline px-3 py-3 font-medium group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>
                               {linked ? (
                                 <Link
                                   href="/app/company/SNBR"
@@ -244,8 +264,11 @@ export default function HomePage() {
                             <td className={`border-b border-hairline px-3 py-3 text-ink-muted group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>
                               {c.as_of ? formatPeriod(c.as_of) : "Not disclosed"}
                             </td>
-                            <td className={`border-b border-hairline px-3 py-3 group-last:border-0 ${linked ? "rounded-r-xl group-hover:bg-inset" : ""}`}>
+                            <td className={`border-b border-hairline px-3 py-3 group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>
                               <StatusPill tone={tone} word={word} />
+                            </td>
+                            <td className={`border-b border-hairline px-3 py-3 text-ink-muted group-last:border-0 ${linked ? "rounded-r-xl group-hover:bg-inset" : ""}`}>
+                              {nextTestCell(c)}
                             </td>
                           </tr>
                         );
@@ -275,6 +298,19 @@ export default function HomePage() {
       )}
     </div>
   );
+}
+
+function nextTestCell(company: CompanyRow): string {
+  const next = company.next_test;
+  if (!next || !next.date) return "";
+  const parts = [formatDateLong(next.date)];
+  if (next.limit !== null && next.limit !== undefined) {
+    parts.push(`${formatRatio(next.limit)} limit`);
+  }
+  if (next.ratio_2dp !== null && next.ratio_2dp !== undefined) {
+    parts.push(`proj ${formatRatio(next.ratio_2dp)}`);
+  }
+  return parts.join(", ");
 }
 
 function headroomCell(company: CompanyRow): string {

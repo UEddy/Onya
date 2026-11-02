@@ -98,6 +98,9 @@ Apr 4, 2026." Never use today's date as as_of unless the user asks about today.
 example, call lookup_company to resolve the company and retry with the CIK) \
 before giving up.
 - Always cite tool outputs for facts and figures. Never invent numbers.
+- After draft_memo, when a covenant is breached or the next test is high \
+risk, call draft_info_request for the same period and mention the request \
+in the final answer. When nothing is breached, skip it.
 - Every number in the memo must come from a tool result. Tool call arguments keep \
 dates as YYYY-MM-DD, but memo prose uses dates like "Apr 4, 2026", ratios like \
 "6.58x", and dollars like "$267.2 million" in prose; exact dollar figures with \
@@ -1581,6 +1584,62 @@ def tool_draft_memo(company, period_end, draft="", as_of=None):
             "note": note}
 
 
+def tool_draft_info_request(company, period_end, as_of=None):
+    """Build the lender-to-borrower information request from results.
+
+    Deterministic (no model call): recomputes the period, reads the
+    reviewed extraction, the projection, and the selected agreement,
+    then builds each item from a flagged finding and its figure.
+    Returns {"request": None} when nothing is breached and the next
+    test is not high risk. Never sends anything anywhere.
+    """
+    import edgar
+
+    if company_slug(company) not in SUPPORTED_PIPELINES:
+        return _record(_unsupported(company, period_end, "compute"))
+    as_of, defaulted, default_period = effective_as_of(company, as_of)
+    if _period_after_as_of(period_end, as_of):
+        return _record(_after_as_of_error(company, period_end, as_of,
+                                          "period_end"))
+    try:
+        compute_result = covenant.compute(period_end)
+    except Exception as exc:
+        return _record({"supported": True, "company": company,
+                        "period_end": period_end, "as_of": as_of,
+                        "error": f"{type(exc).__name__}: {exc}"})
+    slug = company_slug(company)
+    try:
+        reviewed = json.loads(
+            (DATA_DIR / "extracted" / f"{slug}_covenants.reviewed.json"
+             ).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        reviewed = {}
+    try:
+        projection = project.compute(period_end)
+    except Exception:
+        projection = {}
+    try:
+        ticker = resolve_ticker(company)
+        base, amendments = edgar.select_agreement(
+            ticker, as_of=as_of, verbose=False)
+        agreement = {"base": _compact_candidate(base) if base else None,
+                     "amendments": [_compact_candidate(a)
+                                    for a in (amendments or [])]}
+    except Exception:
+        agreement = {}
+    import info_request
+    built = info_request.build_info_request(
+        compute_result, reviewed, projection, agreement)
+    return _record({
+        "supported": True, "company": company, "period_end": period_end,
+        "as_of": as_of, "as_of_defaulted": defaulted,
+        "default_period_end": default_period,
+        "subject": built.get("subject"), "items": built.get("items"),
+        "reply_by": built.get("reply_by"), "request": built.get("request"),
+        "reason": built.get("reason"), "figures": built.get("figures"),
+    })
+
+
 # ---------------------------------------------------------------------------
 # Tool schemas (OpenAI function calling) and dispatch
 # ---------------------------------------------------------------------------
@@ -1698,6 +1757,23 @@ TOOL_SCHEMAS = [
             "as_of": AS_OF_PARAM,
         }, "required": ["company", "period_end", "draft"]},
     }},
+    {"type": "function", "function": {
+        "name": "draft_info_request",
+        "description": ("Build the lender-to-borrower information request "
+                        "from the computed results (deterministic, no model "
+                        "call). Call after draft_memo when a covenant is "
+                        "breached or the next test is high risk. Returns the "
+                        "letter under 'request', or 'request': null when "
+                        "nothing is breached. Omit as_of when the user named "
+                        "no test period to use the latest computed test."),
+        "parameters": {"type": "object", "properties": {
+            "company": {"type": "string",
+                        "description": "Company name, ticker, or CIK"},
+            "period_end": {"type": "string",
+                           "description": "Test period end (YYYY-MM-DD)"},
+            "as_of": AS_OF_PARAM,
+        }, "required": ["company", "period_end"]},
+    }},
 ]
 
 TOOL_FUNCS = {
@@ -1708,6 +1784,7 @@ TOOL_FUNCS = {
     "project_next_test": tool_project_next_test,
     "cure_analysis": tool_cure_analysis,
     "draft_memo": tool_draft_memo,
+    "draft_info_request": tool_draft_info_request,
 }
 
 
@@ -1832,6 +1909,16 @@ def summarize_result(tool, result, max_chars=300):
                               + (result.get("unverified_titles") or []))
             if flagged_labels:
                 text += "; unverified labels: %s" % (flagged_labels,)
+    elif tool == "draft_info_request":
+        if result.get("request"):
+            text = ("information request drafted: %d item(s), subject: %s"
+                    % (len(result.get("items") or []),
+                       result.get("subject") or ""))
+        elif result.get("error"):
+            text = "information request error: %s" % result.get("error")
+        else:
+            text = ("no information request: %s"
+                    % (result.get("reason") or "nothing flagged"))
     else:
         text = json.dumps(result, default=str)
     return _truncate_at_word(text, max_chars)
@@ -1970,6 +2057,7 @@ def run_agent(user_prompt, client=None, run_id=None,
     history = []
     seen_results = {}
     last_figure_fields = []
+    last_info_request = None
 
     def _log_final(content, turn):
         step_nl = step + 1
@@ -2046,6 +2134,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                             "reason": "done"})
                         return {"answer": ensure_default_date_line(
                                     retry_content, _TOOL_OUTPUTS),
+                                "info_request": last_info_request,
                                 "reason": "done",
                                 "run_id": run_id, "tool_calls": tool_calls,
                                 "total_tokens": total_tokens,
@@ -2063,6 +2152,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                         "reason": "done"})
                     return {"answer": ensure_default_date_line(
                                 fallback, _TOOL_OUTPUTS),
+                            "info_request": last_info_request,
                             "reason": "done",
                             "run_id": run_id, "tool_calls": tool_calls,
                             "total_tokens": total_tokens,
@@ -2079,6 +2169,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                                       "reason": "done"})
                 return {"answer": ensure_default_date_line(
                             content, _TOOL_OUTPUTS),
+                        "info_request": last_info_request,
                         "reason": "done", "run_id": run_id,
                         "tool_calls": tool_calls, "total_tokens": total_tokens,
                         "figure_fields": last_figure_fields,
@@ -2118,6 +2209,10 @@ def run_agent(user_prompt, client=None, run_id=None,
                     if name == "draft_memo" and isinstance(result, dict):
                         last_figure_fields = (
                             result.get("figure_fields") or last_figure_fields)
+                    if (name == "draft_info_request"
+                            and isinstance(result, dict)
+                            and result.get("request")):
+                        last_info_request = result.get("request")
             messages.append({"role": "tool", "tool_call_id": call.id,
                              "content": json.dumps(result, default=str)[:20000]})
             step += 1

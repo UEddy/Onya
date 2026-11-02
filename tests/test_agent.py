@@ -70,12 +70,12 @@ def _covenant_result():
 
 
 class Schemas(unittest.TestCase):
-    def test_six_tools_with_required_params(self):
+    def test_eight_tools_with_required_params(self):
         names = [s["function"]["name"] for s in agent.TOOL_SCHEMAS]
         self.assertEqual(sorted(names), [
-            "compute_covenants", "cure_analysis", "draft_memo",
-            "extract_covenants", "find_agreements", "lookup_company",
-            "project_next_test"])
+            "compute_covenants", "cure_analysis", "draft_info_request",
+            "draft_memo", "extract_covenants", "find_agreements",
+            "lookup_company", "project_next_test"])
         required = {s["function"]["name"]: s["function"]["parameters"]["required"]
                     for s in agent.TOOL_SCHEMAS}
         self.assertEqual(required["lookup_company"], ["name_or_ticker"])
@@ -89,6 +89,8 @@ class Schemas(unittest.TestCase):
         self.assertEqual(required["cure_analysis"], ["company", "period_end"])
         self.assertEqual(required["draft_memo"],
                          ["company", "period_end", "draft"])
+        self.assertEqual(required["draft_info_request"],
+                         ["company", "period_end"])
 
     def test_model_and_limits(self):
         self.assertEqual(agent.MODEL, "muse-spark-1.3")
@@ -607,7 +609,7 @@ class AgentLoop(unittest.TestCase):
         req = client.chat.completions.requests[0]
         self.assertEqual(req["model"], "muse-spark-1.3")
         self.assertEqual(req["max_tokens"], 8000)
-        self.assertEqual(len(req["tools"]), 7)
+        self.assertEqual(len(req["tools"]), 8)
 
     def _run_script(self, client):
         with tempfile.TemporaryDirectory() as tmp:
