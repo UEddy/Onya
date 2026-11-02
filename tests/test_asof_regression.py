@@ -128,6 +128,21 @@ class DefaultDateLine(unittest.TestCase):
         self.assertEqual(
             agent.ensure_default_date_line(memo, self._finds(True)), memo)
 
+    def test_strips_model_given_date_line_when_defaulted(self):
+        memo = ("Test date given; using Apr 4, 2026 with reporting window "
+                "to May 19, 2026.\nSummary")
+        self.assertEqual(
+            agent.ensure_default_date_line(memo, self._finds(True)),
+            "No test date given; using the latest computed test, "
+            "Apr 4, 2026.\nSummary")
+
+    def test_strips_model_given_date_line_when_explicit(self):
+        memo = ("Test date given; using Apr 4, 2026 with reporting window "
+                "to May 19, 2026.\nSummary")
+        self.assertEqual(
+            agent.ensure_default_date_line(memo, self._finds(False)),
+            "Summary")
+
 
 class DiscoveryCutoff(unittest.TestCase):
     def _candidates(self):

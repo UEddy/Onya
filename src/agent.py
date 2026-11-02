@@ -93,7 +93,8 @@ to every other tool call in the run. When the user names no test period, omit \
 as_of (pass nothing) in every tool call: the tools default to the latest \
 computed test. Then begin the memo with exactly one line stating the date used \
 and why, for example "No test date given; using the latest computed test, \
-Apr 4, 2026." Never use today's date as as_of unless the user asks about today.
+Apr 4, 2026." When the user names a test date, do not start the memo with \
+any date line. Never use today's date as as_of unless the user asks about today.
 - When a tool fails, read the error message and try a different approach (for \
 example, call lookup_company to resolve the company and retry with the CIK) \
 before giving up.
@@ -163,8 +164,9 @@ the tool output.
 under the agreement for the Apr 4, 2026 failures", never "the Apr 4, 2026 \
 fails".
 - Format ratios always with two decimals and x, such as 2.10x, 4.80x, and \
-1.70x. Write risk in lowercase, such as "high risk". Write "add-backs" \
-hyphenated. Use sentence case covenant names in prose, such as "net leverage" \
+1.70x. Write risk in lowercase. Describe projection risk as "The projection \
+carries high risk: ..." (or medium/low risk); never write "<label> risk is \
+<level> risk". Write "add-backs" hyphenated. Use sentence case covenant names in prose, such as "net leverage" \
 and "interest coverage"; the table may keep the agreement's defined terms.
 - Write document titles in sentence case, never ALL CAPS. Use plain words: \
 write "fails", not "result fail". Use no em dashes anywhere.
@@ -250,13 +252,25 @@ def effective_as_of(company, as_of):
     return defaulted, True, period
 
 
+def _strip_given_date_line(answer):
+    """Remove a leading "Test date given..." line the model added itself."""
+    lines = (answer or "").splitlines(keepends=True)
+    if lines and lines[0].lstrip().lower().startswith("test date given"):
+        return "".join(lines[1:]).lstrip("\n")
+    return answer
+
+
 def ensure_default_date_line(answer, tool_outputs):
     """Prepend the no-test-date line when the run used the default.
 
-    Fires only when every find_agreements call in the run defaulted
-    its as_of (i.e. the user named no test period) and the memo does
-    not already say so. Returns the answer unchanged otherwise.
+    Always strips a leading model-written "Test date given" line first:
+    when the user names a test date the memo must not start with any
+    date line. Then fires only when every find_agreements call in the
+    run defaulted its as_of (i.e. the user named no test period) and
+    the memo does not already say so. Returns the answer unchanged
+    otherwise.
     """
+    answer = _strip_given_date_line(answer)
     finds = [o for o in (tool_outputs or [])
              if isinstance(o, dict) and "governing_doc_type" in o]
     if not finds or not all(o.get("as_of_defaulted") for o in finds):
@@ -725,6 +739,11 @@ def verify_memo_format(draft):
             errors.append(f"ratio {match.group(0)} must have two decimals")
     if re.search(r"\b(?:HIGH|MEDIUM|LOW)\s+risk\b", draft or ""):
         errors.append("risk must be lowercase, such as high risk")
+    if re.search(r"\brisk is (?:high|medium|low) risk\b", draft or "",
+                 re.IGNORECASE):
+        errors.append(
+            "write: The projection carries high risk: ... (never "
+            "<label> risk is <level> risk)")
     if re.search(r"\baddbacks?\b|\badd backs?\b", draft or "",
                  re.IGNORECASE):
         errors.append("use add-backs, hyphenated")

@@ -281,6 +281,21 @@ class MemoValidators(unittest.TestCase):
         self.assertIn("No equity cure provision was found in the "
                       "reviewed agreement", agent.SYSTEM_PROMPT)
 
+    def test_projection_risk_wording(self):
+        errors = agent.verify_memo_format(
+            "Trend risk is high risk over the next test.")
+        self.assertTrue(any("carries high risk" in e for e in errors),
+                        errors)
+        good = ("The projection carries high risk: headroom stays "
+                "negative at the next test.")
+        self.assertEqual(agent.verify_memo_format(good), [])
+        self.assertIn("The projection carries high risk",
+                      agent.SYSTEM_PROMPT)
+
+    def test_prompt_forbids_date_line_when_date_given(self):
+        self.assertIn("do not start the memo with any date line",
+                      agent.SYSTEM_PROMPT)
+
 
 class DashCharacters(unittest.TestCase):
     def test_no_em_or_en_dash_in_web_app_or_components(self):
