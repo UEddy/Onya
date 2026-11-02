@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MemoActions, MemoView } from "../../../components/memo";
-import { formatClock, formatInt, type AgentRunState, type AgentStep } from "../../../lib/api";
+import { formatClock, formatInt, isWakingStatus, type AgentRunState, type AgentStep } from "../../../lib/api";
 import { stepSentence } from "../../../lib/step-sentences";
 
 const PREFILL =
@@ -59,7 +59,7 @@ function friendlyError(status: number, detail: string): string {
   if (status === 413 || status === 422) {
     return "That question needs trimming: keep it under 4,000 characters and non-empty.";
   }
-  if (status === 502) {
+  if (isWakingStatus(status)) {
     return "The data service is waking up. This can take up to a minute. See a saved run.";
   }
   return "The check could not start. Please try again in a moment.";
@@ -124,7 +124,11 @@ export default function AgentPage() {
         if (!res.ok) {
           stopPolling();
           setRunning(false);
-          setError("The check was lost. Please run it again.");
+          setError(
+            isWakingStatus(res.status)
+              ? "The data service is waking up. This can take up to a minute. See a saved run."
+              : "The check was lost. Please run it again.",
+          );
           return;
         }
         if (state.steps.length !== lastStepCount.current) {

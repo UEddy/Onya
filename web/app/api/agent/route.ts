@@ -2,6 +2,7 @@
    No-store: the start request and its response are never cached. */
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
+const UPSTREAM_TIMEOUT_MS = 30_000;
 
 export async function POST(req: Request) {
   const forwardedFor =
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
   const clientIp = forwardedFor.split(",")[0].trim();
   const base = process.env.ONYA_API_BASE;
   const token = process.env.ONYA_DEMO_TOKEN;
+  const basetenKey = process.env.BASETEN_API_KEY;
   if (!base || !token) {
     return Response.json(
       { detail: "agent service is not configured" },
@@ -34,10 +36,14 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type": "application/json",
         "X-Onya-Token": token,
+        ...(basetenKey
+          ? { Authorization: `Api-Key ${basetenKey}` }
+          : {}),
         ...(clientIp ? { "X-Onya-Client-IP": clientIp } : {}),
       },
       body: JSON.stringify({ question }),
       cache: "no-store",
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch {
     return Response.json(

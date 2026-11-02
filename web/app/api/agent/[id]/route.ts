@@ -4,6 +4,7 @@
 
 const RUN_ID_RE = /^[0-9a-fA-F-]{1,64}$/;
 const NO_STORE = { "Cache-Control": "no-store" } as const;
+const UPSTREAM_TIMEOUT_MS = 30_000;
 
 export async function GET(
   _req: Request,
@@ -18,6 +19,7 @@ export async function GET(
   }
   const base = process.env.ONYA_API_BASE;
   const token = process.env.ONYA_DEMO_TOKEN;
+  const basetenKey = process.env.BASETEN_API_KEY;
   if (!base || !token) {
     return Response.json(
       { detail: "agent service is not configured" },
@@ -27,8 +29,14 @@ export async function GET(
   let upstream: Response;
   try {
     upstream = await fetch(`${base}/agent/run/${id}`, {
-      headers: { "X-Onya-Token": token },
+      headers: {
+        "X-Onya-Token": token,
+        ...(basetenKey
+          ? { Authorization: `Api-Key ${basetenKey}` }
+          : {}),
+      },
       cache: "no-store",
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch {
     return Response.json(

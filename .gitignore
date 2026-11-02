@@ -6,3 +6,5 @@ data/cache/
 data/extracted/*.txt
 data/extracted/snbr_covenants.json
 data/runs/
+deploy/baseten/staging/
+web/test-results/

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Production smoke test. Usage: scripts/smoke_prod.sh API_URL SITE_URL
+# API_URL is the Baseten invoke URL; read checks go through the site's
+# server-side proxy (which adds the Baseten key), never from here.
 # Prints no secrets. Exits non-zero on the first failed check.
 set -u
 API="${1:?usage: smoke_prod.sh API_URL SITE_URL}"
@@ -18,32 +20,21 @@ check_200() {
   fi
 }
 
-check_200 "$API/health"
-check_200 "$API/companies"
-check_200 "$API/backtest"
+check_200 "$SITE/api/backend/health"
+check_200 "$SITE/api/backend/companies"
+check_200 "$SITE/api/backend/backtest"
 check_200 "$SITE/"
 check_200 "$SITE/app/watchlist"
 check_200 "$SITE/app/company/SNBR"
 check_200 "$SITE/app/agent"
 
+# The Baseten gateway must reject a call with no Api-Key header.
 code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/agent/run" \
   -H "Content-Type: application/json" -d '{"question":"smoke"}')
 if [ "$code" = "401" ]; then
-  echo "OK 401 POST $API/agent/run without token"
+  echo "OK 401 POST $API/agent/run without Baseten key"
 else
-  echo "FAIL $code POST $API/agent/run without token (want 401)"
-  fail=1
-fi
-
-# A preflight from an unapproved origin must get no allow-origin header.
-acao=$(curl -s -D- -o /dev/null -X OPTIONS "$API/companies" \
-  -H "Origin: https://unapproved.example" \
-  -H "Access-Control-Request-Method: GET" \
-  | grep -ci "access-control-allow-origin: https://unapproved.example" || true)
-if [ "$acao" = "0" ]; then
-  echo "OK CORS preflight from unapproved origin refused"
-else
-  echo "FAIL CORS preflight from unapproved origin was allowed"
+  echo "FAIL $code POST $API/agent/run without Baseten key (want 401)"
   fail=1
 fi
 

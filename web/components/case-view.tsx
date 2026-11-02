@@ -733,7 +733,7 @@ export default function CaseView({ ticker }: { ticker: string }) {
     return () => {
       cancelled = true;
     };
-  }, [ticker, selected]);
+  }, [ticker, selected, attempt]);
 
   const visibleDetail =
     detail && detail.period_end === selected ? detail : null;

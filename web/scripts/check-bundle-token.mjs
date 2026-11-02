@@ -5,9 +5,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const token = process.env.ONYA_DEMO_TOKEN || "";
-if (!token) {
-  console.error("ONYA_DEMO_TOKEN is not set; nothing to check for.");
+const values = [
+  process.env.ONYA_DEMO_TOKEN || "",
+  process.env.BASETEN_API_KEY || "",
+].filter(Boolean);
+if (values.length === 0) {
+  console.error("No dummy secret values set; nothing to check for.");
   process.exit(1);
 }
 
@@ -20,7 +23,8 @@ function walk(dir) {
       walk(path);
       continue;
     }
-    if (readFileSync(path, "utf8").includes(token)) hits.push(path);
+    const text = readFileSync(path, "utf8");
+    if (values.some((v) => text.includes(v))) hits.push(path);
   }
 }
 walk(root);
@@ -29,4 +33,4 @@ if (hits.length > 0) {
   console.error(`Demo token value found in client bundle:\n${hits.join("\n")}`);
   process.exit(1);
 }
-console.log("Client bundle contains no demo token value.");
+console.log("Client bundle contains no demo token or Baseten key value.");

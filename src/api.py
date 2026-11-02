@@ -39,6 +39,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 load_dotenv(os.path.expanduser("~/.config/onya/.env"))
 
+import secret_files  # noqa: E402
+
+secret_files.load_secret_files()
+
 import agent  # noqa: E402
 import score_disclosed  # noqa: E402
 import xbrl  # noqa: E402

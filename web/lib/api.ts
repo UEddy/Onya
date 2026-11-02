@@ -1,5 +1,6 @@
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+export /* The browser only calls this origin; /api/backend proxies to the
+   backend server-side with the Baseten key (see app/api/backend). */
+const API_BASE = "/api/backend";
 
 export class ApiError extends Error {
   status: number;
@@ -9,10 +10,21 @@ export class ApiError extends Error {
   }
 }
 
+/* A cold backend answers slowly or not at all; stop waiting instead of
+   hanging the page, so the waking notice appears with its retry. */
+export const API_TIMEOUT_MS = 60_000;
+
+/* Network failure plus the gateway statuses a cold start surfaces. */
+export function isWakingStatus(status: number): boolean {
+  return status === 0 || status === 502 || status === 503 || status === 504;
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`);
+    res = await fetch(`${API_BASE}${path}`, {
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
   } catch {
     throw new ApiError(0, "the data service is unreachable");
   }

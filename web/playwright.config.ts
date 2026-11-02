@@ -39,13 +39,13 @@ export default defineConfig({
     },
     {
       command:
-        "NEXT_PUBLIC_API_BASE=http://localhost:8001 ONYA_API_BASE=http://localhost:8001 npm run build && npm run start -- -p 3001",
+        "ONYA_API_BASE=http://localhost:8001 BASETEN_API_KEY=dummy-baseten-key npm run build && npm run start -- -p 3001",
       url: "http://localhost:3001",
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
-        NEXT_PUBLIC_API_BASE: "http://localhost:8001",
         ONYA_API_BASE: "http://localhost:8001",
+        BASETEN_API_KEY: "dummy-baseten-key",
       },
     },
   ],

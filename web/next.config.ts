@@ -1,8 +1,5 @@
 import type { NextConfig } from "next";
 
-const apiOrigin =
-  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -12,7 +9,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      `connect-src 'self' ${apiOrigin}`,
+      "connect-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
