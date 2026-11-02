@@ -767,6 +767,12 @@ def verify_memo_format(draft):
             errors.append(f"rewrite the raw tool wording: {phrase}")
     if re.search(r"requires agent approval", low_draft):
         errors.append("say requires administrative agent approval")
+    if re.search(r"\bevery\b", draft or "", re.IGNORECASE):
+        errors.append("never write every in memo or request text")
+    if re.search(r"(?<!administrative )agent approval", draft or "",
+                 re.IGNORECASE):
+        errors.append("write administrative agent approval, "
+                      "not bare agent approval")
     prose = "\n".join(
         line for line in (draft or "").splitlines()
         if not line.lstrip().startswith("|"))

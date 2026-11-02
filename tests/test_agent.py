@@ -296,6 +296,22 @@ class MemoValidators(unittest.TestCase):
         self.assertIn("do not start the memo with any date line",
                       agent.SYSTEM_PROMPT)
 
+    def test_request_wording_style_rules(self):
+        self.assertTrue(any("every" in e for e in agent.verify_memo_format(
+            "Review every covenant test.")))
+        self.assertTrue(any("administrative agent approval" in e
+                            for e in agent.verify_memo_format(
+                                "The savings need agent approval.")))
+        self.assertEqual(agent.verify_memo_format(
+            "The savings need administrative agent approval."), [])
+        self.assertTrue(any("two decimals" in e
+                            for e in agent.verify_memo_format(
+                                "A forecast through the Jul 4, 2026 test "
+                                "(limit 4.8x).")))
+        good = ("A forecast through the Jul 4, 2026 test (limit 4.80x) "
+                "with administrative agent approval.")
+        self.assertEqual(agent.verify_memo_format(good), [])
+
 
 class DashCharacters(unittest.TestCase):
     def test_no_em_or_en_dash_in_web_app_or_components(self):

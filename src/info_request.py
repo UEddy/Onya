@@ -136,8 +136,9 @@ def build_info_request(compute_result, reviewed, projection, agreement):
                          "under (a)(ix) (cap %s) and the administrative "
                          "agent approval status." % (
                              amount, _millions(ix_cap))),
-                "why": ("Pro forma savings need support and agent approval "
-                        "before they count toward EBITDA."),
+                "why": ("Pro forma savings need support and "
+                        "administrative agent approval before they count "
+                        "toward EBITDA."),
             })
 
     items.append({
@@ -152,7 +153,7 @@ def build_info_request(compute_result, reviewed, projection, agreement):
         use(next_limit)
         items.append({
             "text": ("A liquidity and covenant forecast through the %s "
-                     "test (limit %sx)." % (
+                     "test (limit %.2fx)." % (
                          prose_date(next_test), next_limit)),
             "why": ("The next test sets the limit the forecast must "
                     "clear."),
@@ -167,7 +168,8 @@ def build_info_request(compute_result, reviewed, projection, agreement):
             "text": ("Confirmation of the forbearance expiry date and "
                      "the termination events."),
             "why": ("The governing document is a forbearance agreement; "
-                    "its expiry bounds every cure."),
+                    "its expiry date limits the time available for a "
+                    "cure."),
         })
 
     subject = ("Information request: Sleep Number covenants, %s test"

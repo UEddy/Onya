@@ -83,10 +83,14 @@ class Builder(unittest.TestCase):
                     f"{token} not traced")
             elif token.endswith("x"):
                 everything = json.dumps([_inputs()[0], _inputs()[2]])
+                ratio = float(token[:-1])
+                inputs_numbers = [
+                    float(n)
+                    for n in re.findall(r"-?\d+(?:\.\d+)?", everything)]
                 self.assertTrue(
                     token in everything
-                    or token.rstrip("x") in everything
-                    or ("%sx" % float(token[:-1])) in everything,
+                    or any(abs(n - ratio) < 1e-9
+                           for n in inputs_numbers),
                     f"{token} not traced")
             else:
                 digits = token[1:].replace(",", "")
@@ -95,6 +99,21 @@ class Builder(unittest.TestCase):
                         or f"{float(v):,.0f}" == token[1:]
                         for v in self.built["figures"]),
                     f"{token} not traced")
+
+    def test_request_wording_rules(self):
+        text = self.built["request"]
+        self.assertIn(
+            "its expiry date limits the time available for a cure.",
+            text)
+        self.assertNotRegex(text, r"(?i)\bevery\b")
+        self.assertNotRegex(
+            text, r"(?i)(?<!administrative )agent approval")
+        self.assertIn("(limit 4.80x)", text)
+
+    def test_built_request_passes_style_check(self):
+        import agent
+        self.assertEqual(
+            agent.verify_memo_format(self.built["request"]), [])
 
     def test_no_breach_no_request(self):
         passing = dict(_inputs()[0])
