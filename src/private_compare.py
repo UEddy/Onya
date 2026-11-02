@@ -196,6 +196,32 @@ def _ratio_2dp(value):
     return round(float(value) + 0.0, 2)
 
 
+def _governing_is_forbearance(slug, period_end):
+    """True when the cached agreement selection is a forbearance.
+
+    Uses the reporting-window cutoff (period_end + 45 days). Cached
+    companies resolve from the bundled select cache; any miss or error
+    means False.
+    """
+    import datetime
+
+    import edgar
+
+    try:
+        end = datetime.date.fromisoformat(str(period_end)[:10])
+        cutoff = (end + datetime.timedelta(days=45)).isoformat()
+        base, _amendments = edgar.select_agreement(
+            "SNBR" if slug == "snbr" else slug, as_of=cutoff,
+            verbose=False)
+        base = base or {}
+        text = (str(base.get("title") or "") + " "
+                + str(base.get("description") or "")).lower()
+        return bool(base.get("is_forbearance")
+                    or "forbearance" in text)
+    except Exception:
+        return False
+
+
 def compare_with_onya(ticker, period_end, figures):
     """Side-by-side rows of certificate vs Onya, plus gap flags.
 
@@ -228,7 +254,10 @@ def compare_with_onya(ticker, period_end, figures):
     if baseline.get("onya_pre_proforma") is not None:
         pre_savings = baseline.get("onya_pre_proforma")
 
+    labels = {"net_leverage": "net leverage",
+              "interest_coverage": "interest coverage"}
     rows = []
+    flags = []
     for covenant_fig in (figures.get("covenants") or []):
         name = str(covenant_fig.get("name") or "")
         lowered = name.lower()
@@ -253,8 +282,25 @@ def compare_with_onya(ticker, period_end, figures):
                     else "differs from Onya; see the gap summary"),
             })
         rows.append(entry)
+        limit = onya.get(key, {}).get("threshold") \
+            if key is not None else None
+        actual = covenant_fig.get("actual")
+        direction = str(covenant_fig.get("direction") or "").lower()
+        if (limit is None or actual is None
+                or not isinstance(actual, (int, float))):
+            continue
+        failed = (direction == "max" and actual > limit
+                  or direction == "min" and actual < limit)
+        if not failed:
+            continue
+        side = "above" if direction == "max" else "below"
+        sentence = ("The certificate's %s of %.2fx is still %s the "
+                    "%.2fx limit." % (labels[key], actual, side, limit))
+        if _governing_is_forbearance(slug, period_end):
+            sentence += (" Its compliance statement relies on the "
+                         "forbearance, not the ratio.")
+        flags.append(sentence)
 
-    flags = []
     if (computed.get("disallowed") or 0) > 0:
         flags.append(
             "Add-backs above the shared cap: Onya disallowed $%s." %

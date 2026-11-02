@@ -9,14 +9,14 @@ const MAX_UPLOAD_BYTES = 2_000_000;
 const SAMPLE_WATERMARK =
   "ILLUSTRATIVE SAMPLE. Not a real compliance certificate.";
 
-function formatValue(value: number | null): string {
+function formatRatio(value: number | null): string {
   if (value === null || value === undefined) return "Not stated";
-  return String(value);
+  return `${value.toFixed(2)}x`;
 }
 
 function formatDiff(value: number | null): string {
   if (value === null || value === undefined) return "Not stated";
-  return value > 0 ? `+${value}` : String(value);
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}x`;
 }
 
 function comparisonMarkdown(
@@ -27,12 +27,12 @@ function comparisonMarkdown(
     `Private comparison: ${comparison.ticker}, ${comparison.period_end} test`,
     `Source: ${source}`,
     "",
-    "| Covenant | Certificate | Onya | Difference | Evidence |",
+    "| Covenant | Certificate | Onya | Certificate minus Onya | Evidence |",
     "| --- | --- | --- | --- | --- |",
   ];
   for (const row of comparison.rows) {
     lines.push(
-      `| ${row.name} | ${formatValue(row.certificate)} | ${formatValue(row.onya)} | ${formatDiff(row.difference)} | ${row.verified ? "Verified" : "Unverified"} |`,
+      `| ${row.name} | ${formatRatio(row.certificate)} | ${formatRatio(row.onya)} | ${formatDiff(row.difference)} | ${row.verified ? "Verified" : "Unverified"} |`,
     );
   }
   if (comparison.flags.length > 0) {
@@ -385,7 +385,7 @@ export default function PrivatePage() {
                     <th className="py-2 pr-4 font-medium">Covenant</th>
                     <th className="py-2 pr-4 text-right font-medium">Certificate</th>
                     <th className="py-2 pr-4 text-right font-medium">Onya</th>
-                    <th className="py-2 pr-4 text-right font-medium">Difference</th>
+                    <th className="py-2 pr-4 text-right font-medium">Certificate minus Onya</th>
                     <th className="py-2 font-medium">Evidence</th>
                   </tr>
                 </thead>
@@ -394,10 +394,10 @@ export default function PrivatePage() {
                     <tr key={row.name} className="border-b border-hairline">
                       <td className="py-2 pr-4">{row.name}</td>
                       <td className="py-2 pr-4 text-right">
-                        {formatValue(row.certificate)}
+                        {formatRatio(row.certificate)}
                       </td>
                       <td className="py-2 pr-4 text-right">
-                        {formatValue(row.onya)}
+                        {formatRatio(row.onya)}
                       </td>
                       <td className="py-2 pr-4 text-right">
                         {formatDiff(row.difference)}

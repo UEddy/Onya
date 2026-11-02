@@ -191,6 +191,46 @@ class ComparisonMath(unittest.TestCase):
             private_compare.compare_with_onya(
                 "ACME", "2026-04-04", {"covenants": []})
 
+    def test_cert_ratio_against_limit_flag(self):
+        import edgar
+
+        def dead(*args, **kwargs):
+            raise AssertionError("network call attempted")
+
+        figures = {"covenants": [
+            {"name": "Net Leverage Ratio", "direction": "max",
+             "threshold": 4.75, "actual": 5.06, "quote": "q",
+             "verified": True},
+            {"name": "Interest Coverage Ratio", "direction": "min",
+             "threshold": 2.1, "actual": 1.7, "quote": "q",
+             "verified": True}],
+            "components": []}
+        with patch.object(edgar.requests, "get", side_effect=dead), \
+             patch.object(edgar.requests, "post", side_effect=dead):
+            out = private_compare.compare_with_onya(
+                "SNBR", "2026-04-04", figures)
+        self.assertIn(
+            "The certificate's net leverage of 5.06x is still above "
+            "the 4.75x limit. Its compliance statement relies on the "
+            "forbearance, not the ratio.",
+            out["flags"])
+        self.assertIn(
+            "The certificate's interest coverage of 1.70x is still "
+            "below the 2.10x limit. Its compliance statement relies "
+            "on the forbearance, not the ratio.",
+            out["flags"])
+
+    def test_no_flag_when_certificate_passes(self):
+        figures = {"covenants": [
+            {"name": "Net Leverage Ratio", "direction": "max",
+             "threshold": 4.75, "actual": 4.0, "quote": "q",
+             "verified": True}],
+            "components": []}
+        out = private_compare.compare_with_onya(
+            "SNBR", "2026-04-04", figures)
+        self.assertFalse([f for f in out["flags"]
+                          if "certificate's net leverage" in f])
+
 
 class NoPersistence(unittest.TestCase):
     def _snapshot(self):
