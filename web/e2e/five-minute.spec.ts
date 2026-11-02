@@ -29,7 +29,7 @@ test("five-minute path: landing, case, agent memo, linked figure", async ({
     timeout: 90_000,
   });
   await expect(
-    page.getByText("Breach under every scenario").or(
+    page.getByText("Breach in both scenarios").or(
       page.getByText("fails two covenants"),
     ).first(),
   ).toBeVisible();

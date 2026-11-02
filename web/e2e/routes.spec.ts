@@ -16,7 +16,7 @@ test("get started lands on the app watchlist and the row opens the case", async 
 
   await click(page.locator("tr", { hasText: "SNBR" }));
   await expect(page).toHaveURL(/\/app\/company\/SNBR/);
-  await expect(page.getByText("Breach under every scenario")).toBeVisible();
+  await expect(page.getByText("Breach in both scenarios")).toBeVisible();
 
   console.log(`GET-STARTED CLICKS: ${clicks}`);
   expect(clicks).toBeLessThanOrEqual(8);

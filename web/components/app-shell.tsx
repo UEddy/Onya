@@ -74,9 +74,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       background:
                         "color-mix(in srgb, var(--watch) 16%, transparent)",
                     }}
-                    title={`${watched.length} watching`}
+                    title={`Watching ${watched.length}`}
                   >
-                    {watched.length} watching
+                    Watching {watched.length}
                   </span>
                 )}
                 {breaches !== null && (

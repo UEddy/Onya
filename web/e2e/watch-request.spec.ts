@@ -11,7 +11,7 @@ test("watching SNBR shows the sidebar count and the next test", async ({
   await expect(
     page.getByRole("button", { name: "Stop watching SNBR" }),
   ).toBeVisible();
-  await expect(page.getByText("1 watching")).toBeVisible();
+  await expect(page.getByText("Watching 1")).toBeVisible();
   await expect(page.getByText(/Jul 4, 2026/)).toBeVisible();
 });
 

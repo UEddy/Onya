@@ -45,14 +45,14 @@ function verdictHeadline(detail: PeriodDetail): string {
   const scenarios = detail.scenarios ?? detail.proforma_scenarios ?? [];
   if (scenarios.length > 0) {
     if (scenarios.every((s) => s.net_leverage.pass === false)) {
-      return "Breach under every scenario";
+      return "Breach in both scenarios";
     }
     if (scenarios.some((s) => s.net_leverage.pass === true)) {
       return scenarios.every((s) => s.net_leverage.pass === true)
         ? "Pass"
         : "Passes only with projected savings";
     }
-    return "Breach under every scenario";
+    return "Breach in both scenarios";
   }
   const sensitivity = detail.sensitivity_without_proforma;
   if (
@@ -484,7 +484,7 @@ function FlagsPanel({ detail }: { detail: PeriodDetail }) {
         <h3 className="text-[15px] font-medium">Unverifiable add-backs</h3>
         {!unverifiable && !sensitivity ? (
           <p className="mt-1 text-[15px] text-ink-muted">
-            Every add-back this period traces to a filed figure.
+            Each add-back this period traces to a filed figure.
           </p>
         ) : (
           <div className="mt-1 space-y-2">
