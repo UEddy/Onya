@@ -1,26 +1,32 @@
 # Onya API as a Baseten custom server (Truss).
-# Baseten builds from the public python:3.12-slim image and bundles the
-# staged Truss directory at /app: config.yaml, requirements.txt, src/,
-# data/. No container registry is needed.
+#
+# What Baseten puts in the container (see DEPLOY.md for doc links):
+# - Python deps from requirements_file (./requirements.txt), pip-installed
+#   at build time by the Truss build; never via build_commands.
+# - The staging model/ dir at /app/model (model_module_dir default).
+# - The staging data/ dir at /app/data (data_dir default).
+# - config.yaml itself at /app/config.yaml.
+# - Each secrets: entry as a read-only file at /secrets/{name}.
+# Only these paths are promised; nothing else from staging is copied.
 model_name: onya-api
 description: Covenant monitoring API for the Onya site.
+python_version: py312
 base_image:
   image: python:3.12-slim
-build_commands:
-  - pip install --no-cache-dir -r /app/requirements.txt
+requirements_file: ./requirements.txt
 resources:
   cpu: "1"
   memory: 2Gi
 environment_variables:
   META_BASE_URL: https://api.meta.ai/v1
-  SEC_USER_AGENT: "OnyaDemo/1.0 (public SEC filings demo)"
   ONYA_ENV: production
   ONYA_FRONTEND_ORIGIN: https://placeholder.invalid
 secrets:
-  - META_API_KEY
-  - ONYA_DEMO_TOKEN
+  META_API_KEY: null
+  ONYA_DEMO_TOKEN: null
+  SEC_USER_AGENT: null
 docker_server:
-  start_command: sh -c "cd /app && uvicorn api:app --app-dir src --host 0.0.0.0 --port 8000 --workers 1"
+  start_command: sh -c "cd /app && uvicorn api:app --app-dir /app/model --host 0.0.0.0 --port 8000 --workers 1"
   server_port: 8000
   predict_endpoint: /health
   readiness_endpoint: /health

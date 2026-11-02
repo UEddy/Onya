@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint && node scripts/check-dashes.mjs && node scripts/check-copy.mjs",
-    "test:what-if": "node --experimental-strip-types --test lib/what-if.test.ts lib/headroom-bar.test.ts",
+    "test:what-if": "node --experimental-strip-types --test lib/what-if.test.ts lib/headroom-bar.test.ts lib/backend-url.test.ts",
     "prebuild": "node scripts/check-env.mjs",
     "test:bundle": "node scripts/check-bundle-token.mjs"
   },

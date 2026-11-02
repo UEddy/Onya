@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { joinBackendUrl } from "../../../../lib/api";
 
 /* Server-side proxy for read-only backend calls. The browser talks
    only to this origin; the Baseten API key is added here, server-side,
@@ -20,11 +21,11 @@ export async function GET(
   }
   const { path } = await params;
   const url = new URL(req.url);
-  const target = `${base}/${path.join("/")}${url.search}`;
+  const target = `${joinBackendUrl(base, path)}${url.search}`;
   try {
     const res = await fetch(target, {
       cache: "no-store",
-      headers: { Authorization: `Api-Key ${key}` },
+      headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     const body = await res.text();

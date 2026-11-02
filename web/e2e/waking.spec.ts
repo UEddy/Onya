@@ -50,7 +50,7 @@ function startStub(): Promise<string> {
       void (async () => {
         try {
           const upstream = await fetch(`${REAL_BACKEND}${req.url ?? ""}`, {
-            headers: { Authorization: "Api-Key dummy-baseten-key" },
+            headers: { Authorization: "Bearer dummy-baseten-key" },
           });
           const body = Buffer.from(await upstream.arrayBuffer());
           res.writeHead(upstream.status, {

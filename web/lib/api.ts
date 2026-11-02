@@ -19,6 +19,17 @@ export function isWakingStatus(status: number): boolean {
   return status === 0 || status === 502 || status === 503 || status === 504;
 }
 
+/* Join the Baseten sync base URL (no trailing slash) with backend path
+   parts, tolerating a trailing slash on the base. The /sync prefix must
+   survive: never drop middle segments or double the slashes. */
+export function joinBackendUrl(base: string, parts: string[]): string {
+  const cleanBase = base.replace(/\/+$/, "");
+  const cleanParts = parts
+    .map((part) => part.replace(/^\/+|\/+$/g, ""))
+    .filter((part) => part.length > 0);
+  return `${cleanBase}/${cleanParts.join("/")}`;
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   let res: Response;
   try {

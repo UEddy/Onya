@@ -58,13 +58,19 @@ class StagingSet(unittest.TestCase):
                 name)
 
     def test_runtime_dirs_present(self):
-        prefixes = ("src/", "data/results/", "data/extracted/",
+        prefixes = ("model/", "data/results/", "data/extracted/",
                     "data/backtest/", "data/samples/", "data/cache/")
         names = self.rel()
         for prefix in prefixes:
             self.assertTrue(
                 any(n.startswith(prefix) for n in names), prefix)
         self.assertIn("data/companies.json", names)
+
+    def test_no_src_dir(self):
+        # App code ships as model/ (model_module_dir); a stray src/
+        # would not be copied into the image.
+        self.assertFalse(
+            any(n == "src" or n.startswith("src/") for n in self.rel()))
 
 
 if __name__ == "__main__":

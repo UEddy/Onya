@@ -5,10 +5,10 @@ Usage (from the repo root):
     .venv/bin/python scripts/stage_baseten.py [staging-dir]
 
 Prints the file list and total size. The staging directory is what
-`truss push` uploads from deploy/baseten after staging; it contains
-config.yaml, requirements.txt, src/, and only the data the API reads
-at runtime. No .env, no web/, no tests, no data/runs, and no other
-borrowers' raw filings.
+`baseten model push --dir` uploads; it contains config.yaml,
+requirements.txt, model/ (the app code, from src/), and only the data
+the API reads at runtime. No .env, no web/, no tests, no data/runs,
+and no other borrowers' raw filings.
 """
 
 import shutil
@@ -44,7 +44,7 @@ def build_staging(staging: Path) -> list[Path]:
 
     place(ROOT / "deploy" / "baseten" / "config.yaml", "config.yaml")
     place(ROOT / "requirements.txt", "requirements.txt")
-    _copy_tree(ROOT / "src", staging / "src", files)
+    _copy_tree(ROOT / "src", staging / "model", files)
     for name in DATA_DIRS:
         _copy_tree(ROOT / "data" / name, staging / "data" / name, files)
     place(ROOT / "data" / "companies.json", "data/companies.json")

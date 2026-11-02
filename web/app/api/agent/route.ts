@@ -1,6 +1,8 @@
 /* Agent POST proxy: adds the server-only token, never exposes it.
    No-store: the start request and its response are never cached. */
 
+import { joinBackendUrl } from "../../../lib/api";
+
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
@@ -31,13 +33,13 @@ export async function POST(req: Request) {
   }
   let upstream: Response;
   try {
-    upstream = await fetch(`${base}/agent/run`, {
+    upstream = await fetch(joinBackendUrl(base, ["agent", "run"]), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Onya-Token": token,
         ...(basetenKey
-          ? { Authorization: `Api-Key ${basetenKey}` }
+          ? { Authorization: `Bearer ${basetenKey}` }
           : {}),
         ...(clientIp ? { "X-Onya-Client-IP": clientIp } : {}),
       },

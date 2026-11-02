@@ -2,6 +2,8 @@
    No-store: every poll fetches upstream uncached and returns
    Cache-Control: no-store, so a finished run is never served stale. */
 
+import { joinBackendUrl } from "../../../../lib/api";
+
 const RUN_ID_RE = /^[0-9a-fA-F-]{1,64}$/;
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 const UPSTREAM_TIMEOUT_MS = 30_000;
@@ -28,11 +30,11 @@ export async function GET(
   }
   let upstream: Response;
   try {
-    upstream = await fetch(`${base}/agent/run/${id}`, {
+    upstream = await fetch(joinBackendUrl(base, ["agent", "run", id]), {
       headers: {
         "X-Onya-Token": token,
         ...(basetenKey
-          ? { Authorization: `Api-Key ${basetenKey}` }
+          ? { Authorization: `Bearer ${basetenKey}` }
           : {}),
       },
       cache: "no-store",

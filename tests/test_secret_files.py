@@ -56,6 +56,51 @@ class SecretFiles(unittest.TestCase):
             with patch.dict(os.environ, {}, clear=True):
                 secret_files.load_secret_files()
 
+    def test_user_agent_missing_in_production(self):
+        env = {
+            "ONYA_ENV": "production",
+            "META_API_KEY": "meta-value",
+            "ONYA_DEMO_TOKEN": "token-value",
+        }
+        with patch.object(secret_files, "SECRETS_DIR", self.dir):
+            with patch.dict(os.environ, env, clear=True):
+                with self.assertRaises(RuntimeError):
+                    secret_files.load_secret_files()
+
+    def test_user_agent_without_contact_refused_in_production(self):
+        env = {
+            "ONYA_ENV": "production",
+            "META_API_KEY": "meta-value",
+            "ONYA_DEMO_TOKEN": "token-value",
+            "SEC_USER_AGENT": "OnyaDemo/1.0 (no contact here)",
+        }
+        with patch.object(secret_files, "SECRETS_DIR", self.dir):
+            with patch.dict(os.environ, env, clear=True):
+                with self.assertRaises(RuntimeError):
+                    secret_files.load_secret_files()
+
+    def test_user_agent_with_contact_accepted_in_production(self):
+        env = {
+            "ONYA_ENV": "production",
+            "META_API_KEY": "meta-value",
+            "ONYA_DEMO_TOKEN": "token-value",
+            "SEC_USER_AGENT": "OnyaDemo/1.0 contact@example.com",
+        }
+        with patch.object(secret_files, "SECRETS_DIR", self.dir):
+            with patch.dict(os.environ, env, clear=True):
+                secret_files.load_secret_files()
+                self.assertEqual(
+                    os.environ["SEC_USER_AGENT"],
+                    "OnyaDemo/1.0 contact@example.com")
+
+    def test_user_agent_without_contact_allowed_locally(self):
+        with patch.object(secret_files, "SECRETS_DIR", self.dir):
+            with patch.dict(
+                    os.environ,
+                    {"SEC_USER_AGENT": "OnyaDemo/1.0 (local dev)"},
+                    clear=True):
+                secret_files.load_secret_files()
+
 
 if __name__ == "__main__":
     unittest.main()

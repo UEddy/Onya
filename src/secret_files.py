@@ -11,7 +11,7 @@ from pathlib import Path
 
 SECRETS_DIR = Path("/secrets")
 
-REQUIRED_SECRETS = ("META_API_KEY", "ONYA_DEMO_TOKEN")
+REQUIRED_SECRETS = ("META_API_KEY", "ONYA_DEMO_TOKEN", "SEC_USER_AGENT")
 
 
 def get_secret(name, environ=None):
@@ -29,6 +29,14 @@ def get_secret(name, environ=None):
     return value or None
 
 
+def _check_contact(name, value):
+    """SEC contact rule: the User-Agent must name a contact email."""
+    if name == "SEC_USER_AGENT" and "@" not in (value or ""):
+        raise RuntimeError(
+            "required secret SEC_USER_AGENT must contain a contact "
+            "email in production")
+
+
 def load_secret_files(environ=None):
     """Copy file secrets into the environment for existing readers."""
     env = os.environ if environ is None else environ
@@ -36,6 +44,8 @@ def load_secret_files(environ=None):
     for name in REQUIRED_SECRETS:
         value = get_secret(name, env)
         if value:
+            if production:
+                _check_contact(name, value)
             env[name] = value
         elif production:
             raise RuntimeError(
