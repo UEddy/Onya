@@ -82,7 +82,6 @@ async function startWeb(apiBase: string): Promise<string> {
     env: {
       ...process.env,
       ONYA_API_BASE: apiBase,
-      BASETEN_API_KEY: "dummy-baseten-key",
       ONYA_DEMO_TOKEN: "dummy-demo-token",
     },
     stdio: "ignore",

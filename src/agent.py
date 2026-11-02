@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -33,10 +34,18 @@ import covenant  # noqa: E402
 import cure  # noqa: E402
 import project  # noqa: E402
 import textify  # noqa: E402
+from runtime_paths import overlay_root, writable_path  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 RUNS_DIR = DATA_DIR / "runs"
+
+
+def _runs_dir():
+    """Trace dir: overlay in production, RUNS_DIR locally (patchable)."""
+    if overlay_root() is not None and RUNS_DIR == DATA_DIR / "runs":
+        return overlay_root() / "runs"
+    return RUNS_DIR
 
 MODEL = "muse-spark-1.3"
 TIER = "standard"  # base model name selects the standard tier (vs -contributor)
@@ -44,6 +53,9 @@ MAX_TOKENS = 8000  # per agent turn
 MAX_TOOL_CALLS = 15
 TOKEN_BUDGET = 400_000  # per run
 TOOL_TIMEOUT_SECONDS = 45  # per tool call; a timeout becomes an error step
+STREAM_DEADLINE_SECONDS = 270  # stop with a clear error before 300s cap
+TOO_LONG_ANSWER = ("The check took too long (over 270 seconds) without "
+                   "finishing. Nothing was completed. Please try again.")
 
 USAGE = 'Usage: python src/agent.py "<request>"'
 
@@ -77,7 +89,11 @@ Rules:
 - As-of discipline: every tool takes an as_of date (YYYY-MM-DD) and ignores \
 information dated after it. When the user names a test period, call find_agreements \
 with as_of = period_end + 45 days (the reporting window), and pass that same as_of \
-to every other tool call in the run.
+to every other tool call in the run. When the user names no test period, omit \
+as_of (pass nothing) in every tool call: the tools default to the latest \
+computed test. Then begin the memo with exactly one line stating the date used \
+and why, for example "No test date given; using the latest computed test, \
+Apr 4, 2026." Never use today's date as as_of unless the user asks about today.
 - When a tool fails, read the error message and try a different approach (for \
 example, call lookup_company to resolve the company and retry with the CIK) \
 before giving up.
@@ -169,6 +185,87 @@ def reporting_as_of(period_end):
     """
     return (datetime.strptime(str(period_end)[:10], "%Y-%m-%d").date()
             + timedelta(days=REPORTING_WINDOW_DAYS)).isoformat()
+
+
+_MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def prose_date(iso_date):
+    """'2026-04-04' -> 'Apr 4, 2026' for memo prose."""
+    year, month, day = str(iso_date)[:10].split("-")
+    return f"{_MONTH_ABBR[int(month) - 1]} {int(day)}, {year}"
+
+
+DEFAULT_DATE_LINE = ("No test date given; using the latest computed "
+                     "test, {period}.")
+
+
+def latest_computed_period(company):
+    """Latest period_end with computed results, or None.
+
+    Result files are <slug>_<YYYY-MM-DD>.json (projections excluded),
+    so this is the newest test Onya has numbers for.
+    """
+    try:
+        slug = company_slug(company)
+    except Exception:
+        return None
+    periods = []
+    try:
+        candidates = DATA_DIR.glob("results/*.json")
+    except OSError:
+        return None
+    for path in candidates:
+        name = path.name
+        if not name.startswith(slug + "_"):
+            continue
+        stem = path.stem[len(slug) + 1:]
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", stem):
+            periods.append(stem)
+    return max(periods) if periods else None
+
+
+def default_as_of(company):
+    """(period_end, as_of) default when the user names no test period."""
+    period = latest_computed_period(company)
+    if period is None:
+        return None, None
+    return period, reporting_as_of(period)
+
+
+def effective_as_of(company, as_of):
+    """Given as_of, or the latest-computed default with a flag.
+
+    Returns (as_of_or_None, defaulted, period_or_None).
+    """
+    if as_of:
+        return str(as_of).strip()[:10], False, None
+    period, defaulted = default_as_of(company)
+    if defaulted is None:
+        return None, False, None
+    return defaulted, True, period
+
+
+def ensure_default_date_line(answer, tool_outputs):
+    """Prepend the no-test-date line when the run used the default.
+
+    Fires only when every find_agreements call in the run defaulted
+    its as_of (i.e. the user named no test period) and the memo does
+    not already say so. Returns the answer unchanged otherwise.
+    """
+    finds = [o for o in (tool_outputs or [])
+             if isinstance(o, dict) and "governing_doc_type" in o]
+    if not finds or not all(o.get("as_of_defaulted") for o in finds):
+        return answer
+    period = next((o.get("default_period_end") for o in finds
+                   if o.get("default_period_end")), None)
+    if period is None:
+        return answer
+    line = DEFAULT_DATE_LINE.format(period=prose_date(period))
+    if (answer or "").lstrip().startswith(line[:24]):
+        return answer
+    return line + "\n" + (answer or "")
 
 
 def _period_after_as_of(period, as_of):
@@ -1004,6 +1101,7 @@ def tool_find_agreements(company, as_of=None):
     """
     import edgar
 
+    as_of, defaulted, default_period = effective_as_of(company, as_of)
     ticker = resolve_ticker(company)
     cached = _discovery_cache_present(ticker)
     # verbose=False keeps discovery quiet; stdout is never redirected
@@ -1015,6 +1113,8 @@ def tool_find_agreements(company, as_of=None):
         "company": company,
         "ticker": ticker,
         "as_of": as_of,
+        "as_of_defaulted": defaulted,
+        "default_period_end": default_period,
         "cached_discovery": cached,
         "governing_doc_type": governing_doc_type(base, amendments),
         "base": _compact_candidate(base) if base is not None else None,
@@ -1115,7 +1215,7 @@ def tool_extract_covenants(company, agreement_url, as_of=None,
         raw = response.choices[0].message.content or ""
         parsed = json.loads(extract_mod.strip_code_fences(raw))
 
-    out_dir = DATA_DIR / "extracted"
+    out_dir = writable_path("extracted")
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / f"{slug}_covenants.json"
     raw_path = out_dir / f"{slug}_raw_response.txt"
@@ -1197,6 +1297,7 @@ def tool_compute_covenants(company, period_end, as_of=None):
     """
     if company_slug(company) not in SUPPORTED_PIPELINES:
         return _record(_unsupported(company, period_end, "compute"))
+    as_of, defaulted, default_period = effective_as_of(company, as_of)
     if _period_after_as_of(period_end, as_of):
         return _record(_after_as_of_error(company, period_end, as_of,
                                           "period_end"))
@@ -1205,6 +1306,8 @@ def tool_compute_covenants(company, period_end, as_of=None):
     except Exception as exc:  # missing data: report, never invent
         return _record({"supported": True, "company": company,
                         "period_end": period_end, "as_of": as_of,
+                        "as_of_defaulted": defaulted,
+                        "default_period_end": default_period,
                         "error": f"{type(exc).__name__}: {exc}"})
     try:
         saved = str(covenant.save_result(result))
@@ -1243,6 +1346,8 @@ def tool_compute_covenants(company, period_end, as_of=None):
     return _record({
         "supported": True, "company": company, "period_end": period_end,
         "as_of": as_of,
+        "as_of_defaulted": defaulted,
+        "default_period_end": default_period,
         "units": result.get("units", "USD"),
         "numerator": result.get("numerator"),
         "numerator_thousands": result.get("numerator_thousands"),
@@ -1512,7 +1617,9 @@ TOOL_SCHEMAS = [
                       "description": ("Only consider filings on/before this "
                                       "date (YYYY-MM-DD); use period_end + "
                                       "45 days when the user names a test "
-                                      "period")},
+                                      "period; omit it when no test period "
+                                      "is named to use the latest computed "
+                                      "test")},
         }, "required": ["company"]},
     }},
     {"type": "function", "function": {
@@ -1808,19 +1915,49 @@ def _fallback_answer(user_prompt, history):
 
 
 def run_agent(user_prompt, client=None, run_id=None,
-              max_tool_calls=MAX_TOOL_CALLS):
-    """Run the tool-calling loop; returns the final answer plus run stats."""
+              max_tool_calls=MAX_TOOL_CALLS,
+              deadline_s=STREAM_DEADLINE_SECONDS, on_event=None):
+    """Run the tool-calling loop; returns the final answer plus run stats.
+
+    Every trace entry is also passed to on_event as it happens, so a
+    caller can stream progress (serverless has no background polling).
+    The run stops with a took_too_long outcome once deadline_s elapses.
+    """
     os.chdir(PROJECT_ROOT)
     reset_corpus()
     run_id = run_id or uuid.uuid4().hex[:12]
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    trace_path = RUNS_DIR / f"{run_id}.jsonl"
+    runs_dir = _runs_dir()
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    trace_path = runs_dir / f"{run_id}.jsonl"
     if client is None:
         client = build_client()
+    started = time.monotonic()
+
+    def _emit(entry):
+        log_step(trace_path, entry)
+        if on_event is not None:
+            on_event(dict(entry))
+
+    def _expired():
+        return (time.monotonic() - started) >= deadline_s
+
+    def _too_long(tool_calls, total_tokens):
+        entry = {"run_id": run_id, "step": 0,
+                 "timestamp": _utcnow(), "type": "run_end",
+                 "tool": None, "arguments": {},
+                 "result_summary": "stopped: 270s streaming deadline",
+                 "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                 "total_tokens": total_tokens, "reason": "took_too_long"}
+        _emit(entry)
+        return {"answer": TOO_LONG_ANSWER, "reason": "took_too_long",
+                "run_id": run_id, "tool_calls": tool_calls,
+                "total_tokens": total_tokens,
+                "figure_fields": last_figure_fields,
+                "trace_path": str(trace_path)}
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}]
-    log_step(trace_path, {"run_id": run_id, "step": 0,
+    _emit({"run_id": run_id, "step": 0,
                           "timestamp": _utcnow(), "type": "run_start",
                           "tool": None, "arguments": {},
                           "result_summary": user_prompt[:300],
@@ -1836,7 +1973,7 @@ def run_agent(user_prompt, client=None, run_id=None,
 
     def _log_final(content, turn):
         step_nl = step + 1
-        log_step(trace_path, {"run_id": run_id, "step": step_nl,
+        _emit( {"run_id": run_id, "step": step_nl,
                               "timestamp": _utcnow(),
                               "type": "assistant_final",
                               "tool": None, "arguments": {},
@@ -1846,7 +1983,7 @@ def run_agent(user_prompt, client=None, run_id=None,
         return step_nl
 
     def budget_exceeded():
-        log_step(trace_path, {"run_id": run_id, "step": step,
+        _emit( {"run_id": run_id, "step": step,
                               "timestamp": _utcnow(), "type": "run_end",
                               "tool": None, "arguments": {},
                               "result_summary": (
@@ -1864,6 +2001,8 @@ def run_agent(user_prompt, client=None, run_id=None,
                 "trace_path": str(trace_path)}
 
     while True:
+        if _expired():
+            return _too_long(tool_calls, total_tokens)
         response = client.chat.completions.create(
             model=MODEL, messages=messages, tools=TOOL_SCHEMAS,
             tool_choice="auto", max_tokens=MAX_TOKENS)
@@ -1896,7 +2035,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                     retry_content = retry_msg.content or ""
                     if retry_content.strip():
                         step = _log_final(retry_content, retry_turn)
-                        log_step(trace_path, {
+                        _emit( {
                             "run_id": run_id, "step": step,
                             "timestamp": _utcnow(), "type": "run_end",
                             "tool": None, "arguments": {},
@@ -1905,14 +2044,16 @@ def run_agent(user_prompt, client=None, run_id=None,
                                        "total": 0},
                             "total_tokens": total_tokens,
                             "reason": "done"})
-                        return {"answer": retry_content, "reason": "done",
+                        return {"answer": ensure_default_date_line(
+                                    retry_content, _TOOL_OUTPUTS),
+                                "reason": "done",
                                 "run_id": run_id, "tool_calls": tool_calls,
                                 "total_tokens": total_tokens,
                                 "figure_fields": last_figure_fields,
                                 "trace_path": str(trace_path)}
                     fallback = _fallback_answer(user_prompt, history)
                     step = _log_final(fallback, retry_turn)
-                    log_step(trace_path, {
+                    _emit( {
                         "run_id": run_id, "step": step,
                         "timestamp": _utcnow(), "type": "run_end",
                         "tool": None, "arguments": {},
@@ -1920,13 +2061,15 @@ def run_agent(user_prompt, client=None, run_id=None,
                         "tokens": {"prompt": 0, "completion": 0, "total": 0},
                         "total_tokens": total_tokens,
                         "reason": "done"})
-                    return {"answer": fallback, "reason": "done",
+                    return {"answer": ensure_default_date_line(
+                                fallback, _TOOL_OUTPUTS),
+                            "reason": "done",
                             "run_id": run_id, "tool_calls": tool_calls,
                             "total_tokens": total_tokens,
                             "trace_path": str(trace_path)}
             else:
                 step = _log_final(content, turn)
-                log_step(trace_path, {"run_id": run_id, "step": step,
+                _emit( {"run_id": run_id, "step": step,
                                       "timestamp": _utcnow(), "type": "run_end",
                                       "tool": None, "arguments": {},
                                       "result_summary": "done",
@@ -1934,7 +2077,9 @@ def run_agent(user_prompt, client=None, run_id=None,
                                                  "total": 0},
                                       "total_tokens": total_tokens,
                                       "reason": "done"})
-                return {"answer": content, "reason": "done", "run_id": run_id,
+                return {"answer": ensure_default_date_line(
+                            content, _TOOL_OUTPUTS),
+                        "reason": "done", "run_id": run_id,
                         "tool_calls": tool_calls, "total_tokens": total_tokens,
                         "figure_fields": last_figure_fields,
                         "trace_path": str(trace_path)}
@@ -1965,6 +2110,8 @@ def run_agent(user_prompt, client=None, run_id=None,
                     result = {"error": ("tool-call budget exhausted "
                                         "(max %d)" % max_tool_calls)}
                 else:
+                    if _expired():
+                        return _too_long(tool_calls, total_tokens)
                     result = dispatch_tool(name, arguments)
                     seen_results[cache_key] = result
                     tool_calls += 1
@@ -1975,7 +2122,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                              "content": json.dumps(result, default=str)[:20000]})
             step += 1
             summary = summarize_result(name, result)
-            log_step(trace_path, {"run_id": run_id, "step": step,
+            _emit( {"run_id": run_id, "step": step,
                                   "timestamp": _utcnow(), "type": "tool_call",
                                   "tool": name, "arguments": arguments,
                                   "result_summary": summary,
@@ -2012,7 +2159,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                 if not content.strip():
                     content = _fallback_answer(user_prompt, history)
             step = _log_final(content, turn)
-            log_step(trace_path, {"run_id": run_id, "step": step,
+            _emit( {"run_id": run_id, "step": step,
                                   "timestamp": _utcnow(), "type": "run_end",
                                   "tool": None, "arguments": {},
                                   "result_summary": ("stopped after %d tool "

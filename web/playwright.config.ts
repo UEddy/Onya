@@ -27,7 +27,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "cd .. && ONYA_AGENT_REPLAY=1 .venv/bin/python -m uvicorn api:app --app-dir src --port 8001",
+        "cd .. && ONYA_AGENT_REPLAY=1 .venv/bin/python -m uvicorn app:app --port 8001",
       url: "http://localhost:8001/health",
       reuseExistingServer: false,
       timeout: 120_000,
@@ -39,13 +39,12 @@ export default defineConfig({
     },
     {
       command:
-        "ONYA_API_BASE=http://localhost:8001 BASETEN_API_KEY=dummy-baseten-key npm run build && npm run start -- -p 3001",
+        "ONYA_API_BASE=http://localhost:8001 npm run build && npm run start -- -p 3001",
       url: "http://localhost:3001",
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
         ONYA_API_BASE: "http://localhost:8001",
-        BASETEN_API_KEY: "dummy-baseten-key",
       },
     },
   ],

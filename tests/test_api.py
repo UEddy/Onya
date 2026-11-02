@@ -3,10 +3,7 @@
 import json
 import os
 import sys
-import threading
-import time
 import unittest
-from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,6 +14,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import agent  # noqa: E402
 import api  # noqa: E402
+import limits  # noqa: E402
 
 TOKEN = "test-token-123"
 
@@ -24,19 +22,14 @@ TICKERS = {"TRS", "AIN", "AMCX", "STGW", "QUAD", "CRS", "ORLY", "GPK",
            "NUVR", "HAIN", "SNBR", "OPTX"}
 
 
-def _trace_path(run_id):
-    return PROJECT_ROOT / "data" / "runs" / f"{run_id}.jsonl"
-
-
-def _poll_done(client, run_id, timeout=10):
-    deadline = time.time() + timeout
-    last = None
-    while time.time() < deadline:
-        last = client.get(f"/agent/run/{run_id}")
-        if last.status_code == 200 and last.json()["status"] != "running":
-            return last
-        time.sleep(0.05)
-    return last
+def _stream_events(response):
+    """Parse a newline-delimited JSON stream body into event dicts."""
+    events = []
+    for line in response.text.splitlines():
+        line = line.strip()
+        if line:
+            events.append(json.loads(line))
+    return events
 
 
 class ApiTestBase(unittest.TestCase):
@@ -45,7 +38,6 @@ class ApiTestBase(unittest.TestCase):
         os.environ["ONYA_DEMO_TOKEN"] = TOKEN
         api._reset_state()
         self.client = TestClient(api.app)
-        self._traces = []
 
     def tearDown(self):
         if self._old_token is None:
@@ -53,47 +45,32 @@ class ApiTestBase(unittest.TestCase):
         else:
             os.environ["ONYA_DEMO_TOKEN"] = self._old_token
         api._reset_state()
-        for run_id in self._traces:
-            try:
-                _trace_path(run_id).unlink()
-            except OSError:
-                pass
 
     def auth(self):
         return {"X-Onya-Token": TOKEN}
 
     def fake_run(self, answer="CANNED ANSWER", tokens=100, tool_calls=1,
-                 with_trace=True):
-        def _fake(question, run_id=None, **kwargs):
-            if with_trace:
-                agent.log_step(
-                    _trace_path(run_id),
+                 reason="done"):
+        def _fake(question, run_id=None, on_event=None, **kwargs):
+            for entry in (
                     {"run_id": run_id, "step": 0,
                      "timestamp": "2026-01-01T00:00:00+00:00",
                      "type": "run_start", "tool": None, "arguments": {},
                      "result_summary": question[:300],
                      "tokens": {"prompt": 0, "completion": 0, "total": 0},
-                     "total_tokens": 0})
-                agent.log_step(
-                    _trace_path(run_id),
+                     "total_tokens": 0},
                     {"run_id": run_id, "step": 1,
                      "timestamp": "2026-01-01T00:00:01+00:00",
                      "type": "tool_call", "tool": "lookup_company",
                      "arguments": {"name_or_ticker": "SNBR"},
                      "result_summary": "SNBR: 1 candidate(s)",
                      "tokens": {"prompt": 10, "completion": 5, "total": 15},
-                     "total_tokens": 15})
-                agent.log_step(
-                    _trace_path(run_id),
-                    {"run_id": run_id, "step": 2,
-                     "timestamp": "2026-01-01T00:00:02+00:00",
-                     "type": "run_end", "tool": None, "arguments": {},
-                     "result_summary": "done",
-                     "tokens": {"prompt": 0, "completion": 0, "total": 0},
-                     "total_tokens": tokens, "reason": "done"})
-            return {"answer": answer, "reason": "done", "run_id": run_id,
+                     "total_tokens": 15}):
+                if on_event is not None:
+                    on_event(entry)
+            return {"answer": answer, "reason": reason, "run_id": run_id,
                     "tool_calls": tool_calls, "total_tokens": tokens,
-                    "trace_path": str(_trace_path(run_id))}
+                    "figure_fields": []}
         return _fake
 
 
@@ -385,54 +362,44 @@ class AgentAuth(ApiTestBase):
 
 
 class AgentRun(ApiTestBase):
-    def test_run_returns_immediately_then_done(self):
-        started = threading.Event()
-        release = threading.Event()
-
-        def slow(question, run_id=None, **kwargs):
-            started.set()
-            release.wait(10)
-            return {"answer": "SLOW ANSWER", "reason": "done",
-                    "run_id": run_id, "tool_calls": 0, "total_tokens": 7,
-                    "trace_path": "none"}
-
-        with patch.object(agent, "run_agent", slow):
-            r = self.client.post("/agent/run",
-                                 json={"question": "Check SNBR?"},
-                                 headers=self.auth())
-            self.assertEqual(r.status_code, 202)
-            run_id = r.json()["run_id"]
-            self.assertEqual(r.json()["status"], "running")
-            self.assertTrue(started.wait(5))
-            # Returns while the worker is still blocked: polled state.
-            mid = self.client.get(f"/agent/run/{run_id}")
-            self.assertEqual(mid.json()["status"], "running")
-            self.assertIsNone(mid.json()["answer"])
-            release.set()
-            done = _poll_done(self.client, run_id)
-        self.assertEqual(done.json()["status"], "done")
-        self.assertEqual(done.json()["answer"], "SLOW ANSWER")
-        self.assertEqual(done.json()["total_tokens"], 7)
-
-    def test_trace_steps_and_answer(self):
+    def test_stream_steps_then_result(self):
         with patch.object(agent, "run_agent",
                           self.fake_run(answer="FINAL HERE", tokens=42)):
             r = self.client.post("/agent/run",
                                  json={"question": "Check SNBR?"},
                                  headers=self.auth())
-            run_id = r.json()["run_id"]
-            self._traces.append(run_id)
-            done = _poll_done(self.client, run_id)
-        body = done.json()
-        self.assertEqual(body["status"], "done")
-        self.assertEqual(body["answer"], "FINAL HERE")
-        self.assertEqual(body["total_tokens"], 42)
-        kinds = [s["type"] for s in body["steps"]]
-        self.assertEqual(kinds, ["run_start", "tool_call", "run_end"])
-        tool_step = body["steps"][1]
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("x-ndjson", r.headers["content-type"])
+        events = _stream_events(r)
+        kinds = [e["type"] for e in events]
+        self.assertEqual(kinds, ["run_start", "tool_call", "run_result"])
+        tool_step = events[1]
         self.assertEqual(tool_step["tool"], "lookup_company")
         self.assertEqual(tool_step["arguments"],
                          {"name_or_ticker": "SNBR"})
+        result = events[-1]
+        self.assertEqual(result["reason"], "done")
+        self.assertEqual(result["answer"], "FINAL HERE")
+        self.assertEqual(result["total_tokens"], 42)
+
+    def test_replay_yields_incrementally(self):
+        # One next() surfaces the first step with no waiting beyond it:
+        # the replay streams as it goes instead of buffering the run.
+        # (Each delay lands between two yields, never before the first.)
+        sleeps = []
+        store = limits.MemoryStore()
+        gen = api._iter_replay(store)
+        with patch("api.time.sleep",
+                   side_effect=lambda s: sleeps.append(s)):
+            first = next(gen)
+            self.assertIn("step", first)
+            self.assertEqual(sleeps, [])
+            rest = list(gen)
+        self.assertEqual(rest[-1]["type"], "run_result")
+        steps = [e for e in [first, *rest]
+                 if e.get("type") != "run_result"]
+        self.assertGreater(len(steps), 1)
+        self.assertEqual(len(sleeps), len(steps))
 
     def test_run_error_sanitized(self):
         def boom(question, run_id=None, **kwargs):
@@ -441,86 +408,115 @@ class AgentRun(ApiTestBase):
         with patch.object(agent, "run_agent", boom):
             r = self.client.post("/agent/run", json={"question": "q?"},
                                  headers=self.auth())
-            run_id = r.json()["run_id"]
-            done = _poll_done(self.client, run_id)
-        body = done.json()
-        self.assertEqual(body["status"], "failed")
-        self.assertNotIn(str(PROJECT_ROOT), body["error"])
-        self.assertNotIn("/home/", json.dumps(body))
-        self.assertTrue(
-            any(s["type"] == "error" for s in body["steps"]),
-            body["steps"])
+        events = _stream_events(r)
+        errors = [e for e in events if e["type"] == "error"]
+        self.assertEqual(len(errors), 1)
+        self.assertNotIn(str(PROJECT_ROOT), errors[0]["error"])
+        self.assertNotIn("/home/", json.dumps(events))
 
-    def test_unknown_run(self):
-        self.assertEqual(
-            self.client.get("/agent/run/0123456789ab").status_code, 404)
-        self.assertEqual(
-            self.client.get("/agent/run/..%2F..%2Fx").status_code, 404)
+    def test_step_paths_redacted(self):
+        def leaky(question, run_id=None, on_event=None, **kwargs):
+            if on_event is not None:
+                on_event(
+                    {"run_id": run_id, "step": 1,
+                     "timestamp": "2026-01-01T00:00:01+00:00",
+                     "type": "tool_call", "tool": "extract_covenants",
+                     "arguments": {"company": "SNBR"},
+                     "result_summary": (
+                         "reviewed file used: "
+                         f"{PROJECT_ROOT}/data/extracted/x.json"),
+                     "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                     "total_tokens": 0})
+            return {"answer": "ok", "reason": "done", "run_id": run_id,
+                    "tool_calls": 1, "total_tokens": 1, "figure_fields": []}
 
-    def test_preexisting_trace_without_record(self):
-        run_id = "deadbeef1234"
-        self._traces.append(run_id)
-        agent.log_step(_trace_path(run_id),
-                       {"run_id": run_id, "step": 0,
-                        "timestamp": "2026-01-01T00:00:00+00:00",
-                        "type": "run_start", "tool": None, "arguments": {},
-                        "result_summary": "old CLI run",
-                        "tokens": {"prompt": 1, "completion": 1, "total": 2},
-                        "total_tokens": 2})
-        r = self.client.get(f"/agent/run/{run_id}")
-        self.assertEqual(r.status_code, 200)
-        body = r.json()
-        self.assertEqual(len(body["steps"]), 1)
-        self.assertIsNone(body["answer"])
-
-    def test_trace_paths_redacted(self):
-        run_id = "abc123abc123"
-        self._traces.append(run_id)
-        agent.log_step(
-            _trace_path(run_id),
-            {"run_id": run_id, "step": 1,
-             "timestamp": "2026-01-01T00:00:01+00:00",
-             "type": "tool_call", "tool": "extract_covenants",
-             "arguments": {"company": "SNBR"},
-             "result_summary":
-                 f"reviewed file used: {PROJECT_ROOT}/data/extracted/x.json",
-             "tokens": {"prompt": 0, "completion": 0, "total": 0},
-             "total_tokens": 0})
-        body = self.client.get(f"/agent/run/{run_id}").json()
-        summary = body["steps"][0]["result_summary"]
+        with patch.object(agent, "run_agent", leaky):
+            r = self.client.post("/agent/run", json={"question": "q?"},
+                                 headers=self.auth())
+        summary = _stream_events(r)[0]["result_summary"]
         self.assertNotIn(str(PROJECT_ROOT), summary)
         self.assertNotIn("/home/", summary)
         self.assertIn("[redacted]", summary)
 
+    def test_polling_removed(self):
+        r = self.client.get("/agent/run/0123456789ab")
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("streams", r.json()["detail"])
+        self.assertEqual(
+            self.client.get("/agent/run/..%2F..%2Fx").status_code, 404)
+
+    def test_periodless_question_replays_latest_computed(self):
+        with patch.dict(os.environ, {"ONYA_AGENT_REPLAY": "1"}):
+            with patch("api.time.sleep", return_value=None):
+                r = self.client.post(
+                    "/agent/run",
+                    json={"question": "Check Sleep Number's covenants"},
+                    headers=self.auth())
+        events = _stream_events(r)
+        result = events[-1]
+        self.assertEqual(result["type"], "run_result")
+        self.assertEqual(result["reason"], "replay")
+        steps = [e for e in events if e.get("type") == "tool_call"]
+        self.assertLessEqual(len(steps), 7)
+        blob = json.dumps(events)
+        self.assertIn("2026-04-04", blob)
+        self.assertIn("FORBEARANCE", blob.upper())
+        self.assertIn("THIRTEENTH", blob.upper())
+        self.assertNotIn("FOURTEENTH", blob.upper())
+        self.assertLessEqual(result["tool_calls"], 7)
+
+    def test_replay_streams_sample(self):
+        with patch.dict(os.environ, {"ONYA_AGENT_REPLAY": "1"}):
+            with patch("api.time.sleep", return_value=None):
+                r = self.client.post("/agent/run",
+                                     json={"question": "Check SNBR?"},
+                                     headers=self.auth())
+        events = _stream_events(r)
+        self.assertGreater(len(events), 2)
+        self.assertEqual(events[-1]["type"], "run_result")
+        self.assertEqual(events[-1]["reason"], "replay")
+        self.assertTrue(events[-1]["answer"])
+        kinds = {e["type"] for e in events[:-1]}
+        self.assertIn("tool_call", kinds)
+
 
 class AgentLimits(ApiTestBase):
     def test_five_per_hour_per_ip(self):
-        with patch.object(agent, "run_agent",
-                          self.fake_run(with_trace=False)):
+        with patch.object(agent, "run_agent", self.fake_run()):
             codes = [self.client.post(
                 "/agent/run", json={"question": f"q{i}"},
                 headers=self.auth()).status_code for i in range(6)]
-        self.assertEqual(codes, [202, 202, 202, 202, 202, 429])
+        self.assertEqual(codes, [200, 200, 200, 200, 200, 429])
 
     def test_thirty_per_day_total(self):
-        now = datetime.now(timezone.utc)
-        with api._LOCK:
-            api._RUN_STARTS.extend([now] * 30)
-        with patch.object(agent, "run_agent",
-                          self.fake_run(with_trace=False)):
+        store = limits.local_store()
+        for _ in range(30):
+            store.claim(limits.day_key(), 2 * 86400)
+        with patch.object(agent, "run_agent", self.fake_run()):
             r = self.client.post("/agent/run", json={"question": "q"},
                                  headers=self.auth())
         self.assertEqual(r.status_code, 429)
 
     def test_token_budget_reject(self):
         with patch.object(agent, "TOKEN_BUDGET", 100):
-            with patch.object(agent, "run_agent",
-                              self.fake_run(with_trace=False)):
+            with patch.object(agent, "run_agent", self.fake_run()):
                 r = self.client.post("/agent/run",
                                      json={"question": "Check SNBR?"},
                                      headers=self.auth())
         self.assertEqual(r.status_code, 429)
         self.assertIn("token budget", r.json()["detail"])
+
+    def test_fail_closed_without_redis_in_production(self):
+        env = {"ONYA_ENV": "production"}
+        for var in ("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"):
+            env[var] = ""
+        with patch.dict(os.environ, env, clear=False):
+            with patch.object(agent, "run_agent", self.fake_run()):
+                r = self.client.post("/agent/run",
+                                     json={"question": "Check SNBR?"},
+                                     headers=self.auth())
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("paused", r.json()["detail"])
 
 
 class ReplayFlag(unittest.TestCase):
@@ -588,11 +584,9 @@ class ProductionGuards(ApiTestBase):
                 r = self.client.post("/agent/run",
                                      json={"question": "Check SNBR?"},
                                      headers=self.auth())
-                self.assertEqual(r.status_code, 202)
-                run_id = r.json()["run_id"]
-                self._traces.append(run_id)
-                done = _poll_done(self.client, run_id)
-                self.assertEqual(done.json()["status"], "done")
+                self.assertEqual(r.status_code, 200)
+                result = _stream_events(r)[-1]
+                self.assertEqual(result["type"], "run_result")
                 r2 = self.client.post("/agent/run",
                                       json={"question": "Check SNBR?"},
                                       headers=self.auth())
@@ -606,8 +600,7 @@ class ProductionGuards(ApiTestBase):
                     "/agent/run", json={"question": "Check SNBR?"},
                     headers={**self.auth(),
                              "X-Onya-Client-IP": "203.0.113.9"})
-                self.assertEqual(r.status_code, 202)
-                self._traces.append(r.json()["run_id"])
+                self.assertEqual(r.status_code, 200)
             sixth = self.client.post(
                 "/agent/run", json={"question": "Check SNBR?"},
                 headers={**self.auth(), "X-Onya-Client-IP": "203.0.113.9"})
@@ -615,8 +608,7 @@ class ProductionGuards(ApiTestBase):
             other = self.client.post(
                 "/agent/run", json={"question": "Check SNBR?"},
                 headers={**self.auth(), "X-Onya-Client-IP": "203.0.113.10"})
-            self.assertEqual(other.status_code, 202)
-            self._traces.append(other.json()["run_id"])
+            self.assertEqual(other.status_code, 200)
 
     def test_forwarded_ip_ignored_without_valid_token(self):
         r = self.client.post(

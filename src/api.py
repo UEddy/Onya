@@ -1,38 +1,40 @@
-"""Onya demo API: read-only covenant data plus background agent runs.
+"""Onya demo API: read-only covenant data plus a streamed agent run.
 
 Read-only endpoints serve JSON straight from ``data/`` (backtest
 disclosures and terms, SNBR covenant results, release tables, the
 reviewed contract extraction, and the local XBRL companyfacts dump).
-``POST /agent/run`` starts an ``agent.run_agent`` run in a background
-thread and ``GET /agent/run/{run_id}`` serves the trace for polling.
+``POST /agent/run`` validates the token, rate limits and budget, then
+streams the run inside the request as newline-delimited JSON events
+(serverless instances freeze after the response: no background
+threads, no polling).
 
 Security: CORS allows only http://localhost:3000 plus an optional
 ONYA_FRONTEND_ORIGIN value; agent runs require the X-Onya-Token
 header to match ONYA_DEMO_TOKEN from ~/.config/onya/.env; responses
 never include file paths, environment values, or raw model payloads.
 
-Run from the project root::
+Run from the project root (same entrypoint Vercel uses)::
 
     source .venv/bin/activate
-    uvicorn api:app --app-dir src --port 8000
+    uvicorn app:app --port 8000
 """
 
 import json
 import os
+import queue
 import re
 import secrets
 import sys
 import threading
 import time
-import traceback
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -44,6 +46,7 @@ import secret_files  # noqa: E402
 secret_files.load_secret_files()
 
 import agent  # noqa: E402
+import limits  # noqa: E402
 import score_disclosed  # noqa: E402
 import xbrl  # noqa: E402
 
@@ -52,14 +55,9 @@ DATA_DIR = PROJECT_ROOT / "data"
 BACKTEST_DIR = DATA_DIR / "backtest"
 RESULTS_DIR = DATA_DIR / "results"
 EXTRACTED_DIR = DATA_DIR / "extracted"
-RUNS_DIR = DATA_DIR / "runs"
 
 SNBR = "snbr"
 LOCAL_ORIGIN = "http://localhost:3000"
-
-# Rate limits for POST /agent/run.
-MAX_RUNS_PER_HOUR_PER_IP = 5
-MAX_RUNS_PER_DAY_TOTAL = 30
 
 MAX_QUESTION_CHARS = 4000
 
@@ -69,7 +67,6 @@ TERMS_STATUS_OK = "ok"
 TERMS_AMENDED = "amended after agreement"
 TERMS_NO_DISCLOSED = "no disclosed match"
 
-RUN_ID_RE = re.compile(r"[0-9a-fA-F-]{1,64}\Z")
 PERIOD_RE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
 router = APIRouter()
@@ -250,41 +247,20 @@ def normalize_covenant_name(name):
 
 
 # ---------------------------------------------------------------------------
-# Agent-run registry and rate limiting (in-memory, thread-safe)
+# Agent limits live in Redis in production (see limits.py); locally an
+# in-memory store stands in. Runs stream inside the request: serverless
+# instances freeze after the response, so there are no background
+# threads and no shared run registry.
 # ---------------------------------------------------------------------------
-
-_LOCK = threading.Lock()
-_RUNS = {}
-_RUN_STARTS = []
-_IP_STARTS = {}
-_TOKEN_LEDGER = {}
-
 
 def _utcnow():
     return datetime.now(timezone.utc)
 
 
-def _prune(now):
-    hour_ago = now - timedelta(hours=1)
-    day_ago = now - timedelta(hours=24)
-    global _RUN_STARTS
-    _RUN_STARTS = [t for t in _RUN_STARTS if t > day_ago]
-    for ip in list(_IP_STARTS):
-        kept = [t for t in _IP_STARTS[ip] if t > hour_ago]
-        if kept:
-            _IP_STARTS[ip] = kept
-        else:
-            del _IP_STARTS[ip]
-
-
 def _reset_state():
-    """Clear runs and rate-limit counters (tests only)."""
-    with _LOCK:
-        _RUNS.clear()
-        _RUN_STARTS.clear()
-        _IP_STARTS.clear()
-        _TOKEN_LEDGER.clear()
+    """Clear cached company names and local limit counters (tests only)."""
     _NAME_CACHE.clear()
+    limits.reset_local()
 
 
 def _estimate_tokens(question):
@@ -296,44 +272,41 @@ def _expected_token():
     return os.environ.get("ONYA_DEMO_TOKEN") or ""
 
 
-def _record_error_step(run_id, message):
-    """Append an error step to the run trace so the UI can show it."""
+def _paused():
+    """Fail-closed answer when limits cannot be enforced."""
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The live agent is paused. See a saved run."})
+
+
+def _claim_limits(store, ip):
+    """Atomically claim one run; returns an error response or None."""
     try:
-        path = _data_file("runs", f"{run_id}.jsonl")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        step = 0
-        if path.exists():
-            step = sum(1 for _ in path.open(encoding="utf-8"))
-        entry = {
-            "step": step,
-            "timestamp": _utcnow().isoformat(),
-            "type": "error",
-            "tool": None,
-            "arguments": {},
-            "result_summary": f"error: {message}",
-            "total_tokens": 0,
-        }
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
-    except (OSError, ValueError):
-        pass
+        hour_runs = store.claim(limits.ip_key(ip), 3600)
+    except limits.RedisUnavailable:
+        return _paused()
+    if hour_runs > limits.MAX_RUNS_PER_HOUR_PER_IP:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "rate limit: 5 runs per hour per IP"})
+    try:
+        day_runs = store.claim(limits.day_key(), 2 * 86400)
+    except limits.RedisUnavailable:
+        return _paused()
+    if day_runs > limits.MAX_RUNS_PER_DAY_TOTAL:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "rate limit: 30 runs per day total"})
+    return None
 
 
-def _fail_run(run_id, message, exc=None):
-    """Log to stderr, record an error step, and mark the run failed."""
-    if exc is not None:
-        print(f"[agent-run {run_id}] failed: "
-              f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
-        traceback.print_exc(file=sys.stderr)
-    else:
-        print(f"[agent-run {run_id}] failed: {message}",
-              file=sys.stderr, flush=True)
-    _record_error_step(run_id, message)
-    with _LOCK:
-        rec = _RUNS.get(run_id)
-        if rec is not None:
-            rec.update(status="failed", reason="failed",
-                       error=redact(message))
+def _budget_exhausted(store):
+    """True when the daily token budget is spent (fail closed on error)."""
+    try:
+        spent = store.total(limits.tokens_key())
+    except limits.RedisUnavailable:
+        return True
+    return spent >= _daily_token_budget()
 
 
 def _agent_replay_enabled():
@@ -357,22 +330,18 @@ def _daily_token_budget():
         return 1500000
 
 
-def _record_run_tokens(total_tokens):
+def _record_tokens(store, total_tokens):
+    """Add a finished run's tokens to the daily budget (best effort)."""
     try:
         total = int(total_tokens or 0)
     except (TypeError, ValueError):
         return
     if total <= 0:
         return
-    day = _utcnow().date().isoformat()
-    with _LOCK:
-        _TOKEN_LEDGER[day] = _TOKEN_LEDGER.get(day, 0) + total
-
-
-def _tokens_spent_today():
-    day = _utcnow().date().isoformat()
-    with _LOCK:
-        return _TOKEN_LEDGER.get(day, 0)
+    try:
+        store.add(limits.tokens_key(), total, 2 * 86400)
+    except limits.RedisUnavailable:
+        pass
 
 
 def _client_ip(request, token_valid):
@@ -391,85 +360,84 @@ def _load_sample_memo():
         return None
 
 
-def _replay_in_background(run_id):
-    """Replay the saved sample run with short delays (no model calls)."""
+def _sanitize_step(entry):
+    """Trace entry safe for the browser (no paths or raw payloads)."""
+    if not isinstance(entry, dict):
+        return None
+    return {
+        "step": entry.get("step"),
+        "timestamp": entry.get("timestamp"),
+        "type": entry.get("type"),
+        "tool": entry.get("tool"),
+        "arguments": _redact_json(entry.get("arguments") or {}),
+        "result_summary": redact(entry.get("result_summary") or ""),
+        "total_tokens": entry.get("total_tokens", 0),
+    }
+
+
+def _iter_replay(store):
+    """Stream the saved sample run step by step (no model calls)."""
     sample = _load_sample_memo() or {}
-    steps = sample.get("steps") or []
-    try:
-        path = _data_file("runs", f"{run_id}.jsonl")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as f:
-            for entry in steps:
-                f.write(json.dumps(entry) + "\n")
-                f.flush()
-                time.sleep(0.35)
-    except (OSError, ValueError) as exc:
-        _fail_run(run_id, f"replay failed: {exc}", exc=exc)
-        return
-    with _LOCK:
-        rec = _RUNS.get(run_id)
-        if rec is not None:
-            rec.update(status="done", reason="replay",
-                       answer=sample.get("memo", ""),
-                       total_tokens=sample.get("total_tokens", 0),
-                       tool_calls=sample.get("tool_calls", 0),
-                       figure_fields=sample.get("figure_fields", []))
-    _record_run_tokens(sample.get("total_tokens", 0))
+    for entry in sample.get("steps") or []:
+        step = _sanitize_step(entry)
+        if step is not None:
+            yield step
+        time.sleep(0.35)
+    total = sample.get("total_tokens", 0)
+    yield {"type": "run_result", "reason": "replay",
+           "answer": redact(sample.get("memo", "")),
+           "total_tokens": total,
+           "tool_calls": sample.get("tool_calls", 0),
+           "figure_fields": sample.get("figure_fields", [])}
+    _record_tokens(store, total)
 
 
-def _run_in_background(run_id, question):
-    try:
-        outcome = agent.run_agent(question, run_id=run_id)
-    except SystemExit:
-        _fail_run(run_id, "model credentials not configured")
-        return
-    except Exception as exc:  # never leak tracebacks or paths to the UI
-        _fail_run(run_id, f"{type(exc).__name__}: {exc}", exc=exc)
-        return
-    with _LOCK:
-        rec = _RUNS.get(run_id)
-        if rec is not None:
-            rec.update(status="done", reason=outcome.get("reason", "done"),
-                       answer=outcome.get("answer", ""),
-                       total_tokens=outcome.get("total_tokens", 0),
-                       tool_calls=outcome.get("tool_calls", 0),
-                       figure_fields=outcome.get("figure_fields", []))
-    _record_run_tokens(outcome.get("total_tokens", 0))
+def _iter_live(question, run_id, store):
+    """Run the agent in a worker thread, yielding steps as they happen."""
+    events = queue.Queue()
+    box = {}
 
-
-def _read_trace(run_id):
-    """Sanitized trace steps from data/runs/<run_id>.jsonl."""
-    try:
-        path = _data_file("runs", f"{run_id}.jsonl")
-    except ValueError:
-        return None
-    if not path.exists():
-        return None
-    steps = []
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
+    def worker():
         try:
-            entry = json.loads(line)
-        except ValueError:
+            box["outcome"] = agent.run_agent(
+                question, run_id=run_id, on_event=events.put)
+        except SystemExit:
+            events.put({"type": "error",
+                        "error": "model credentials not configured"})
+        except Exception as exc:  # never leak tracebacks or paths
+            events.put({"type": "error",
+                        "error": f"{type(exc).__name__}: {exc}"})
+        finally:
+            events.put(None)
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+    saw_error = False
+    while True:
+        event = events.get()
+        if event is None:
+            break
+        if event.get("type") == "error":
+            saw_error = True
+            yield {"type": "error",
+                   "error": redact(event.get("error") or "")}
             continue
-        if not isinstance(entry, dict):
-            continue
-        steps.append({
-            "step": entry.get("step"),
-            "timestamp": entry.get("timestamp"),
-            "type": entry.get("type"),
-            "tool": entry.get("tool"),
-            "arguments": _redact_json(entry.get("arguments") or {}),
-            "result_summary": redact(entry.get("result_summary") or ""),
-            "total_tokens": entry.get("total_tokens", 0),
-        })
-    return steps
+        step = _sanitize_step(event)
+        if step is not None:
+            yield step
+    outcome = box.get("outcome")
+    if outcome is None:
+        if not saw_error:
+            yield {"type": "error", "error": "the check was lost"}
+        return
+    total = outcome.get("total_tokens", 0)
+    yield {"type": "run_result",
+           "reason": outcome.get("reason", "done"),
+           "answer": redact(outcome.get("answer", "")),
+           "total_tokens": total,
+           "tool_calls": outcome.get("tool_calls", 0),
+           "figure_fields": outcome.get("figure_fields", [])}
+    _record_tokens(store, total)
 
 
 # ---------------------------------------------------------------------------
@@ -962,9 +930,10 @@ class RunRequest(BaseModel):
     question: str
 
 
-@router.post("/agent/run", status_code=202)
-def start_agent_run(body: RunRequest, request: Request,
-                    x_onya_token: str | None = Header(default=None)):
+@router.post("/agent/run")
+def stream_agent_run(body: RunRequest, request: Request,
+                     x_onya_token: str | None = Header(default=None)):
+    """Validate, then stream the run as newline-delimited JSON events."""
     expected = _expected_token()
     if not expected:
         return JSONResponse(status_code=500,
@@ -973,14 +942,7 @@ def start_agent_run(body: RunRequest, request: Request,
         return JSONResponse(status_code=401,
                             content={"detail": "invalid token"})
     if not _agent_enabled():
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "The live agent is paused. See a saved run."})
-    if _tokens_spent_today() >= _daily_token_budget():
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "The daily token budget is used up for today. "
-                               "See a saved run."})
+        return _paused()
     question = (body.question or "").strip()
     if not question:
         return JSONResponse(status_code=422,
@@ -992,69 +954,42 @@ def start_agent_run(body: RunRequest, request: Request,
         return JSONResponse(
             status_code=429,
             content={"detail": "per-run token budget would be exceeded"})
+    try:
+        store = limits.resolve_store()
+    except limits.RedisUnavailable:
+        return _paused()
     ip = _client_ip(request, token_valid=True)
-    now = _utcnow()
-    with _LOCK:
-        _prune(now)
-        if len(_IP_STARTS.get(ip, [])) >= MAX_RUNS_PER_HOUR_PER_IP:
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "rate limit: 5 runs per hour per IP"})
-        if len(_RUN_STARTS) >= MAX_RUNS_PER_DAY_TOTAL:
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "rate limit: 30 runs per day total"})
-        run_id = uuid.uuid4().hex[:12]
-        _RUNS[run_id] = {"run_id": run_id, "question": question,
-                         "status": "running", "reason": None, "answer": None,
-                         "total_tokens": 0, "tool_calls": 0, "error": None,
-                         "started_at": now.isoformat(), "ip": ip}
-        _RUN_STARTS.append(now)
-        _IP_STARTS.setdefault(ip, []).append(now)
-    if _agent_replay_enabled():
-        thread = threading.Thread(target=_replay_in_background,
-                                  args=(run_id,), daemon=True)
-    else:
-        thread = threading.Thread(target=_run_in_background,
-                                  args=(run_id, question), daemon=True)
-    thread.start()
-    return {"run_id": run_id, "status": "running"}
+    claimed = _claim_limits(store, ip)
+    if claimed is not None:
+        return claimed
+    if _budget_exhausted(store):
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "The daily token budget is used up for today. "
+                               "See a saved run."})
+    run_id = uuid.uuid4().hex[:12]
+
+    def events():
+        if _agent_replay_enabled():
+            yield from _iter_replay(store)
+        else:
+            yield from _iter_live(question, run_id, store)
+
+    def body_lines():
+        for event in events():
+            yield json.dumps(event, default=str) + "\n"
+
+    return StreamingResponse(body_lines(),
+                             media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store"})
 
 
 @router.get("/agent/run/{run_id}")
 def get_agent_run(run_id: str):
-    if not RUN_ID_RE.match(run_id):
-        return JSONResponse(status_code=404,
-                            content={"detail": "unknown run"})
-    with _LOCK:
-        record = dict(_RUNS.get(run_id, {}))
-    steps = _read_trace(run_id)
-    if not record and not steps:
-        return JSONResponse(status_code=404,
-                            content={"detail": "unknown run"})
-    steps = steps or []
-    if record:
-        status = record["status"]
-        reason = record.get("reason")
-        answer = record.get("answer")
-        total_tokens = record.get("total_tokens", 0)
-        tool_calls = record.get("tool_calls", 0)
-        error = record.get("error")
-        figure_fields = record.get("figure_fields", [])
-    else:
-        reason = None
-        status = "done" if steps else "running"
-        answer = None
-        total_tokens = steps[-1].get("total_tokens", 0) if steps else 0
-        tool_calls = sum(1 for s in steps if s.get("type") == "tool_call")
-        error = None
-        figure_fields = []
-    return {"run_id": run_id, "status": status, "reason": reason,
-            "steps": steps,
-            "answer": redact(answer) if answer else None,
-            "total_tokens": total_tokens, "tool_calls": tool_calls,
-            "figure_fields": figure_fields,
-            "error": redact(error) if error else None}
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "run polling was removed; "
+                           "POST /agent/run streams the run"})
 
 
 def allowed_origins():

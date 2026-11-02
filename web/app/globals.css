@@ -28,7 +28,33 @@ html {
   --surface: #16232c;
 }
 
+/*
+ * Card system. Every value below is mixed from the palette above, so the
+ * layout can float and layer without adding a single new color.
+ */
+:root {
+  --hairline: color-mix(in srgb, var(--ink) 10%, transparent);
+  --inset: color-mix(in srgb, var(--paper) 60%, var(--surface));
+  --shadow-soft: color-mix(in srgb, var(--ink) 6%, transparent);
+  --shadow-card: color-mix(in srgb, var(--ink) 16%, transparent);
+  --shadow-float: color-mix(in srgb, var(--ink) 26%, transparent);
+  --edge-light: color-mix(in srgb, var(--surface) 100%, transparent);
+  --banner-bg: #d49a3e;
+  --banner-ink: #15222c;
+}
+
+.dark {
+  --hairline: color-mix(in srgb, var(--ink) 9%, transparent);
+  --inset: color-mix(in srgb, var(--paper) 55%, var(--surface));
+  --shadow-soft: rgb(0 0 0 / 0.25);
+  --shadow-card: rgb(0 0 0 / 0.45);
+  --shadow-float: rgb(0 0 0 / 0.65);
+  --edge-light: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
 @theme inline {
+  --color-hairline: var(--hairline);
+  --color-inset: var(--inset);
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
@@ -67,10 +93,11 @@ body {
 }
 
 [id^="fig-"] {
-  scroll-margin-top: 1.5rem;
+  scroll-margin-top: 6rem;
 }
 
 .figure-highlight {
+  border-radius: 10px;
   background: color-mix(in srgb, var(--watch) 22%, transparent);
   transition: background-color 300ms ease;
 }
@@ -136,23 +163,319 @@ body {
   font-family: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-.fade-up {
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 200ms ease,
-    transform 200ms ease;
+@layer components {
+  .card {
+    position: relative;
+    border-radius: 22px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      inset 0 1px 0 var(--edge-light),
+      0 1px 2px var(--shadow-soft),
+      0 18px 40px -22px var(--shadow-card);
+  }
+
+  .card-float {
+    position: relative;
+    border-radius: 18px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      inset 0 1px 0 var(--edge-light),
+      0 2px 6px var(--shadow-soft),
+      0 34px 70px -24px var(--shadow-float);
+  }
+
+  .card-inset {
+    border-radius: 16px;
+    background: var(--inset);
+    border: 1px solid var(--hairline);
+  }
+
+  .lift {
+    transition:
+      transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .lift:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      inset 0 1px 0 var(--edge-light),
+      0 2px 6px var(--shadow-soft),
+      0 30px 60px -24px var(--shadow-float);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.5rem 1.15rem;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    transition:
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--paper) 18%, transparent),
+      0 6px 16px -8px var(--shadow-float);
+  }
+
+  .btn-primary:hover {
+    background: color-mix(in srgb, var(--ink) 88%, var(--paper));
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--hairline);
+    box-shadow: 0 1px 2px var(--shadow-soft);
+  }
+
+  .btn-secondary:hover {
+    background: var(--inset);
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.85rem;
+    font-size: 13px;
+  }
+
+  .pill-tabs {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pill-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pill-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    border-radius: 12px;
+    padding: 0.45rem 0.8rem;
+    font-size: 13px;
+    color: var(--ink-muted);
+    border: 1px solid transparent;
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+
+  .pill-tab:hover {
+    color: var(--ink);
+  }
+
+  .pill-tab[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--inset);
+    border-color: var(--hairline);
+    box-shadow: 0 1px 2px var(--shadow-soft);
+  }
+
+  .text-link {
+    text-decoration: underline;
+    text-decoration-color: var(--rule);
+    text-underline-offset: 4px;
+  }
+
+  .text-link:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+
+  .eyebrow {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .grain {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .skeleton {
+    border-radius: 9999px;
+    background: linear-gradient(
+      90deg,
+      var(--hairline) 0%,
+      color-mix(in srgb, var(--ink) 16%, transparent) 50%,
+      var(--hairline) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
 }
 
-.fade-up.is-visible {
+/* Reveal: cards rise and settle as they scroll in; .pop-out cards
+   overshoot slightly so they read as lifting off the card beneath. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  transition:
+    opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.pop-out {
+  transform: translate(var(--pop-x, -14px), 30px) scale(0.9);
+  transition:
+    opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 900ms cubic-bezier(0.34, 1.45, 0.64, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
+}
+
+/* Above the fold: same motion, played on load without waiting for JS. */
+.enter {
+  animation: enter-rise 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+.enter.pop-out {
+  animation: enter-pop 900ms cubic-bezier(0.34, 1.45, 0.64, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes enter-pop {
+  from {
+    opacity: 0;
+    transform: translate(var(--pop-x, -14px), 30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.highlight-cycle {
+  transition: color 500ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fade-up {
+  .reveal,
+  .reveal.pop-out,
+  .enter,
+  .enter.pop-out {
     opacity: 1;
     transform: none;
     transition: none;
+    animation: none;
+  }
+
+  .lift,
+  .lift:hover,
+  .btn,
+  .btn:active {
+    transform: none;
+    transition: none;
+  }
+
+  .marquee {
+    overflow-x: auto;
+  }
+
+  .marquee-track,
+  .skeleton {
+    animation: none;
+  }
+}
+
+@media print {
+  .card,
+  .card-float {
+    box-shadow: none;
+    border: none;
   }
 }

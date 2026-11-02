@@ -81,7 +81,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={`Use ${next} mode`}
-      className="text-[13px] text-ink-muted underline decoration-rule underline-offset-4 hover:text-ink"
+      className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[12px] text-ink-muted transition-colors hover:bg-[var(--hairline)] hover:text-ink"
     >
       {theme === "dark" ? "Light" : "Dark"}
     </button>

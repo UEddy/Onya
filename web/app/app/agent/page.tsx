@@ -9,7 +9,7 @@ import { stepSentence } from "../../../lib/step-sentences";
 const PREFILL =
   "Check Sleep Number's covenants as of the April 2026 test and tell me what to do.";
 
-const MAX_RUN_SECONDS = 240;
+const MAX_RUN_SECONDS = 290;
 const STALL_SECONDS = 60;
 
 const TOOL_RUNNING: Record<string, string> = {
@@ -72,19 +72,17 @@ export default function AgentPage() {
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [stalledStep, setStalledStep] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAt = useRef<number | null>(null);
   const lastStepCount = useRef(0);
   const lastProgressAt = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (timer.current) {
-      clearInterval(timer.current);
-      timer.current = null;
-    }
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const noteProgress = useCallback(() => {
+    lastProgressAt.current = Date.now();
+    setStalledStep(null);
   }, []);
-
-  useEffect(() => stopPolling, [stopPolling]);
 
   useEffect(() => {
     if (!running) return;
@@ -94,10 +92,10 @@ export default function AgentPage() {
         const secs = Math.floor((now - startedAt.current) / 1000);
         setElapsed(secs);
         if (secs > MAX_RUN_SECONDS) {
-          stopPolling();
+          abortRef.current?.abort();
           setRunning(false);
           setError(
-            "The check took longer than four minutes without finishing, so Onya stopped waiting. Nothing was completed. Please try again.",
+            "The check took too long without finishing, so Onya stopped waiting. Nothing was completed. Please try again.",
           );
           return;
         }
@@ -112,51 +110,79 @@ export default function AgentPage() {
       }
     }, 1000);
     return () => clearInterval(tick);
-  }, [running, run, stalledStep, stopPolling]);
+  }, [running, run, stalledStep]);
 
-  const poll = useCallback(
-    async (runId: string) => {
-      try {
-        const res = await fetch(`/api/agent/${runId}`, {
-          cache: "no-store",
-        });
-        const state = (await res.json()) as AgentRunState;
-        if (!res.ok) {
-          stopPolling();
+  const applyEvent = useCallback(
+    (event: unknown) => {
+      if (typeof event !== "object" || event === null) return;
+      const record = event as Record<string, unknown>;
+      if (record.type === "run_result") {
+        const reason = typeof record.reason === "string" ? record.reason : "";
+        if (reason === "done" || reason === "replay") {
+          setRun((current) => ({
+            run_id: "",
+            error: null,
+            status: "done",
+            reason,
+            steps: current?.steps ?? [],
+            answer:
+              typeof record.answer === "string" ? record.answer : "",
+            total_tokens:
+              typeof record.total_tokens === "number"
+                ? record.total_tokens
+                : 0,
+            tool_calls:
+              typeof record.tool_calls === "number" ? record.tool_calls : 0,
+            figure_fields: Array.isArray(record.figure_fields)
+              ? (record.figure_fields as AgentRunState["figure_fields"])
+              : [],
+          }));
+          setRunning(false);
+        } else {
           setRunning(false);
           setError(
-            isWakingStatus(res.status)
-              ? "The data service is waking up. This can take up to a minute. See a saved run."
-              : "The check was lost. Please run it again.",
+            typeof record.answer === "string" && record.answer
+              ? record.answer
+              : "The check did not finish. Please try again.",
           );
-          return;
         }
-        if (state.steps.length !== lastStepCount.current) {
-          lastStepCount.current = state.steps.length;
-          lastProgressAt.current = Date.now();
-          setStalledStep(null);
-        }
-        setRun(state);
-        if (
-          state.status === "done" ||
-          state.status === "failed" ||
-          state.status === "error"
-        ) {
-          stopPolling();
-          setRunning(false);
-        }
-      } catch {
-        stopPolling();
+        return;
+      }
+      if (record.type === "error") {
         setRunning(false);
-        setError("The check was lost. Please run it again.");
+        setError(
+          typeof record.error === "string" && record.error
+            ? record.error
+            : "The check was lost. Please run it again.",
+        );
+        return;
+      }
+      if (record.tool) {
+        const step = record as unknown as AgentStep;
+        setRun((current) => ({
+          run_id: "",
+          error: null,
+          status: "running",
+          reason: null,
+          steps: [...(current?.steps ?? []), step],
+          answer: null,
+          total_tokens:
+            typeof step.total_tokens === "number" ? step.total_tokens : 0,
+          tool_calls: current?.tool_calls ?? 0,
+          figure_fields: current?.figure_fields ?? [],
+        }));
+        lastStepCount.current += 1;
+        noteProgress();
       }
     },
-    [stopPolling],
+    [noteProgress],
   );
 
   const submit = useCallback(async () => {
     if (running || question.trim().length === 0) return;
-    stopPolling();
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setRunning(true);
     setError(null);
     setRun(null);
@@ -171,20 +197,49 @@ export default function AgentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: question.trim() }),
         cache: "no-store",
+        signal: controller.signal,
       });
-      const data = (await res.json()) as { run_id?: string; detail?: string };
-      if (!res.ok || !data.run_id) {
+      if (!res.ok || !res.body) {
+        const data = (await res.json().catch(() => ({
+          detail: "",
+        }))) as { detail?: string };
         setRunning(false);
         setError(friendlyError(res.status, data.detail ?? ""));
         return;
       }
-      await poll(data.run_id);
-      timer.current = setInterval(() => void poll(data.run_id as string), 2000);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            applyEvent(JSON.parse(line) as unknown);
+          } catch {
+            /* A partial line waits for the next chunk. */
+            buffer = `${line}\n${buffer}`;
+            break;
+          }
+        }
+      }
+      if (buffer.trim()) {
+        try {
+          applyEvent(JSON.parse(buffer) as unknown);
+        } catch {
+          /* Trailing bytes are not a complete event; ignore them. */
+        }
+      }
     } catch {
+      if (controller.signal.aborted) return;
       setRunning(false);
       setError(friendlyError(502, ""));
     }
-  }, [question, running, poll, stopPolling]);
+  }, [question, running, applyEvent]);
 
   const rawSteps = run?.steps ?? [];
   const seenStepKeys = new Set<string>();

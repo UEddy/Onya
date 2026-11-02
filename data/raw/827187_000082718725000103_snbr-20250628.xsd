@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--XBRL Document Created with the Workiva Platform-->
+<!--Copyright 2025 Workiva-->
+<!--r:2b315453-540a-4c02-8ba1-44255913e92c,g:95a5a313-31f6-441f-9e71-c46a4af1a36d-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:snbr="http://www.sleepnumber.com/20250628" xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:dtr-types="http://www.xbrl.org/dtr/type/2024-01-31" xmlns:xbrldt="http://xbrl.org/2005/xbrldt" attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://www.sleepnumber.com/20250628">
+  <xs:import namespace="http://fasb.org/srt/2025" schemaLocation="https://xbrl.fasb.org/srt/2025/elts/srt-2025.xsd"/>
+  <xs:import namespace="http://fasb.org/us-gaap/2025" schemaLocation="https://xbrl.fasb.org/us-gaap/2025/elts/us-gaap-2025.xsd"/>
+  <xs:import namespace="http://www.xbrl.org/2003/instance" schemaLocation="http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd"/>
+  <xs:import namespace="http://www.xbrl.org/2003/linkbase" schemaLocation="http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd"/>
+  <xs:import namespace="http://www.xbrl.org/dtr/type/2024-01-31" schemaLocation="https://www.xbrl.org/dtr/type/2024-01-31/types.xsd"/>
+  <xs:import namespace="http://xbrl.org/2005/xbrldt" schemaLocation="http://www.xbrl.org/2005/xbrldt-2005.xsd"/>
+  <xs:import namespace="http://xbrl.sec.gov/dei/2025" schemaLocation="https://xbrl.sec.gov/dei/2025/dei-2025.xsd"/>
+  <xs:import namespace="http://xbrl.sec.gov/ecd/2025" schemaLocation="https://xbrl.sec.gov/ecd/2025/ecd-2025.xsd"/>
+  <xs:annotation>
+    <xs:appinfo>
+      <link:linkbaseRef xmlns:xlink="http://www.w3.org/1999/xlink" xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="snbr-20250628_pre.xml" xlink:role="http://www.xbrl.org/2003/role/presentationLinkbaseRef" xlink:type="simple"/>
+      <link:linkbaseRef xmlns:xlink="http://www.w3.org/1999/xlink" xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="snbr-20250628_def.xml" xlink:role="http://www.xbrl.org/2003/role/definitionLinkbaseRef" xlink:type="simple"/>
+      <link:linkbaseRef xmlns:xlink="http://www.w3.org/1999/xlink" xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="snbr-20250628_lab.xml" xlink:role="http://www.xbrl.org/2003/role/labelLinkbaseRef" xlink:type="simple"/>
+      <link:linkbaseRef xmlns:xlink="http://www.w3.org/1999/xlink" xlink:arcrole="http://www.w3.org/1999/xlink/properties/linkbase" xlink:href="snbr-20250628_cal.xml" xlink:role="http://www.xbrl.org/2003/role/calculationLinkbaseRef" xlink:type="simple"/>
+      <link:roleType id="CoverPage" roleURI="http://www.sleepnumber.com/role/CoverPage">
+        <link:definition>0000001 - Document - Cover Page</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CondensedConsolidatedBalanceSheets" roleURI="http://www.sleepnumber.com/role/CondensedConsolidatedBalanceSheets">
+        <link:definition>9952151 - Statement - Condensed Consolidated Balance Sheets</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CondensedConsolidatedBalanceSheetsParenthetical" roleURI="http://www.sleepnumber.com/role/CondensedConsolidatedBalanceSheetsParenthetical">
+        <link:definition>9952152 - Statement - Condensed Consolidated Balance Sheets (Parenthetical)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CondensedConsolidatedStatementsofOperations" roleURI="http://www.sleepnumber.com/role/CondensedConsolidatedStatementsofOperations">
+        <link:definition>9952153 - Statement - Condensed Consolidated Statements of Operations</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CondensedConsolidatedStatementsofShareholdersDeficit" roleURI="http://www.sleepnumber.com/role/CondensedConsolidatedStatementsofShareholdersDeficit">
+        <link:definition>9952154 - Statement - Condensed Consolidated Statements of Shareholders' Deficit</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CondensedConsolidatedStatementofCashFlows" roleURI="http://www.sleepnumber.com/role/CondensedConsolidatedStatementofCashFlows">
+        <link:definition>9952155 - Statement - Condensed Consolidated Statement of Cash Flows</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="BusinessandSummaryofSignificantAccountingPolicies" roleURI="http://www.sleepnumber.com/role/BusinessandSummaryofSignificantAccountingPolicies">
+        <link:definition>9952156 - Disclosure - Business and Summary of Significant Accounting Policies</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="FairValueMeasurements" roleURI="http://www.sleepnumber.com/role/FairValueMeasurements">
+        <link:definition>9952157 - Disclosure - Fair Value Measurements</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="Inventories" roleURI="http://www.sleepnumber.com/role/Inventories">
+        <link:definition>9952158 - Disclosure - Inventories</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="GoodwillandIntangibleAssetsNet" roleURI="http://www.sleepnumber.com/role/GoodwillandIntangibleAssetsNet">
+        <link:definition>9952159 - Disclosure - Goodwill and Intangible Assets, Net</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CreditAgreement" roleURI="http://www.sleepnumber.com/role/CreditAgreement">
+        <link:definition>9952160 - Disclosure - Credit Agreement</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="Leases" roleURI="http://www.sleepnumber.com/role/Leases">
+        <link:definition>9952161 - Disclosure - Leases</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RepurchasesofCommonStock" roleURI="http://www.sleepnumber.com/role/RepurchasesofCommonStock">
+        <link:definition>9952162 - Disclosure - Repurchases of Common Stock</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognition" roleURI="http://www.sleepnumber.com/role/RevenueRecognition">
+        <link:definition>9952163 - Disclosure - Revenue Recognition</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="StockBasedCompensationExpense" roleURI="http://www.sleepnumber.com/role/StockBasedCompensationExpense">
+        <link:definition>9952164 - Disclosure - Stock-Based Compensation Expense</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="ProfitSharingand401kPlan" roleURI="http://www.sleepnumber.com/role/ProfitSharingand401kPlan">
+        <link:definition>9952165 - Disclosure - Profit Sharing and 401(k) Plan</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="NetLossperCommonShare" roleURI="http://www.sleepnumber.com/role/NetLossperCommonShare">
+        <link:definition>9952166 - Disclosure - Net Loss per Common Share</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RestructuringCosts" roleURI="http://www.sleepnumber.com/role/RestructuringCosts">
+        <link:definition>9952167 - Disclosure - Restructuring Costs</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="IncomeTaxes" roleURI="http://www.sleepnumber.com/role/IncomeTaxes">
+        <link:definition>9952168 - Disclosure - Income Taxes</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="Segments" roleURI="http://www.sleepnumber.com/role/Segments">
+        <link:definition>9952169 - Disclosure - Segments</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CommitmentsandContingencies" roleURI="http://www.sleepnumber.com/role/CommitmentsandContingencies">
+        <link:definition>9952170 - Disclosure - Commitments and Contingencies</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="SubsequentEvent" roleURI="http://www.sleepnumber.com/role/SubsequentEvent">
+        <link:definition>9952171 - Disclosure - Subsequent Event</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="BusinessandSummaryofSignificantAccountingPoliciesPolicies" roleURI="http://www.sleepnumber.com/role/BusinessandSummaryofSignificantAccountingPoliciesPolicies">
+        <link:definition>9955511 - Disclosure - Business and Summary of Significant Accounting Policies (Policies)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="InventoriesTables" roleURI="http://www.sleepnumber.com/role/InventoriesTables">
+        <link:definition>9955512 - Disclosure - Inventories (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="GoodwillandIntangibleAssetsNetTables" roleURI="http://www.sleepnumber.com/role/GoodwillandIntangibleAssetsNetTables">
+        <link:definition>9955513 - Disclosure - Goodwill and Intangible Assets, Net (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CreditAgreementTables" roleURI="http://www.sleepnumber.com/role/CreditAgreementTables">
+        <link:definition>9955514 - Disclosure - Credit Agreement (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesTables" roleURI="http://www.sleepnumber.com/role/LeasesTables">
+        <link:definition>9955515 - Disclosure - Leases (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognitionTables" roleURI="http://www.sleepnumber.com/role/RevenueRecognitionTables">
+        <link:definition>9955516 - Disclosure - Revenue Recognition (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="StockBasedCompensationExpenseTables" roleURI="http://www.sleepnumber.com/role/StockBasedCompensationExpenseTables">
+        <link:definition>9955517 - Disclosure - Stock-Based Compensation Expense (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="NetLossperCommonShareTables" roleURI="http://www.sleepnumber.com/role/NetLossperCommonShareTables">
+        <link:definition>9955518 - Disclosure - Net Loss per Common Share (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RestructuringCostsTables" roleURI="http://www.sleepnumber.com/role/RestructuringCostsTables">
+        <link:definition>9955519 - Disclosure - Restructuring Costs (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="SegmentTables" roleURI="http://www.sleepnumber.com/role/SegmentTables">
+        <link:definition>9955520 - Disclosure - Segment (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CommitmentsandContingenciesTables" roleURI="http://www.sleepnumber.com/role/CommitmentsandContingenciesTables">
+        <link:definition>9955521 - Disclosure - Commitments and Contingencies (Tables)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="BusinessandSummaryofSignificantAccountingPoliciesDetails" roleURI="http://www.sleepnumber.com/role/BusinessandSummaryofSignificantAccountingPoliciesDetails">
+        <link:definition>9955522 - Disclosure - Business and Summary of Significant Accounting Policies (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="FairValueMeasurementsDetails" roleURI="http://www.sleepnumber.com/role/FairValueMeasurementsDetails">
+        <link:definition>9955523 - Disclosure - Fair Value Measurements (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="InventoriesDetails" roleURI="http://www.sleepnumber.com/role/InventoriesDetails">
+        <link:definition>9955524 - Disclosure - Inventories (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="GoodwillandIntangibleAssetsNetNarrativeDetails" roleURI="http://www.sleepnumber.com/role/GoodwillandIntangibleAssetsNetNarrativeDetails">
+        <link:definition>9955525 - Disclosure - Goodwill and Intangible Assets, Net - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="GoodwillandIntangibleAssetsNetScheduleofAnnualAmortizationofDefiniteLivedTangibleAssetsDetails" roleURI="http://www.sleepnumber.com/role/GoodwillandIntangibleAssetsNetScheduleofAnnualAmortizationofDefiniteLivedTangibleAssetsDetails">
+        <link:definition>9955526 - Disclosure - Goodwill and Intangible Assets, Net - Schedule of Annual Amortization of Definite-Lived Tangible Assets (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CreditAgreementNarrativeDetails" roleURI="http://www.sleepnumber.com/role/CreditAgreementNarrativeDetails">
+        <link:definition>9955527 - Disclosure - Credit Agreement - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CreditAgreementScheduleofBorrowingsUnderCreditFacilityDetails" roleURI="http://www.sleepnumber.com/role/CreditAgreementScheduleofBorrowingsUnderCreditFacilityDetails">
+        <link:definition>9955528 - Disclosure - Credit Agreement - Schedule of Borrowings Under Credit Facility (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesAdditionalInformationDetails" roleURI="http://www.sleepnumber.com/role/LeasesAdditionalInformationDetails">
+        <link:definition>9955529 - Disclosure - Leases - Additional Information (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesScheduleofOperatingLeaseCostsDetails" roleURI="http://www.sleepnumber.com/role/LeasesScheduleofOperatingLeaseCostsDetails">
+        <link:definition>9955530 - Disclosure - Leases - Schedule of Operating Lease Costs (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesScheduleofMaturitiesofOperatingLeaseLiabilitiesDetails" roleURI="http://www.sleepnumber.com/role/LeasesScheduleofMaturitiesofOperatingLeaseLiabilitiesDetails">
+        <link:definition>9955531 - Disclosure - Leases - Schedule of Maturities of Operating Lease Liabilities (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesScheduleofMaturitiesofOperatingLeaseLiabilitiesDetails_1" roleURI="http://www.sleepnumber.com/role/LeasesScheduleofMaturitiesofOperatingLeaseLiabilitiesDetails_1">
+        <link:definition>9955531 - Disclosure - Leases - Schedule of Maturities of Operating Lease Liabilities (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="LeasesScheduleofOtherInformationRelatedOperatingLeasesDetails" roleURI="http://www.sleepnumber.com/role/LeasesScheduleofOtherInformationRelatedOperatingLeasesDetails">
+        <link:definition>9955532 - Disclosure - Leases - Schedule of Other Information Related Operating Leases (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RepurchasesofCommonStockDetails" roleURI="http://www.sleepnumber.com/role/RepurchasesofCommonStockDetails">
+        <link:definition>9955533 - Disclosure - Repurchases of Common Stock (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognitionScheduleofDeferredContractAssetsandDeferredContractLiabilitiesDetails" roleURI="http://www.sleepnumber.com/role/RevenueRecognitionScheduleofDeferredContractAssetsandDeferredContractLiabilitiesDetails">
+        <link:definition>9955534 - Disclosure - Revenue Recognition - Schedule of Deferred Contract Assets and Deferred Contract Liabilities (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognitionNarrativeDetails" roleURI="http://www.sleepnumber.com/role/RevenueRecognitionNarrativeDetails">
+        <link:definition>9955535 - Disclosure - Revenue Recognition - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognitionScheduleofNetSalesDetails" roleURI="http://www.sleepnumber.com/role/RevenueRecognitionScheduleofNetSalesDetails">
+        <link:definition>9955536 - Disclosure - Revenue Recognition - Schedule of Net Sales (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RevenueRecognitionScheduleofSalesReturnLiabilityDetails" roleURI="http://www.sleepnumber.com/role/RevenueRecognitionScheduleofSalesReturnLiabilityDetails">
+        <link:definition>9955537 - Disclosure - Revenue Recognition - Schedule of Sales Return Liability (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="StockBasedCompensationExpenseDetails" roleURI="http://www.sleepnumber.com/role/StockBasedCompensationExpenseDetails">
+        <link:definition>9955538 - Disclosure - Stock-Based Compensation Expense (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="ProfitSharingand401kPlanDetails" roleURI="http://www.sleepnumber.com/role/ProfitSharingand401kPlanDetails">
+        <link:definition>9955539 - Disclosure - Profit Sharing and 401(k) Plan (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="NetLossperCommonShareScheduleofComponentsofBasicandDilutedNetLossIncomeperShareDetails" roleURI="http://www.sleepnumber.com/role/NetLossperCommonShareScheduleofComponentsofBasicandDilutedNetLossIncomeperShareDetails">
+        <link:definition>9955540 - Disclosure - Net Loss per Common Share - Schedule of Components of Basic and Diluted Net (Loss) Income per Share (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="NetLossperCommonShareNarrativeDetails" roleURI="http://www.sleepnumber.com/role/NetLossperCommonShareNarrativeDetails">
+        <link:definition>9955541 - Disclosure - Net Loss per Common Share - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RestructuringCostsNarrativeDetails" roleURI="http://www.sleepnumber.com/role/RestructuringCostsNarrativeDetails">
+        <link:definition>9955542 - Disclosure - Restructuring Costs - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RestructuringCostsScheduleofRestructuringandRelatedCostsDetails" roleURI="http://www.sleepnumber.com/role/RestructuringCostsScheduleofRestructuringandRelatedCostsDetails">
+        <link:definition>9955543 - Disclosure - Restructuring Costs - Schedule of Restructuring and Related Costs (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="RestructuringCostsScheduleofRestructuringReservebyTypeofCostDetails" roleURI="http://www.sleepnumber.com/role/RestructuringCostsScheduleofRestructuringReservebyTypeofCostDetails">
+        <link:definition>9955544 - Disclosure - Restructuring Costs - Schedule of Restructuring Reserve by Type of Cost (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="IncomeTaxesDetails" roleURI="http://www.sleepnumber.com/role/IncomeTaxesDetails">
+        <link:definition>9955545 - Disclosure - Income Taxes (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="SegmentNarrativeDetails" roleURI="http://www.sleepnumber.com/role/SegmentNarrativeDetails">
+        <link:definition>9955546 - Disclosure - Segment - Narrative (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="SegmentScheduleofOperatingProfitLossfromSegmentstoConsolidatedDetails" roleURI="http://www.sleepnumber.com/role/SegmentScheduleofOperatingProfitLossfromSegmentstoConsolidatedDetails">
+        <link:definition>9955547 - Disclosure - Segment - Schedule of Operating Profit (Loss) from Segments to Consolidated (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+      <link:roleType id="CommitmentsandContingenciesScheduleofWarrantyLiabilitiesDetails" roleURI="http://www.sleepnumber.com/role/CommitmentsandContingenciesScheduleofWarrantyLiabilitiesDetails">
+        <link:definition>9955548 - Disclosure - Commitments and Contingencies - Schedule of Warranty Liabilities (Details)</link:definition>
+        <link:usedOn>link:presentationLink</link:usedOn>
+        <link:usedOn>link:calculationLink</link:usedOn>
+        <link:usedOn>link:definitionLink</link:usedOn>
+      </link:roleType>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element id="snbr_CustomerPrepaymentsCurrent" abstract="false" name="CustomerPrepaymentsCurrent" nillable="true" xbrli:periodType="instant" xbrli:balance="credit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_IncreaseDecreaseInPrepaymentsFromCustomer" abstract="false" name="IncreaseDecreaseInPrepaymentsFromCustomer" nillable="true" xbrli:periodType="duration" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_PaymentToSecureContractualRights" abstract="false" name="PaymentToSecureContractualRights" nillable="true" xbrli:periodType="duration" xbrli:balance="credit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_RepurchasesOfCommonStockAbstract" abstract="true" name="RepurchasesOfCommonStockAbstract" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_CommonStockRepurchasesTextBlock" abstract="false" name="CommonStockRepurchasesTextBlock" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:textBlockItemType"/>
+  <xs:element id="snbr_ProfitSharingAnd401kPlanAbstract" abstract="true" name="ProfitSharingAnd401kPlanAbstract" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_ScheduleOfOtherInformationRelatedOperatingLeasesTableTextBlock" abstract="false" name="ScheduleOfOtherInformationRelatedOperatingLeasesTableTextBlock" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:textBlockItemType"/>
+  <xs:element id="snbr_ScheduleOfSalesReturnLiabilityTableTextBlock" abstract="false" name="ScheduleOfSalesReturnLiabilityTableTextBlock" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:textBlockItemType"/>
+  <xs:element id="snbr_InventoryFinishedGoodsAndComponentsNet" abstract="false" name="InventoryFinishedGoodsAndComponentsNet" nillable="true" xbrli:periodType="instant" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_GoodwillAndIntangibleAssetsTable" abstract="true" name="GoodwillAndIntangibleAssetsTable" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrldt:hypercubeItem" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_GoodwillAndIntangibleAssetsLineItems" abstract="true" name="GoodwillAndIntangibleAssetsLineItems" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodAxis" abstract="true" name="DebtCovenantPeriodAxis" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrldt:dimensionItem" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodDomain" abstract="true" name="DebtCovenantPeriodDomain" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodOneMember" abstract="true" name="DebtCovenantPeriodOneMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodTwoMember" abstract="true" name="DebtCovenantPeriodTwoMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodThreeMember" abstract="true" name="DebtCovenantPeriodThreeMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_DebtCovenantPeriodFourMember" abstract="true" name="DebtCovenantPeriodFourMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_DebtInstrumentCovenantMinimumLiquidity" abstract="false" name="DebtInstrumentCovenantMinimumLiquidity" nillable="true" xbrli:periodType="instant" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_DebtInstrumentCovenantNetLeverageRatioMinimumThreshold" abstract="false" name="DebtInstrumentCovenantNetLeverageRatioMinimumThreshold" nillable="true" xbrli:periodType="instant" substitutionGroup="xbrli:item" type="xbrli:pureItemType"/>
+  <xs:element id="snbr_DebtInstrumentCovenantNetLeverageRatioMaximumThreshold" abstract="false" name="DebtInstrumentCovenantNetLeverageRatioMaximumThreshold" nillable="true" xbrli:periodType="instant" substitutionGroup="xbrli:item" type="xbrli:pureItemType"/>
+  <xs:element id="snbr_DebtInstrumentCovenantInterestCoverageRatioMinimumThreshold" abstract="false" name="DebtInstrumentCovenantInterestCoverageRatioMinimumThreshold" nillable="true" xbrli:periodType="instant" substitutionGroup="xbrli:item" type="xbrli:pureItemType"/>
+  <xs:element id="snbr_LineOfCreditFacilityAmendmentFeePercentage" abstract="false" name="LineOfCreditFacilityAmendmentFeePercentage" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:percentItemType"/>
+  <xs:element id="snbr_RetailStoreLeasesMember" abstract="true" name="RetailStoreLeasesMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_OfficeAndManufacturingLeasesMember" abstract="true" name="OfficeAndManufacturingLeasesMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_LeaseVehiclesAndCertainEquipmentUnderOperatingLeasesMember" abstract="true" name="LeaseVehiclesAndCertainEquipmentUnderOperatingLeasesMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_VariableLeaseAdjustedCost" abstract="false" name="VariableLeaseAdjustedCost" nillable="true" xbrli:periodType="duration" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_StockRepurchaseAcquiredThroughTaxWithholdingRestrictedStock" abstract="false" name="StockRepurchaseAcquiredThroughTaxWithholdingRestrictedStock" nillable="true" xbrli:periodType="duration" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_SleepIQTechnologyMember" abstract="true" name="SleepIQTechnologyMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_TimingOfTransferOfGoodsOrServicesConcentrationRiskMember" abstract="true" name="TimingOfTransferOfGoodsOrServicesConcentrationRiskMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_RevenueRecognitionProductLife" abstract="false" name="RevenueRecognitionProductLife" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="xbrli:durationItemType"/>
+  <xs:element id="snbr_RetailChannelMember" abstract="true" name="RetailChannelMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_OnlinePhoneChatAndOtherMember" abstract="true" name="OnlinePhoneChatAndOtherMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_SalesReturnLiabilityRollForward" abstract="true" name="SalesReturnLiabilityRollForward" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="xbrli:stringItemType"/>
+  <xs:element id="snbr_ContractWithCustomerRefundLiabilityAdditions" abstract="false" name="ContractWithCustomerRefundLiabilityAdditions" nillable="true" xbrli:periodType="duration" xbrli:balance="credit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_ContractWithCustomerRefundLiabilityDeductions" abstract="false" name="ContractWithCustomerRefundLiabilityDeductions" nillable="true" xbrli:periodType="duration" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+  <xs:element id="snbr_TimeBasedPerformanceBasedAndMarketBasedStockAwardsMember" abstract="true" name="TimeBasedPerformanceBasedAndMarketBasedStockAwardsMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_ProfessionalFeesMember" abstract="true" name="ProfessionalFeesMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_ReportableSegmentMember" abstract="true" name="ReportableSegmentMember" nillable="true" xbrli:periodType="duration" substitutionGroup="xbrli:item" type="dtr-types:domainItemType"/>
+  <xs:element id="snbr_RestructuringCostsAdjusted" abstract="false" name="RestructuringCostsAdjusted" nillable="true" xbrli:periodType="duration" xbrli:balance="debit" substitutionGroup="xbrli:item" type="xbrli:monetaryItemType"/>
+</xs:schema>

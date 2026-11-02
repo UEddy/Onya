@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { joinBackendUrl } from "../../../../lib/api";
 
 /* Server-side proxy for read-only backend calls. The browser talks
-   only to this origin; the Baseten API key is added here, server-side,
-   and never reaches the browser. Gateway errors (502/503/504) pass
-   through untouched so the UI can show the waking notice for them. */
+   only to this origin. Reads are public data, so no token is needed;
+   agent calls go through /api/agent, which adds the server-only
+   token. Gateway errors (502/503/504) pass through untouched so the
+   UI can show the waking notice for them. */
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
 export async function GET(
@@ -12,8 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const base = process.env.ONYA_API_BASE;
-  const key = process.env.BASETEN_API_KEY;
-  if (!base || !key) {
+  if (!base) {
     return NextResponse.json(
       { detail: "Backend is not configured." },
       { status: 502 },
@@ -25,7 +25,6 @@ export async function GET(
   try {
     const res = await fetch(target, {
       cache: "no-store",
-      headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     const body = await res.text();

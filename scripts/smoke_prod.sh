@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
 # Production smoke test. Usage: scripts/smoke_prod.sh API_URL SITE_URL
-# API_URL is the Baseten sync base URL
-# (https://model-<model_id>.api.baseten.co/environments/production/sync,
-# no trailing slash). The key is read from the terminal and never echoed
-# or printed. Read checks go through the site's server-side proxy (which
-# adds the key itself), never from here. Exits non-zero on the first
-# failed check.
+# API_URL is the onya-api Vercel deployment URL (https://<project>.vercel.app).
+# Read endpoints are public; the agent needs the demo token server-side,
+# so this script only checks that agent calls without a token fail 401.
+# Prints no secrets. Exits non-zero on the first failed check.
 set -u
 API="${1:?usage: smoke_prod.sh API_URL SITE_URL}"
 SITE="${2:?usage: smoke_prod.sh API_URL SITE_URL}"
 fail=0
-
-if [ -z "${BASETEN_API_KEY:-}" ]; then
-  echo "Enter the scoped invoke key (input hidden):"
-  read -rs BASETEN_API_KEY
-  echo
-fi
 
 check_200() {
   local url="$1"
@@ -29,35 +21,21 @@ check_200() {
   fi
 }
 
-# Direct sync routes with the key (proves the deployment is reachable).
-check_200_auth() {
-  local url="$1"
-  local code
-  code=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer $BASETEN_API_KEY" "$url")
-  if [ "$code" = "200" ]; then
-    echo "OK 200 $url (with key)"
-  else
-    echo "FAIL $code $url (with key)"
-    fail=1
-  fi
-}
-
-check_200_auth "$API/health"
-check_200_auth "$API/companies"
+check_200 "$API/health"
+check_200 "$API/companies"
 check_200 "$SITE/api/backend/backtest"
 check_200 "$SITE/"
 check_200 "$SITE/app/watchlist"
 check_200 "$SITE/app/company/SNBR"
 check_200 "$SITE/app/agent"
 
-# The Baseten gateway must reject a call with no key.
+# The agent must reject a call with no token.
 code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/agent/run" \
   -H "Content-Type: application/json" -d '{"question":"smoke"}')
 if [ "$code" = "401" ]; then
-  echo "OK 401 POST $API/agent/run without Baseten key"
+  echo "OK 401 POST $API/agent/run without token"
 else
-  echo "FAIL $code POST $API/agent/run without Baseten key (want 401)"
+  echo "FAIL $code POST $API/agent/run without token (want 401)"
   fail=1
 fi
 

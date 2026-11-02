@@ -5,12 +5,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const values = [
-  process.env.ONYA_DEMO_TOKEN || "",
-  process.env.BASETEN_API_KEY || "",
-].filter(Boolean);
+const values = [process.env.ONYA_DEMO_TOKEN || ""].filter(Boolean);
 if (values.length === 0) {
-  console.error("No dummy secret values set; nothing to check for.");
+  console.error("No dummy secret value set; nothing to check for.");
   process.exit(1);
 }
 
@@ -33,4 +30,4 @@ if (hits.length > 0) {
   console.error(`Demo token value found in client bundle:\n${hits.join("\n")}`);
   process.exit(1);
 }
-console.log("Client bundle contains no demo token or Baseten key value.");
+console.log("Client bundle contains no demo token value.");

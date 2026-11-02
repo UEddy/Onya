@@ -129,7 +129,7 @@ function ChartTooltip({
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0].payload;
   return (
-    <div className="border border-rule bg-surface px-3 py-2 text-[13px]">
+    <div className="card-float px-3 py-2 text-[13px]">
       <p className="font-medium">{point.label}</p>
       <p>Ratio {formatRatio(point.ratio)}</p>
       <p>Without projected savings {formatRatio(point.without)}</p>
@@ -145,7 +145,13 @@ type LabelProps = {
   payload?: HeadroomPoint;
 };
 
-export function HeadroomChart({ points }: { points: HeadroomPoint[] }) {
+export function HeadroomChart({
+  points,
+  height = 320,
+}: {
+  points: HeadroomPoint[];
+  height?: number;
+}) {
   const { theme } = useTheme();
   const colors = PALETTE[theme];
 
@@ -207,7 +213,7 @@ export function HeadroomChart({ points }: { points: HeadroomPoint[] }) {
           fill={fill}
           fontSize={12}
           paintOrder="stroke"
-          stroke={colors.page}
+          stroke={colors.surface}
           strokeWidth={4}
           strokeLinejoin="round"
         >
@@ -224,7 +230,7 @@ export function HeadroomChart({ points }: { points: HeadroomPoint[] }) {
 
   return (
     <figure>
-      <div className="h-[320px] w-full" role="img" aria-label={ariaSummary(points)}>
+      <div className="w-full" style={{ height }} role="img" aria-label={ariaSummary(points)}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 28, right: 16, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={colors.rule} vertical={false} />
@@ -244,7 +250,10 @@ export function HeadroomChart({ points }: { points: HeadroomPoint[] }) {
               tickFormatter={(v: number) => `${v.toFixed(2)}x`}
               width={64}
             />
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip
+              content={<ChartTooltip />}
+              cursor={{ stroke: colors.rule, strokeWidth: 1 }}
+            />
             <Line
               type="stepAfter"
               dataKey="limit"

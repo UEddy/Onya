@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from textify import html_to_text  # noqa: E402
+from runtime_paths import overlay_root  # noqa: E402
 
 urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
 
@@ -24,6 +25,38 @@ if not SEC_USER_AGENT:
 
 RAW_DIR = Path("data/raw")
 CACHE_DIR = Path("data/cache")
+
+
+def _overlay_dir(name):
+    """Writable overlay subdir (production), or None locally."""
+    overlay = overlay_root()
+    if overlay is None:
+        return None
+    return overlay / name
+
+
+def _read_first(bundled_dir, filename):
+    """Bundled file first, then the overlay copy; None when absent."""
+    overlay = _overlay_dir(bundled_dir.name)
+    bases = [bundled_dir, *([overlay] if overlay is not None else [])]
+    for base in bases:
+        try:
+            candidate = base / filename
+        except (TypeError, ValueError):
+            continue
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def _write_target(bundled_dir, filename):
+    """Overlay file in production, bundled path locally."""
+    overlay = _overlay_dir(bundled_dir.name)
+    base = overlay if overlay is not None else bundled_dir
+    return base / filename
 
 FILES = [
     (
@@ -65,9 +98,10 @@ FETCH_RETRY_DELAYS = (5, 15, 30)
 
 
 def fetch(url, filename):
-    dest = RAW_DIR / filename
-    if dest.exists():
-        return dest
+    cached = _read_first(RAW_DIR, filename)
+    if cached is not None:
+        return cached
+    dest = _write_target(RAW_DIR, filename)
     headers = {"User-Agent": SEC_USER_AGENT}
     for attempt in range(len(FETCH_RETRY_DELAYS) + 1):
         try:
@@ -179,6 +213,25 @@ def _accession_forms(accession):
     return nodash, dashed
 
 
+def _registry_cik(ticker):
+    """CIK from the local registry (covers delisted tickers), or None."""
+    try:
+        registry_path = (Path(__file__).resolve().parent.parent
+                         / "data" / "companies.json")
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(registry, dict):
+        return None
+    info = registry.get(str(ticker).strip().upper())
+    if isinstance(info, dict) and info.get("cik"):
+        try:
+            return _cik_10(info["cik"])
+        except ValueError:
+            return None
+    return None
+
+
 def get_cik(ticker_or_cik):
     """Return the 10-digit zero-padded CIK for a ticker symbol or numeric CIK."""
     s = str(ticker_or_cik).strip()
@@ -194,6 +247,11 @@ def get_cik(ticker_or_cik):
         symbol = entry.get("ticker")
         if isinstance(symbol, str) and symbol.strip().upper() == want:
             return _cik_10(entry.get("cik_str", ""))
+    # Delisted tickers vanish from the SEC list; the local registry
+    # still maps them, so a cached company keeps resolving offline.
+    fallback = _registry_cik(s)
+    if fallback is not None:
+        return fallback
     raise ValueError(
         f"Unknown ticker {ticker_or_cik!r}: company may be delisted; "
         "pass the CIK instead."
@@ -597,8 +655,31 @@ def _as_of_str(as_of):
     return str(as_of).strip()[:10]
 
 
+def _within_cutoff(cached, cutoff):
+    """Cached selection re-checked against cutoff (no cutoff: as stored).
+
+    Returns (base, amendments) with every filing dated on/before the
+    cutoff; base None when the cached base postdates it, forcing a
+    fresh discovery instead of a hindsight leak.
+    """
+    base, amendments = cached
+    if not cutoff:
+        return base, list(amendments or [])
+    if base is not None and (base.get("filingDate") or "") > cutoff:
+        return None, []
+    kept = [a for a in (amendments or [])
+            if (a.get("filingDate") or "") <= cutoff]
+    return base, kept
+
+
 def _select_cache_path(cik10, cutoff):
-    return CACHE_DIR / f"select_{cik10}_{cutoff or 'latest'}.json"
+    return _write_target(
+        CACHE_DIR, f"select_{cik10}_{cutoff or 'latest'}.json")
+
+
+def _select_cache_read(cik10, cutoff):
+    name = f"select_{cik10}_{cutoff or 'latest'}.json"
+    return _read_first(CACHE_DIR, name)
 
 
 def _candidate_for_cache(cand):
@@ -607,8 +688,8 @@ def _candidate_for_cache(cand):
 
 def _load_select_cache(cik10, cutoff):
     """Cached (base, amendments) for a CIK/as_of pair, or None."""
-    path = _select_cache_path(cik10, cutoff)
-    if not path.exists():
+    path = _select_cache_read(cik10, cutoff)
+    if path is None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -622,8 +703,9 @@ def _load_select_cache(cik10, cutoff):
 
 def _save_select_cache(cik10, cutoff, base, amendments):
     try:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        _select_cache_path(cik10, cutoff).write_text(
+        target = _select_cache_path(cik10, cutoff)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
             json.dumps({
                 "cik": cik10,
                 "as_of": cutoff,
@@ -660,7 +742,11 @@ def select_agreement(ticker_or_cik, as_of=None, verbose=False):
     if cik10 is not None:
         cached = _load_select_cache(cik10, cutoff)
         if cached is not None:
-            return cached
+            base, amendments = _within_cutoff(cached, cutoff)
+            if base is not None:
+                return AgreementSelection(base, amendments)
+            # A stale cache must never leak post-cutoff filings:
+            # fall through and rediscover under this cutoff.
     cands = find_credit_agreements(ticker_or_cik, verbose=verbose)
     if cutoff:
         cands = [c for c in cands if (c.get("filingDate") or "") <= cutoff]
