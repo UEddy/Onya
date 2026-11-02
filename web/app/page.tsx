@@ -278,20 +278,32 @@ export default function LandingPage() {
           <StatusMark tone={tone} word={word} />
         </>
       );
-      return c.ticker === "SNBR" && !hidden ? (
-        <li key={c.ticker} className="shrink-0">
-          <Link
-            href="/app/company/SNBR"
-            className="flex items-center gap-3 rounded-full border border-hairline bg-surface px-4 py-2 text-[13px] shadow-[0_1px_2px_var(--shadow-soft)] transition-colors hover:bg-inset"
-          >
+      const key = `${hidden ? "copy-" : ""}${c.ticker}`;
+      if (c.ticker === "SNBR") {
+        const pill =
+          "flex items-center gap-3 rounded-full border border-hairline bg-surface px-4 py-2 text-[13px] shadow-[0_1px_2px_var(--shadow-soft)] transition-colors hover:bg-inset";
+        const inner = (
+          <>
             {body}
             <span className="text-ink-muted">Read the case &rarr;</span>
-          </Link>
-        </li>
-      ) : (
+          </>
+        );
+        return (
+          <li key={key} className="shrink-0 pr-3">
+            {hidden ? (
+              <span className={pill}>{inner}</span>
+            ) : (
+              <Link href="/app/company/SNBR" className={pill}>
+                {inner}
+              </Link>
+            )}
+          </li>
+        );
+      }
+      return (
         <li
-          key={`${hidden ? "copy-" : ""}${c.ticker}`}
-          className="flex shrink-0 items-center gap-3 px-4 py-2 text-[13px]"
+          key={key}
+          className="flex shrink-0 items-center gap-3 py-2 pl-4 pr-7 text-[13px]"
         >
           {body}
         </li>
@@ -335,23 +347,37 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="relative pb-24 pt-6 sm:pb-20 lg:pl-14">
+        <div className="relative pb-24 pt-14 lg:pl-14">
           <div
-            className="card enter grain overflow-hidden p-4 pb-20 sm:p-6 sm:pb-16"
+            className="card enter grain overflow-hidden p-4 sm:p-6"
             style={{ ["--reveal-delay" as string]: "120ms" }}
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pr-2">
-              <p className="eyebrow">SNBR / Net leverage</p>
-              <p className="hidden text-[12px] text-ink-muted sm:block">
-                Ratio per quarter against the covenant limit
-              </p>
-            </div>
+            <p className="eyebrow">SNBR / Net leverage</p>
             <div className="mt-4">
               {points ? (
                 <HeadroomChart points={points} height={260} />
               ) : (
                 <ChartSkeleton height={260} />
               )}
+            </div>
+            <div className="flex h-[96px] items-end justify-end sm:pl-[270px]">
+              <ul
+                aria-label="Chart key"
+                className="hidden flex-wrap justify-end gap-x-4 gap-y-1 text-[12px] text-ink-muted sm:flex"
+              >
+                <li className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="inline-block h-0.5 w-4 rounded-full bg-ink" />
+                  Ratio
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="inline-block w-4 border-t-[1.5px] border-dashed border-ink-muted" />
+                  Without projected savings
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span aria-hidden="true" className="inline-block h-0.5 w-4 rounded-full bg-ink-muted" />
+                  Covenant limit
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -399,7 +425,7 @@ export default function LandingPage() {
 
           {projection && (
             <div
-              className="card-float enter pop-out absolute right-3 top-0 z-10 max-w-[230px] px-4 py-3"
+              className="card-float enter pop-out absolute right-4 top-0 z-10 max-w-[230px] px-4 py-3"
               style={{
                 ["--reveal-delay" as string]: "760ms",
                 ["--pop-x" as string]: "18px",
@@ -429,7 +455,7 @@ export default function LandingPage() {
             Demo watchlist: {companies.length} public borrowers
           </p>
           <div className="marquee mt-5" style={{ ["--marquee-duration" as string]: "60s" }}>
-            <ul className="marquee-track items-center gap-2">
+            <ul className="marquee-track items-center">
               {tickerItems(false)}
               <li aria-hidden="true" className="contents">
                 <ul className="contents">{tickerItems(true)}</ul>

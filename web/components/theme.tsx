@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -73,17 +74,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const noopSubscribe = () => () => {};
+
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  // The server cannot see the stored theme, so the label waits for the
+  // client; otherwise dark mode fails hydration and the page re-renders.
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
   const next = theme === "dark" ? "light" : "dark";
   return (
     <button
       type="button"
       onClick={toggle}
-      aria-label={`Use ${next} mode`}
+      aria-label={mounted ? `Use ${next} mode` : "Switch theme"}
       className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[12px] text-ink-muted transition-colors hover:bg-[var(--hairline)] hover:text-ink"
     >
-      {theme === "dark" ? "Light" : "Dark"}
+      {!mounted ? "Theme" : theme === "dark" ? "Light" : "Dark"}
     </button>
   );
 }

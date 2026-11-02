@@ -6,8 +6,10 @@ import { useEffect, useState } from "react";
 import {
   ErrorLine,
   LoadingLine,
-  StatusMark,
+  Panel,
+  StatusPill,
 } from "../../../components/site";
+import { Reveal } from "../../../components/fade-up";
 import {
   apiGet,
   formatPeriod,
@@ -80,7 +82,7 @@ export default function HomePage() {
   const ready = companies !== null && backtest !== null;
 
   return (
-    <div className="pb-8">
+    <div className="pb-10">
       {failed && (
         <ErrorLine
           title="The data service is waking up."
@@ -95,35 +97,37 @@ export default function HomePage() {
       )}
 
       {!failed && ready && (
-        <>
-          <section aria-label="Watchlist" id="watchlist" className="scroll-mt-4 border-b border-rule py-8">
-            <p className="text-[13px] text-ink-muted">
-              {companies.length} borrowers, breaches first, then tightest
-              headroom first
-            </p>
+        <div className="space-y-5 pt-6">
+          <section aria-label="Watchlist" id="watchlist" className="scroll-mt-24 space-y-5">
             {!noticeDismissed && companies && (
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 border border-rule bg-surface px-4 py-3 text-[15px]">
-                <p>
+              <div
+                className="enter flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl px-5 py-3.5 text-[15px] shadow-[0_10px_24px_-16px_var(--shadow-float)]"
+                style={{
+                  background: "var(--banner-bg)",
+                  color: "var(--banner-ink)",
+                }}
+              >
+                <p className="min-w-0 flex-1 basis-[420px]">
                   This is a demo portfolio of {companies.length} public
                   borrowers. Sleep Number is fully worked: open it to trace
                   each figure to its filing, or run the agent.
                 </p>
                 <Link
                   href="/app/company/SNBR"
-                  className="underline decoration-rule underline-offset-4 hover:decoration-ink"
+                  className="font-medium underline decoration-current/40 underline-offset-4 hover:decoration-current"
                 >
                   Open Sleep Number
                 </Link>
                 <Link
                   href="/app/agent"
-                  className="underline decoration-rule underline-offset-4 hover:decoration-ink"
+                  className="font-medium underline decoration-current/40 underline-offset-4 hover:decoration-current"
                 >
                   Run the agent
                 </Link>
                 <button
                   type="button"
                   onClick={dismissNotice}
-                  className="text-ink-muted underline decoration-rule underline-offset-4 hover:text-ink"
+                  className="rounded-full px-2.5 py-0.5 text-[13px] hover:bg-black/10"
                 >
                   Dismiss
                 </button>
@@ -142,117 +146,132 @@ export default function HomePage() {
               const breachCount = (companies ?? []).filter(
                 (c) => c.status === "fail",
               ).length;
+              const tiles = [
+                {
+                  big: String(companies.length),
+                  text: "borrowers on the watchlist",
+                },
+                {
+                  big: String(breachCount),
+                  text: "borrowers in breach",
+                  tone: "breach" as const,
+                },
+                closest
+                  ? {
+                      big: `${closest.ticker} ${formatSignedRatio(closest.headroom)}`,
+                      text: "closest to its limit",
+                      tone: "watch" as const,
+                    }
+                  : {
+                      big: "",
+                      text: "No passing borrower has a disclosed headroom",
+                    },
+              ];
               return (
-                <div className="mt-6 grid gap-4 border-t border-rule pt-4 sm:grid-cols-3">
-                  <p>
-                    <span className="text-[22px] font-semibold">
-                      {companies.length}
-                    </span>{" "}
-                    borrowers on the watchlist
-                  </p>
-                  <p>
-                    <span className="text-[22px] font-semibold">
-                      {breachCount}
-                    </span>{" "}
-                    borrowers in breach
-                  </p>
-                  <p>
-                    {closest ? (
-                      <>
-                        <span className="text-[22px] font-semibold">
-                          {closest.ticker}{" "}
-                          {formatSignedRatio(closest.headroom)}
-                        </span>{" "}
-                        closest to its limit
-                      </>
-                    ) : (
-                      "No passing borrower has a disclosed headroom"
-                    )}
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {tiles.map((tile, i) => (
+                    <Reveal key={tile.text} onLoad delay={i * 90}>
+                      <div className="card lift grain h-full overflow-hidden p-5 sm:p-6">
+                        <p className="flex items-center gap-2 text-[36px] font-semibold leading-none tracking-tight">
+                          {tile.tone && (
+                            <span
+                              aria-hidden="true"
+                              className={`dot ${tile.tone === "breach" ? "bg-breach" : "bg-watch"}`}
+                            />
+                          )}
+                          {tile.big}
+                        </p>
+                        <p className="mt-3 text-[15px] text-ink-muted">{tile.text}</p>
+                      </div>
+                    </Reveal>
+                  ))}
                 </div>
               );
             })()}
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-left text-[13px]">
-                <thead>
-                  <tr className="border-b border-rule text-ink-muted">
-                    <th scope="col" className="py-2 pr-4 font-medium">Ticker</th>
-                    <th scope="col" className="py-2 pr-4 font-medium">Company</th>
-                    <th scope="col" className="py-2 pr-4 font-medium">Covenant</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Ratio</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Limit</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Headroom</th>
-                    <th scope="col" className="py-2 pr-4 font-medium">As of</th>
-                    <th scope="col" className="py-2 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(companies ?? []).map((c) => {
-                    const { tone, word } = toneFor(c);
-                    return (
-                      <tr
-                        key={c.ticker}
-                        onClick={
-                          c.ticker === "SNBR"
-                            ? () => router.push("/app/company/SNBR")
-                            : undefined
-                        }
-                        className={`border-b border-rule last:border-0 ${
-                          c.ticker === "SNBR" ? "cursor-pointer" : ""
-                        }`}
-                      >
-                        <td className="py-2 pr-4 font-medium">
-                          {c.ticker === "SNBR" ? (
-                            <Link
-                              href="/app/company/SNBR"
-                              className="underline decoration-rule underline-offset-4 hover:decoration-ink"
-                            >
-                              {c.ticker}
-                            </Link>
-                          ) : (
-                            c.ticker
-                          )}
-                        </td>
-                        <td className="py-2 pr-4">{c.name}</td>
-                        <td className="py-2 pr-4 text-ink-muted">{c.covenant ?? "Not disclosed"}</td>
-                        <td className="py-2 pr-4 text-right">{ratioCell(c)}</td>
-                        <td className="py-2 pr-4 text-right">{formatRatio(c.threshold)}</td>
-                        <td className="py-2 pr-4 text-right">
-                          {headroomCell(c)}
-                        </td>
-                        <td className="py-2 pr-4 text-ink-muted">
-                          {c.as_of ? formatPeriod(c.as_of) : "Not disclosed"}
-                        </td>
-                        <td className="py-2">
-                          <StatusMark tone={tone} word={word} />
-                        </td>
+            <Reveal onLoad delay={260}>
+              <div className="card overflow-hidden p-2 sm:p-3">
+                <p className="px-3 pb-2 pt-3 text-[13px] text-ink-muted">
+                  {companies.length} borrowers, breaches first, then tightest
+                  headroom first
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-[13px]">
+                    <thead>
+                      <tr className="text-ink-muted">
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Ticker</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Company</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Covenant</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 text-right font-medium">Ratio</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 text-right font-medium">Limit</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 text-right font-medium">Headroom</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">As of</th>
+                        <th scope="col" className="border-b border-hairline px-3 py-2.5 font-medium">Status</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-[13px] text-ink-muted">
-              Sleep Number ratio: 5.06x with maximum projected savings,
-              6.58x without.
-            </p>
+                    </thead>
+                    <tbody>
+                      {(companies ?? []).map((c) => {
+                        const { tone, word } = toneFor(c);
+                        const linked = c.ticker === "SNBR";
+                        return (
+                          <tr
+                            key={c.ticker}
+                            onClick={
+                              linked
+                                ? () => router.push("/app/company/SNBR")
+                                : undefined
+                            }
+                            className={`group ${linked ? "cursor-pointer" : ""}`}
+                          >
+                            <td className={`border-b border-hairline px-3 py-3 font-medium group-last:border-0 ${linked ? "rounded-l-xl group-hover:bg-inset" : ""}`}>
+                              {linked ? (
+                                <Link
+                                  href="/app/company/SNBR"
+                                  className="text-link"
+                                >
+                                  {c.ticker}
+                                </Link>
+                              ) : (
+                                c.ticker
+                              )}
+                            </td>
+                            <td className={`border-b border-hairline px-3 py-3 group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>{c.name}</td>
+                            <td className={`border-b border-hairline px-3 py-3 text-ink-muted group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>{c.covenant ?? "Not disclosed"}</td>
+                            <td className={`border-b border-hairline px-3 py-3 text-right group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>{ratioCell(c)}</td>
+                            <td className={`border-b border-hairline px-3 py-3 text-right group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>{formatRatio(c.threshold)}</td>
+                            <td className={`border-b border-hairline px-3 py-3 text-right group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>
+                              {headroomCell(c)}
+                            </td>
+                            <td className={`border-b border-hairline px-3 py-3 text-ink-muted group-last:border-0 ${linked ? "group-hover:bg-inset" : ""}`}>
+                              {c.as_of ? formatPeriod(c.as_of) : "Not disclosed"}
+                            </td>
+                            <td className={`border-b border-hairline px-3 py-3 group-last:border-0 ${linked ? "rounded-r-xl group-hover:bg-inset" : ""}`}>
+                              <StatusPill tone={tone} word={word} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="px-3 pb-3 pt-2 text-[13px] text-ink-muted">
+                  Sleep Number ratio: 5.06x with maximum projected savings,
+                  6.58x without.
+                </p>
+              </div>
+            </Reveal>
           </section>
 
-          <section aria-labelledby="accuracy-heading" className="py-8">
-            <h2 id="accuracy-heading" className="text-[22px] font-semibold tracking-tight">
-              Accuracy
-            </h2>
-            <p className="mt-2 max-w-[75ch] text-[15px]">
-              {accuracySentence(backtest)}{" "}
-              <Link
-                href="/app/accuracy"
-                className="underline decoration-rule underline-offset-4 hover:decoration-ink"
-              >
+          <Reveal>
+            <Panel id="accuracy" title="Accuracy">
+              <p className="max-w-[75ch] text-[15px]">
+                {accuracySentence(backtest)}
+              </p>
+              <Link href="/app/accuracy" className="btn btn-secondary btn-sm mt-4">
                 How accuracy is measured
               </Link>
-            </p>
-          </section>
-        </>
+            </Panel>
+          </Reveal>
+        </div>
       )}
     </div>
   );

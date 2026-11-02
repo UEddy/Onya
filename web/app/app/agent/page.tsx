@@ -257,9 +257,12 @@ export default function AgentPage() {
   const currentStep = runningSentence(steps);
 
   return (
-    <div className="pb-8">
-      <div className="border-b border-rule py-8">
-        <h1 className="text-[30px] font-semibold tracking-tight">Agent</h1>
+    <div className="space-y-5 pb-10 pt-6">
+      <div className="enter">
+        <p className="eyebrow">Muse Spark agent</p>
+        <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-tight sm:text-[36px]">
+          Agent
+        </h1>
         <p className="mt-2 max-w-[75ch] text-[17px] text-ink-muted">
           Ask about a borrower and Onya will read the agreement, run the
           numbers, and write up what to do.
@@ -267,74 +270,98 @@ export default function AgentPage() {
       </div>
 
       <form
-        className="no-print border-b border-rule py-8"
+        className="card enter no-print p-2 sm:p-3"
+        style={{ ["--reveal-delay" as string]: "100ms" }}
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
         }}
       >
-        <label htmlFor="agent-question" className="text-[15px] font-medium">
-          What should Onya check
-        </label>
-        <textarea
-          id="agent-question"
-          rows={3}
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          disabled={running}
-          className="mt-2 w-full border border-rule bg-surface p-3 text-[15px] disabled:opacity-60"
-        />
-        <div className="mt-3">
-          <button
-            type="submit"
-            disabled={running || question.trim().length === 0}
-            className="border border-ink px-5 py-2 text-[15px] font-medium disabled:opacity-50"
-          >
-            {running ? "Running the check" : "Run the check"}
-          </button>
+        <div className="card-inset grain p-4 sm:p-5">
+          <label htmlFor="agent-question" className="text-[15px] font-medium">
+            What should Onya check
+          </label>
+          <textarea
+            id="agent-question"
+            rows={3}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            disabled={running}
+            className="mt-3 w-full resize-y rounded-xl border border-hairline bg-surface p-3.5 text-[15px] shadow-[0_1px_2px_var(--shadow-soft)] outline-none transition-shadow focus:shadow-[0_0_0_3px_var(--hairline)] disabled:opacity-60"
+          />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[13px] text-ink-muted">
+              Reads filings dated on or before the test date.
+            </p>
+            <button
+              type="submit"
+              disabled={running || question.trim().length === 0}
+              className="btn btn-primary"
+            >
+              {running && (
+                <span aria-hidden="true" className="dot animate-pulse bg-paper" />
+              )}
+              {running ? "Running the check" : "Run the check"}
+            </button>
+          </div>
         </div>
       </form>
 
       {error && (
-        <div role="alert" className="border-b border-rule py-8">
-          <p className="text-[17px] font-medium">The check did not run.</p>
+        <div role="alert" className="card enter p-6">
+          <p className="flex items-center gap-2 text-[17px] font-medium">
+            <span aria-hidden="true" className="dot bg-watch" />
+            The check did not run.
+          </p>
           <p className="mt-1 max-w-[65ch] text-[15px] text-ink-muted">{error}</p>
-          <button
-            type="button"
-            onClick={() => void submit()}
-            className="mt-3 text-[15px] underline decoration-rule underline-offset-4 hover:text-ink"
-          >
-            Try again
-          </button>
-          {error.includes("See a saved run") && (
-            <p className="mt-2 text-[15px]">
-              <Link
-                href="/#how-it-works"
-                className="underline decoration-rule underline-offset-4 hover:decoration-ink"
-              >
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void submit()}
+              className="btn btn-secondary btn-sm"
+            >
+              Try again
+            </button>
+            {error.includes("See a saved run") && (
+              <Link href="/#how-it-works" className="text-link text-[15px]">
                 See a saved run
               </Link>
-            </p>
-          )}
+            )}
+          </div>
         </div>
       )}
 
       {(running || steps.length > 0) && (
-        <section aria-label="Progress" className="no-print border-b border-rule py-8">
-          <h2 className="text-[22px] font-semibold tracking-tight">Progress</h2>
-          <ol className="mt-4 space-y-2">
+        <section
+          aria-label="Progress"
+          className="enter no-print grain relative overflow-hidden rounded-[22px] p-5 sm:p-7"
+          style={{
+            backgroundColor: "#15222C",
+            color: "#E6ECE9",
+            boxShadow: "0 30px 70px -30px var(--shadow-float)",
+          }}
+        >
+          <h2 className="text-[20px] font-semibold tracking-tight">Progress</h2>
+          <ol className="mt-4 space-y-2.5">
             {steps.map((step, i) => (
               <li
                 key={`${step.step ?? i}-${step.timestamp ?? i}`}
-                className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 text-[15px]"
+                className="enter grid grid-cols-[72px_minmax(0,1fr)] gap-x-4 text-[15px]"
               >
-                <span className="text-ink-muted">{formatClock(step.timestamp)}</span>
+                <span className="font-mono text-[13px]" style={{ color: "#9AA9A3" }}>
+                  {formatClock(step.timestamp)}
+                </span>
                 <span>{stepSentence(step)}</span>
               </li>
             ))}
           </ol>
           {running && (
-            <p role="status" className="mt-4 text-[15px] text-ink-muted">
+            <p
+              role="status"
+              className="mt-5 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px]"
+              style={{ backgroundColor: "#16232C", border: "1px solid #2A3A43", color: "#9AA9A3" }}
+            >
+              <span aria-hidden="true" className="dot animate-pulse" style={{ backgroundColor: "#D49A3E" }} />
               {stalledStep
                 ? `Still working on: ${stalledStep.charAt(0).toLowerCase()}${stalledStep.slice(1)}`
                 : `${currentStep}. ${elapsed} seconds elapsed.`}
@@ -344,7 +371,7 @@ export default function AgentPage() {
       )}
 
       {finished && (run.status === "failed" || run.status === "error") && (
-        <div role="alert" className="py-8">
+        <div role="alert" className="card enter p-6">
           <p className="text-[17px] font-medium">The check failed.</p>
           <p className="mt-1 max-w-[65ch] text-[15px] text-ink-muted">
             {run.error ?? "Something went wrong while running the check."}
@@ -352,7 +379,7 @@ export default function AgentPage() {
           <button
             type="button"
             onClick={() => void submit()}
-            className="mt-3 text-[15px] underline decoration-rule underline-offset-4 hover:text-ink"
+            className="btn btn-secondary btn-sm mt-4"
           >
             Try again
           </button>
@@ -360,7 +387,11 @@ export default function AgentPage() {
       )}
 
       {finished && run.status === "done" && run.answer && (
-        <section aria-label="Memo" className="memo-print-area py-8">
+        <section
+          aria-label="Memo"
+          className="card enter pop-out memo-print-area p-5 sm:p-8"
+          style={{ ["--pop-x" as string]: "0px" }}
+        >
           <h2 className="text-[22px] font-semibold tracking-tight">Memo</h2>
           <MemoView
             answer={run.answer}

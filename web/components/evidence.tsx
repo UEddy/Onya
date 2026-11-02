@@ -107,7 +107,7 @@ export function EvidencePanel({
         {evidence.cap?.quote && (
           <div>
             <p className="text-[13px] font-medium">Shared cap</p>
-            <blockquote className="quote mt-2 border-l-2 border-rule pl-3 text-[15px]">
+            <blockquote className="quote mt-2 rounded-r-lg border-l-2 border-rule bg-inset py-2 pl-3 pr-3 text-[15px]">
               {evidence.cap.quote}
             </blockquote>
           </div>
@@ -125,7 +125,7 @@ export function EvidencePanel({
               <p className="mt-0.5 text-[13px] text-ink-muted">{clause.label}</p>
             )}
             {clause.quote && (
-              <blockquote className="quote mt-2 border-l-2 border-rule pl-3 text-[15px]">
+              <blockquote className="quote mt-2 rounded-r-lg border-l-2 border-rule bg-inset py-2 pl-3 pr-3 text-[15px]">
                 {clause.quote}
               </blockquote>
             )}
@@ -173,7 +173,7 @@ export function EvidencePanel({
           </p>
           <p className="mt-0.5 text-[13px] text-ink-muted">{match.line}</p>
           {match.quote && (
-            <blockquote className="quote mt-2 border-l-2 border-rule pl-3 text-[15px]">
+            <blockquote className="quote mt-2 rounded-r-lg border-l-2 border-rule bg-inset py-2 pl-3 pr-3 text-[15px]">
               {match.quote}
               <span className="text-[13px] text-ink-muted"> thousand</span>
             </blockquote>

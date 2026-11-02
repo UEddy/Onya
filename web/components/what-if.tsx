@@ -26,10 +26,10 @@ function Slider({
   onChange: (value: number) => void;
 }) {
   return (
-    <div>
+    <div className="card-inset p-4">
       <div className="flex min-h-10 items-baseline justify-between gap-4">
         <label className="text-[15px] font-medium">{label}</label>
-        <span className="text-[15px]">{formatMoney(value)}</span>
+        <span className="index-label text-[13px]">{formatMoney(value)}</span>
       </div>
       <input
         type="range"
@@ -82,11 +82,23 @@ export default function WhatIfPanel({ detail }: { detail: PeriodDetail }) {
   };
   return (
     <div>
-      <p className="max-w-[75ch] text-[15px]">
-        What-if. Change the inputs to see the effect. This is not a covenant
-        test.
-      </p>
-      <div className="mt-5 grid gap-5 sm:grid-cols-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-[75ch] text-[15px]">
+          <span className="font-semibold">What-if.</span>{" "}
+          <span className="text-ink-muted">
+            Change the inputs to see the effect. This is not a covenant
+            test.
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={reset}
+          className="btn btn-secondary btn-sm"
+        >
+          Reset
+        </button>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <Slider
           label="Debt reduction"
           value={debtReduction}
@@ -112,18 +124,9 @@ export default function WhatIfPanel({ detail }: { detail: PeriodDetail }) {
           onChange={setSavings}
         />
       </div>
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={reset}
-          className="border border-ink px-4 py-2 text-[15px] font-medium"
-        >
-          Reset
-        </button>
-      </div>
-      <div className="mt-6 grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="text-[30px] font-semibold leading-none">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="card-float p-5">
+          <p className="text-[36px] font-semibold leading-none tracking-tight">
             {formatRatio(round2(result.net_leverage))}
           </p>
           <p className="mt-2 text-[15px]">Net leverage</p>
@@ -136,8 +139,8 @@ export default function WhatIfPanel({ detail }: { detail: PeriodDetail }) {
             />
           </p>
         </div>
-        <div>
-          <p className="text-[30px] font-semibold leading-none">
+        <div className="card-float p-5">
+          <p className="text-[36px] font-semibold leading-none tracking-tight">
             {formatRatio(round2(result.interest_coverage))}
           </p>
           <p className="mt-2 text-[15px]">Interest coverage</p>

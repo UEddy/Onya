@@ -12,8 +12,11 @@ import WhatIfPanel from "./what-if";
 import {
   ErrorLine,
   LoadingLine,
+  Panel,
   StatusMark,
+  StatusPill,
 } from "./site";
+import { Reveal } from "./fade-up";
 import {
   apiGet,
   formatDateLong,
@@ -69,7 +72,7 @@ function VerdictFigure({
   anchorId?: string;
 }) {
   return (
-    <div id={anchorId}>
+    <div id={anchorId} className="card-inset p-5">
       <p className="text-[44px] font-semibold leading-none tracking-tight">
         {formatRatio(verdict.ratio_2dp ?? verdict.ratio)}
       </p>
@@ -90,10 +93,17 @@ export function VerdictBlock({ detail }: { detail: PeriodDetail }) {
     detail.components.find((c) => c.name === "Pro forma cost savings")?.value ?? 0;
   const lev = detail.net_leverage;
   const sortedScenarios = [...scenarios].sort((a, b) => b.savings - a.savings);
+  const headlineTone = headline === "Pass" ? "pass" : headline.startsWith("Passes") ? "watch" : "breach";
   return (
-    <div className="border-t border-rule py-5">
-      <h2 className="text-[22px] font-semibold tracking-tight">{headline}</h2>
-      <div className="mt-5 grid gap-6 sm:grid-cols-2">
+    <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-[22px] font-semibold tracking-tight">{headline}</h2>
+        <StatusPill
+          tone={headlineTone}
+          word={headlineTone === "pass" ? "Pass" : headlineTone === "watch" ? "Watch" : "Breach"}
+        />
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {sortedScenarios.length > 0 ? (
           sortedScenarios.map((s) => (
             <VerdictFigure
@@ -120,7 +130,7 @@ export function VerdictBlock({ detail }: { detail: PeriodDetail }) {
           <VerdictFigure anchorId="fig-net_leverage" verdict={lev} caption="Net leverage" />
         )}
       </div>
-      <p className="mt-5 border-t border-rule pt-3 text-[15px] text-ink-muted">
+      <p className="mt-4 text-[15px] text-ink-muted">
         Interest coverage {formatRatio(detail.interest_coverage.ratio_2dp ?? detail.interest_coverage.ratio)}{" "}
         against at least {formatRatio(detail.interest_coverage.threshold)}. Headroom{" "}
         {formatSignedRatio(detail.interest_coverage.headroom_2dp ?? detail.interest_coverage.headroom)}.
@@ -160,7 +170,7 @@ function ComponentTableRow({
         ? "fig-disallowed"
         : undefined;
   return (
-    <div id={anchorId} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-rule py-2.5 lg:grid-cols-[minmax(0,1fr)_130px_100px_150px]">
+    <div id={anchorId} className={`grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-hairline px-2 py-2.5 transition-colors lg:grid-cols-[minmax(0,1fr)_130px_100px_150px] ${active ? "rounded-lg bg-inset" : ""}`}>
       <span className="text-[15px]">{component.name}</span>
       <span className="text-right">
         <button
@@ -193,7 +203,7 @@ function ComponentTableRow({
 
 function SubtotalRow({ label, value, anchorId }: { label: string; value: number; anchorId?: string }) {
   return (
-    <div id={anchorId} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-rule border-t-2 border-t-ink py-2.5 font-semibold lg:grid-cols-[minmax(0,1fr)_130px_100px_150px]">
+    <div id={anchorId} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-hairline border-t-2 border-t-ink px-2 py-2.5 font-semibold lg:grid-cols-[minmax(0,1fr)_130px_100px_150px]">
       <span className="text-[15px]">{label}</span>
       <span className="text-right text-[15px]">{formatMoney(value)}</span>
       <span />
@@ -204,7 +214,7 @@ function SubtotalRow({ label, value, anchorId }: { label: string; value: number;
 
 function GroupHeading({ children }: { children: string }) {
   return (
-    <h3 className="border-b border-rule pb-2 pt-5 text-[15px] font-medium first:pt-0">
+    <h3 className="eyebrow border-b border-hairline px-2 pb-2 pt-6 first:pt-0">
       {children}
     </h3>
   );
@@ -369,7 +379,7 @@ export function ComponentsSection({ detail }: { detail: PeriodDetail }) {
   return (
     <div className="grid gap-x-8 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div>
-        <div className="hidden grid-cols-[minmax(0,1fr)_130px_100px_150px] gap-x-4 border-b border-rule py-2 text-[13px] text-ink-muted lg:grid">
+        <div className="hidden grid-cols-[minmax(0,1fr)_130px_100px_150px] gap-x-4 border-b border-hairline px-2 py-2 text-[13px] text-ink-muted lg:grid">
           <span>Component</span>
           <span className="text-right">Value</span>
           <span>Source</span>
@@ -385,9 +395,13 @@ export function ComponentsSection({ detail }: { detail: PeriodDetail }) {
         <SubtotalRow anchorId="fig-ebitdar" label="Consolidated EBITDAR" value={detail.ebitdar} />
         {reconciliation.map(renderRow)}
       </div>
-      <aside className="mt-6 self-start lg:sticky lg:top-6 lg:mt-0">
-        <div className="bg-surface p-4">
-          <p className="border-b border-rule pb-2 text-[13px] text-ink-muted">
+      <aside className="mt-6 self-start lg:sticky lg:top-24 lg:mt-0">
+        <div
+          key={`${selected?.name ?? ""}:${build?.label ?? ""}`}
+          className="card-float enter pop-out p-5"
+          style={{ ["--pop-x" as string]: "18px" }}
+        >
+          <p className="eyebrow border-b border-hairline pb-2">
             Evidence
           </p>
           <div className="pt-3">
@@ -408,8 +422,8 @@ function FlagsPanel({ detail }: { detail: PeriodDetail }) {
   const sensitivity = detail.sensitivity_without_proforma ?? null;
 
   return (
-    <div className="space-y-5">
-      <div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="card-inset p-5">
         <h3 className="text-[15px] font-medium">Reconciliation</h3>
         {typeof reconciliation === "string" ? (
           <p className="mt-1 max-w-[75ch] text-[15px] text-ink-muted">
@@ -441,7 +455,7 @@ function FlagsPanel({ detail }: { detail: PeriodDetail }) {
         )}
       </div>
 
-      <div>
+      <div className="card-inset p-5">
         <h3 className="text-[15px] font-medium">
           Data quality warnings ({warnings.length})
         </h3>
@@ -463,7 +477,7 @@ function FlagsPanel({ detail }: { detail: PeriodDetail }) {
         )}
       </div>
 
-      <div>
+      <div className="card-inset p-5">
         <h3 className="text-[15px] font-medium">Unverifiable add-backs</h3>
         {!unverifiable && !sensitivity ? (
           <p className="mt-1 text-[15px] text-ink-muted">
@@ -527,11 +541,11 @@ export function CurePanel({ detail }: { detail: PeriodDetail }) {
       (equity.present === null && equity.found === false) ||
       (equity.present === undefined && equity.found === false));
   return (
-    <div className="space-y-5">
+    <div className="grid gap-4 sm:grid-cols-2">
       {blocks.map(
         ([title, block]) =>
           block && (
-            <div key={title}>
+            <div key={title} className="card-inset p-5">
               <h3 className="text-[15px] font-medium">{title}</h3>
               <p className="mt-1 max-w-[75ch] text-[15px]">
                 <StatusMark
@@ -564,18 +578,18 @@ export function CurePanel({ detail }: { detail: PeriodDetail }) {
           ),
       )}
       {equity && noEquityCure && (
-        <p className="max-w-[75ch] text-[15px]">
+        <p className="max-w-[75ch] text-[15px] sm:col-span-2">
           No equity cure provision was found in the reviewed agreement.
         </p>
       )}
       {equity && !noEquityCure && (
-        <p className="max-w-[75ch] text-[15px] text-ink-muted">
+        <p className="max-w-[75ch] text-[15px] text-ink-muted sm:col-span-2">
           Equity cure provision found in the reviewed agreement
           {equity.section ? `, section ${equity.section}` : ""}.
         </p>
       )}
       {(cure.proforma_scenarios ?? []).map((scenario) => (
-        <div key={scenario.savings}>
+        <div key={scenario.savings} className="card-inset p-5 sm:col-span-2">
           <h3 className="text-[15px] font-medium">
             With {formatShortMoney(scenario.savings)} of projected savings
           </h3>
@@ -627,12 +641,14 @@ export function ProjectionPanel({ detail }: { detail: PeriodDetail }) {
         {sides.map((side) => {
           const cushion = projection.cushion?.[side] ?? null;
           return (
-            <div key={side} className="border-t border-rule pt-3">
+            <div key={side} className="card-inset p-5">
               <h3 className="text-[15px] font-medium">
                 {side === "onya" ? "Onya view" : "Company view"}
               </h3>
-              <p className="mt-1 text-[15px]">
-                {formatRatio(projection.projections[side].ratio_2dp)}{" "}
+              <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]">
+                <span className="text-[30px] font-semibold leading-none tracking-tight">
+                  {formatRatio(projection.projections[side].ratio_2dp)}
+                </span>
                 <StatusMark
                   tone={projection.projections[side].pass ? "pass" : "breach"}
                   word={projection.projections[side].pass ? "Pass" : "Projected breach"}
@@ -755,30 +771,54 @@ export default function CaseView({ ticker }: { ticker: string }) {
 
   if (ticker !== "SNBR") {
     return (
-      <div className="py-8">
+      <div className="card enter mt-6 p-6 sm:p-8">
         <h1 className="text-[30px] font-semibold tracking-tight">
           Only Sleep Number is covered.
         </h1>
         <p className="mt-2 max-w-[65ch] text-[15px] text-ink-muted">
-          Onya has a full case file for Sleep Number so far.{" "}
-          <Link
-            href="/app/company/SNBR"
-            className="underline decoration-rule underline-offset-4 hover:decoration-ink"
-          >
-            Open the Sleep Number case
-          </Link>
+          Onya has a full case file for Sleep Number so far.
         </p>
+        <Link href="/app/company/SNBR" className="btn btn-primary mt-5">
+          Open the Sleep Number case
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="pb-8">
-      <div className="border-b border-rule py-8">
-        <h1 className="text-[30px] font-semibold tracking-tight">Sleep Number</h1>
-        <p className="mt-2 text-[15px] text-ink-muted">
-          SNBR, quarter ended {selected ? formatPeriod(selected) : ""}
-        </p>
+    <div className="space-y-5 pb-10 pt-6">
+      <div className="enter flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div>
+          <p className="eyebrow">SNBR</p>
+          <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-tight sm:text-[36px]">
+            Sleep Number
+          </h1>
+          <p className="mt-1 text-[15px] text-ink-muted">
+            SNBR, quarter ended {selected ? formatPeriod(selected) : ""}
+          </p>
+        </div>
+        {!failed && periods !== null && (
+          <div
+            role="tablist"
+            aria-label="Quarters"
+            className="pill-tabs card-inset max-w-full p-1"
+          >
+            {periods.map((period) => {
+              const active = period.period_end === selected;
+              return (
+                <button
+                  key={period.period_end}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setSelected(period.period_end)}
+                  className="pill-tab text-[14px] aria-selected:bg-surface"
+                >
+                  {formatPeriod(period.period_end)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {failed && (
@@ -796,90 +836,64 @@ export default function CaseView({ ticker }: { ticker: string }) {
 
       {!failed && periods !== null && (
         <>
-          <div role="tablist" aria-label="Quarters" className="flex gap-x-6 border-b border-rule">
-            {periods.map((period) => {
-              const active = period.period_end === selected;
-              return (
-                <button
-                  key={period.period_end}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setSelected(period.period_end)}
-                  className={`border-b-2 py-3 text-[15px] ${
-                    active
-                      ? "border-ink font-semibold"
-                      : "border-transparent text-ink-muted hover:text-ink"
-                  }`}
-                >
-                  {formatPeriod(period.period_end)}
-                </button>
-              );
-            })}
-          </div>
-
           {points && points.length > 0 && (
-            <section aria-label="Headroom chart" className="border-b border-rule py-8">
-              <p className="text-[13px] text-ink-muted">
-                Net leverage ratio per quarter against the covenant limit
-              </p>
-              <div className="mt-4">
-                <HeadroomChart points={points} />
-              </div>
-            </section>
+            <Reveal onLoad delay={80}>
+              <section aria-label="Headroom chart" className="card grain overflow-hidden p-5 sm:p-7">
+                <p className="eyebrow">
+                  Net leverage ratio per quarter against the covenant limit
+                </p>
+                <div className="mt-4">
+                  <HeadroomChart points={points} />
+                </div>
+              </section>
+            </Reveal>
           )}
 
           {!visibleDetail && <LoadingLine text="Reading this quarter." />}
 
           {visibleDetail && (
-            <div role="tabpanel">
-              <section aria-label="Verdict">
-                <VerdictBlock detail={visibleDetail} />
-              </section>
-              <section aria-label="What-if" className="border-t border-rule py-8">
-                <WhatIfPanel detail={visibleDetail} />
-              </section>
+            <div role="tabpanel" className="space-y-5">
+              <Reveal onLoad delay={160}>
+                <section aria-label="Verdict" className="card p-5 sm:p-7">
+                  <VerdictBlock detail={visibleDetail} />
+                </section>
+              </Reveal>
+              <Reveal>
+                <section aria-label="What-if" className="card p-5 sm:p-7">
+                  <WhatIfPanel detail={visibleDetail} />
+                </section>
+              </Reveal>
 
-              <section aria-labelledby="components-heading" className="border-t border-rule py-8">
-                <h2 id="components-heading" className="text-[22px] font-semibold tracking-tight">
-                  Components
-                </h2>
-                <p className="mt-1 max-w-[75ch] text-[13px] text-ink-muted">
-                  Select any figure or source to read its evidence in the margin.
-                </p>
-                <div className="mt-4">
+              <Reveal>
+                <Panel
+                  id="components"
+                  title="Components"
+                  description="Select any figure or source to read its evidence in the margin."
+                >
                   <ComponentsSection
                     key={visibleDetail.period_end}
                     detail={visibleDetail}
                   />
-                </div>
-              </section>
+                </Panel>
+              </Reveal>
 
-              <section aria-labelledby="flags-heading" className="border-t border-rule py-8">
-                <h2 id="flags-heading" className="text-[22px] font-semibold tracking-tight">
-                  Flags
-                </h2>
-                <div className="mt-4">
+              <Reveal>
+                <Panel id="flags" title="Flags">
                   <FlagsPanel detail={visibleDetail} />
-                </div>
-              </section>
+                </Panel>
+              </Reveal>
 
-              <section aria-labelledby="cure-heading" className="border-t border-rule py-8">
-                <h2 id="cure-heading" className="text-[22px] font-semibold tracking-tight">
-                  Cure
-                </h2>
-                <div className="mt-4">
+              <Reveal>
+                <Panel id="cure" title="Cure">
                   <CurePanel detail={visibleDetail} />
-                </div>
-              </section>
+                </Panel>
+              </Reveal>
 
-              <section aria-labelledby="projection-heading" className="py-8">
-                <h2 id="projection-heading" className="text-[22px] font-semibold tracking-tight">
-                  Projection
-                </h2>
-                <div className="mt-4">
+              <Reveal>
+                <Panel id="projection" title="Projection">
                   <ProjectionPanel detail={visibleDetail} />
-                </div>
-              </section>
+                </Panel>
+              </Reveal>
             </div>
           )}
         </>

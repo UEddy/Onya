@@ -105,7 +105,7 @@ export function MemoView({
     const heading = isHeading(line);
     if (heading) {
       blocks.push(
-        <h3 key={key++} className="pt-2 text-[17px] font-semibold tracking-tight">
+        <h3 key={key++} className="pt-3 text-[17px] font-semibold tracking-tight">
           {heading}
         </h3>,
       );
@@ -126,7 +126,7 @@ export function MemoView({
       if (rows.length > 0) {
         const [head, ...body] = rows;
         blocks.push(
-          <div key={key++} className="overflow-x-auto">
+          <div key={key++} className="card-inset overflow-x-auto px-4 py-2">
             <table className="w-full border-collapse text-left text-[13px]">
               <thead>
                 <tr className="border-b border-rule text-ink-muted">
@@ -139,7 +139,7 @@ export function MemoView({
               </thead>
               <tbody>
                 {body.map((row, ri) => (
-                  <tr key={ri} className="border-b border-rule last:border-0">
+                  <tr key={ri} className="border-b border-hairline last:border-0">
                     {row.map((cell, ci) => (
                       <td key={ci} className="py-2 pr-4">
                         {cell}
@@ -280,21 +280,21 @@ export function MemoActions({
         <button
           type="button"
           onClick={() => void copy()}
-          className="border border-ink px-4 py-2 text-[15px] font-medium"
+          className="btn btn-primary btn-sm"
         >
           Copy memo
         </button>
         <button
           type="button"
           onClick={download}
-          className="border border-ink px-4 py-2 text-[15px] font-medium"
+          className="btn btn-secondary btn-sm"
         >
           Download
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="border border-ink px-4 py-2 text-[15px] font-medium"
+          className="btn btn-secondary btn-sm"
         >
           Print
         </button>
