@@ -1,0 +1,17 @@
+name: Keep the API warm
+
+# Disabled by default: run it by hand from the Actions tab. To ping on
+# a schedule, uncomment the schedule block below (free Spaces sleep
+# after a period without traffic; a ping every 30 minutes keeps the
+# API awake during the hours that matter).
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "*/30 * * * *"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the Space health endpoint
+        run: curl -fsS https://placeholder-owner-onya-api.hf.space/health

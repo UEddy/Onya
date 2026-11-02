@@ -239,11 +239,10 @@ export default function LandingPage() {
 
       {failed && (
         <ErrorLine
-          title="The data did not load."
+          title="The data service is waking up."
           onRetry={() => setAttempt((n) => n + 1)}
         >
-          Onya could not reach its data service. Check that the API is running
-          on port 8000, then try again.
+          This can take up to a minute. Then try again.
         </ErrorLine>
       )}
       {!failed && !ready && (

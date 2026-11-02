@@ -60,7 +60,7 @@ function friendlyError(status: number, detail: string): string {
     return "That question needs trimming: keep it under 4,000 characters and non-empty.";
   }
   if (status === 502) {
-    return "Onya could not reach its agent service. Check that the API is running on port 8000, then try again.";
+    return "The data service is waking up. This can take up to a minute. See a saved run.";
   }
   return "The check could not start. Please try again in a moment.";
 }
