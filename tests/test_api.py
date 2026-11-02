@@ -534,6 +534,98 @@ class ReplayFlag(unittest.TestCase):
             self.assertFalse(api._agent_replay_enabled())
 
 
+class ProductionGuards(ApiTestBase):
+    PROD = {"ONYA_ENV": "production",
+            "ONYA_DEMO_TOKEN": "prod-token",
+            "ONYA_FRONTEND_ORIGIN": "https://onya.example.app"}
+
+    def test_production_replay_refused(self):
+        with patch.dict(os.environ, {**self.PROD, "ONYA_AGENT_REPLAY": "0"}):
+            with self.assertRaises(RuntimeError):
+                api.create_app()
+
+    def test_production_missing_token_refused(self):
+        env = {k: v for k, v in self.PROD.items() if k != "ONYA_DEMO_TOKEN"}
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("ONYA_DEMO_TOKEN", None)
+            with self.assertRaises(RuntimeError):
+                api.create_app()
+
+    def test_production_missing_origin_refused(self):
+        env = {k: v for k, v in self.PROD.items()
+               if k != "ONYA_FRONTEND_ORIGIN"}
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("ONYA_FRONTEND_ORIGIN", None)
+            with self.assertRaises(RuntimeError):
+                api.create_app()
+
+    def test_production_cors_only_frontend_origin(self):
+        with patch.dict(os.environ, self.PROD):
+            app = api.create_app()
+            client = TestClient(app)
+            r = client.get("/health",
+                           headers={"Origin": "http://localhost:3000"})
+            self.assertIsNone(r.headers.get("access-control-allow-origin"))
+            r = client.get(
+                "/health",
+                headers={"Origin": "https://onya.example.app"})
+            self.assertEqual(r.headers.get("access-control-allow-origin"),
+                             "https://onya.example.app")
+
+    def test_kill_switch(self):
+        with patch.dict(os.environ, {"ONYA_AGENT_ENABLED": "0"}):
+            with patch.object(agent, "run_agent", self.fake_run()):
+                r = self.client.post("/agent/run",
+                                     json={"question": "Check SNBR?"},
+                                     headers=self.auth())
+        self.assertEqual(r.status_code, 503)
+        self.assertIn("paused", r.json()["detail"])
+
+    def test_daily_token_budget(self):
+        with patch.dict(os.environ, {"ONYA_DAILY_TOKEN_BUDGET": "10"}):
+            with patch.object(agent, "run_agent",
+                              self.fake_run(tokens=100)):
+                r = self.client.post("/agent/run",
+                                     json={"question": "Check SNBR?"},
+                                     headers=self.auth())
+                self.assertEqual(r.status_code, 202)
+                run_id = r.json()["run_id"]
+                self._traces.append(run_id)
+                done = _poll_done(self.client, run_id)
+                self.assertEqual(done.json()["status"], "done")
+                r2 = self.client.post("/agent/run",
+                                      json={"question": "Check SNBR?"},
+                                      headers=self.auth())
+        self.assertEqual(r2.status_code, 429)
+        self.assertIn("budget", r2.json()["detail"].lower())
+
+    def test_forwarded_ip_trusted_only_with_token(self):
+        with patch.object(agent, "run_agent", self.fake_run()):
+            for _ in range(5):
+                r = self.client.post(
+                    "/agent/run", json={"question": "Check SNBR?"},
+                    headers={**self.auth(),
+                             "X-Onya-Client-IP": "203.0.113.9"})
+                self.assertEqual(r.status_code, 202)
+                self._traces.append(r.json()["run_id"])
+            sixth = self.client.post(
+                "/agent/run", json={"question": "Check SNBR?"},
+                headers={**self.auth(), "X-Onya-Client-IP": "203.0.113.9"})
+            self.assertEqual(sixth.status_code, 429)
+            other = self.client.post(
+                "/agent/run", json={"question": "Check SNBR?"},
+                headers={**self.auth(), "X-Onya-Client-IP": "203.0.113.10"})
+            self.assertEqual(other.status_code, 202)
+            self._traces.append(other.json()["run_id"])
+
+    def test_forwarded_ip_ignored_without_valid_token(self):
+        r = self.client.post(
+            "/agent/run", json={"question": "Check SNBR?"},
+            headers={"X-Onya-Token": "wrong",
+                     "X-Onya-Client-IP": "203.0.113.9"})
+        self.assertEqual(r.status_code, 401)
+
+
 class Cors(ApiTestBase):
     def test_allowed_origin(self):
         r = self.client.get("/health",

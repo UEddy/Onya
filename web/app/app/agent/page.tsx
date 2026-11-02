@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MemoActions, MemoView } from "../../../components/memo";
 import { formatClock, formatInt, type AgentRunState, type AgentStep } from "../../../lib/api";
@@ -43,6 +44,12 @@ function runningSentence(steps: AgentStep[]): string {
 }
 
 function friendlyError(status: number, detail: string): string {
+  if (status === 503 || detail.includes("paused")) {
+    return "The live agent is paused. See a saved run.";
+  }
+  if (detail.includes("daily token budget")) {
+    return "The daily token budget is used up for today. See a saved run.";
+  }
   if (status === 429) {
     if (detail.includes("hour")) {
       return "Onya allows five checks per hour from each visitor. This one will have to wait an hour.";
@@ -240,6 +247,16 @@ export default function AgentPage() {
           >
             Try again
           </button>
+          {error.includes("See a saved run") && (
+            <p className="mt-2 text-[15px]">
+              <Link
+                href="/#how-it-works"
+                className="underline decoration-rule underline-offset-4 hover:decoration-ink"
+              >
+                See a saved run
+              </Link>
+            </p>
+          )}
         </div>
       )}
 

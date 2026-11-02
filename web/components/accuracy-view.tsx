@@ -59,6 +59,9 @@ export default function AccuracyView({
           Onya is tested against hand-checked covenant figures and the signed
           credit agreements.
         </p>
+        <p className="mt-2 text-[13px] font-medium">
+          Back-test extraction: Built with Muse Spark Open
+        </p>
         {showDataNote && (
           <div className="mt-3">
             <DataNote />

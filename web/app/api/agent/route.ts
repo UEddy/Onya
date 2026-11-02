@@ -4,6 +4,11 @@
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 export async function POST(req: Request) {
+  const forwardedFor =
+    req.headers.get("x-vercel-forwarded-for") ||
+    req.headers.get("x-forwarded-for") ||
+    "";
+  const clientIp = forwardedFor.split(",")[0].trim();
   const base = process.env.ONYA_API_BASE;
   const token = process.env.ONYA_DEMO_TOKEN;
   if (!base || !token) {
@@ -29,6 +34,7 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type": "application/json",
         "X-Onya-Token": token,
+        ...(clientIp ? { "X-Onya-Client-IP": clientIp } : {}),
       },
       body: JSON.stringify({ question }),
       cache: "no-store",

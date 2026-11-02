@@ -98,7 +98,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <p className="text-[13px] text-ink-muted">Public SEC data</p>
         <div className="mt-4 flex-1">{nav()}</div>
         <div className="border-t border-rule pt-4">
-          <ThemeToggle />
+          <p className="text-[13px] font-medium">Built with Muse Spark Open</p>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Onya supports review by credit professionals. It is not financial,
+            legal or investment advice.
+          </p>
+          <div className="mt-3">
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 

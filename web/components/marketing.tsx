@@ -108,6 +108,13 @@ export function MarketingFooter() {
         <p className="mt-3 text-[13px] text-ink-muted">
           Built on public SEC filings.
         </p>
+        <p className="mt-2 text-[13px] font-medium">
+          Built with Muse Spark Open
+        </p>
+        <p className="mt-1 text-[13px] text-ink-muted">
+          Onya supports review by credit professionals. It is not financial,
+          legal or investment advice.
+        </p>
         <div className="mt-2 flex gap-x-5 text-[13px]">
           <Link
             href="/accuracy"

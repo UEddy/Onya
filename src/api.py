@@ -253,6 +253,7 @@ _LOCK = threading.Lock()
 _RUNS = {}
 _RUN_STARTS = []
 _IP_STARTS = {}
+_TOKEN_LEDGER = {}
 
 
 def _utcnow():
@@ -278,6 +279,7 @@ def _reset_state():
         _RUNS.clear()
         _RUN_STARTS.clear()
         _IP_STARTS.clear()
+        _TOKEN_LEDGER.clear()
     _NAME_CACHE.clear()
 
 
@@ -335,6 +337,49 @@ def _agent_replay_enabled():
     return os.environ.get("ONYA_AGENT_REPLAY") == "1"
 
 
+def _is_production():
+    return os.environ.get("ONYA_ENV") == "production"
+
+
+def _agent_enabled():
+    return (os.environ.get("ONYA_AGENT_ENABLED") or "1").strip().lower() \
+        not in {"0", "false", "off", "no"}
+
+
+def _daily_token_budget():
+    try:
+        return int(os.environ.get("ONYA_DAILY_TOKEN_BUDGET") or 1500000)
+    except ValueError:
+        return 1500000
+
+
+def _record_run_tokens(total_tokens):
+    try:
+        total = int(total_tokens or 0)
+    except (TypeError, ValueError):
+        return
+    if total <= 0:
+        return
+    day = _utcnow().date().isoformat()
+    with _LOCK:
+        _TOKEN_LEDGER[day] = _TOKEN_LEDGER.get(day, 0) + total
+
+
+def _tokens_spent_today():
+    day = _utcnow().date().isoformat()
+    with _LOCK:
+        return _TOKEN_LEDGER.get(day, 0)
+
+
+def _client_ip(request, token_valid):
+    """Visitor IP: forwarded header trusted only with a valid token."""
+    if token_valid:
+        forwarded = request.headers.get("x-onya-client-ip")
+        if forwarded:
+            return forwarded.split(",")[0].strip() or "unknown"
+    return request.client.host if request.client else "unknown"
+
+
 def _load_sample_memo():
     try:
         return _read_json(_data_file("samples", "snbr_memo.json"))
@@ -365,6 +410,7 @@ def _replay_in_background(run_id):
                        total_tokens=sample.get("total_tokens", 0),
                        tool_calls=sample.get("tool_calls", 0),
                        figure_fields=sample.get("figure_fields", []))
+    _record_run_tokens(sample.get("total_tokens", 0))
 
 
 def _run_in_background(run_id, question):
@@ -384,6 +430,7 @@ def _run_in_background(run_id, question):
                        total_tokens=outcome.get("total_tokens", 0),
                        tool_calls=outcome.get("tool_calls", 0),
                        figure_fields=outcome.get("figure_fields", []))
+    _record_run_tokens(outcome.get("total_tokens", 0))
 
 
 def _read_trace(run_id):
@@ -921,6 +968,15 @@ def start_agent_run(body: RunRequest, request: Request,
     if not secrets.compare_digest(x_onya_token or "", expected):
         return JSONResponse(status_code=401,
                             content={"detail": "invalid token"})
+    if not _agent_enabled():
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "The live agent is paused. See a saved run."})
+    if _tokens_spent_today() >= _daily_token_budget():
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "The daily token budget is used up for today. "
+                               "See a saved run."})
     question = (body.question or "").strip()
     if not question:
         return JSONResponse(status_code=422,
@@ -932,7 +988,7 @@ def start_agent_run(body: RunRequest, request: Request,
         return JSONResponse(
             status_code=429,
             content={"detail": "per-run token budget would be exceeded"})
-    ip = request.client.host if request.client else "unknown"
+    ip = _client_ip(request, token_valid=True)
     now = _utcnow()
     with _LOCK:
         _prune(now)
@@ -998,6 +1054,9 @@ def get_agent_run(run_id: str):
 
 
 def allowed_origins():
+    if _is_production():
+        origin = (os.environ.get("ONYA_FRONTEND_ORIGIN") or "").strip()
+        return [origin] if origin else []
     origins = [LOCAL_ORIGIN]
     extra = (os.environ.get("ONYA_FRONTEND_ORIGIN") or "").strip()
     if extra and extra not in origins:
@@ -1006,7 +1065,26 @@ def allowed_origins():
 
 
 def create_app():
+    if _is_production():
+        if "ONYA_AGENT_REPLAY" in os.environ:
+            raise RuntimeError(
+                "ONYA_AGENT_REPLAY must not be set in production")
+        if not (os.environ.get("ONYA_DEMO_TOKEN") or "").strip():
+            raise RuntimeError(
+                "ONYA_DEMO_TOKEN is required in production")
+        if not (os.environ.get("ONYA_FRONTEND_ORIGIN") or "").strip():
+            raise RuntimeError(
+                "ONYA_FRONTEND_ORIGIN is required in production")
     app = FastAPI(title="Onya demo API")
+
+    @app.middleware("http")
+    async def _cache_headers(request, call_next):
+        response = await call_next(request)
+        if (request.method == "GET"
+                and not request.url.path.startswith("/agent")):
+            response.headers.setdefault(
+                "Cache-Control", "public, max-age=60")
+        return response
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins(),

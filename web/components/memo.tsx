@@ -271,6 +271,10 @@ export function MemoActions({
           Prepared by Onya from public SEC filings. Verify before relying on
           it.
         </p>
+        <p>
+          Onya supports review by credit professionals. It is not financial,
+          legal or investment advice.
+        </p>
       </div>
       <div className="no-print flex flex-wrap items-center gap-3">
         <button
@@ -300,6 +304,10 @@ export function MemoActions({
           </span>
         ) : null}
       </div>
+      <p className="no-print mt-3 text-[13px] text-ink-muted">
+        Onya supports review by credit professionals. It is not financial,
+        legal or investment advice.
+      </p>
     </div>
   );
 }
