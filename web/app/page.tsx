@@ -718,8 +718,8 @@ export default function LandingPage() {
                   text: "disclosed covenant figures matched",
                 },
                 {
-                  big: `${t?.matched} of ${t?.matched}`,
-                  text: "contract thresholds correct where the governing agreement was found",
+                  big: `${t?.matched} of ${t?.covenants}`,
+                  text: `contract limits matched; ${t?.amended_after_agreement} changed by later amendments, flagged`,
                 },
                 {
                   big: `${sample.figures_checked} of ${sample.figures_checked}`,
@@ -944,8 +944,9 @@ export default function LandingPage() {
                 }
               >
                 {d?.matched} of {d?.covenants} disclosed covenant figures
-                matched; {t?.matched} of {t?.matched} contract thresholds
-                correct where the governing agreement was found.{" "}
+                matched; {t?.matched} of {t?.covenants} contract limits
+                matched, with {t?.amended_after_agreement} changed by later
+                amendments, flagged.{" "}
                 {sample.figures_checked} of {sample.figures_checked} memo
                 figures traced to tool output.{" "}
                 <Link href="/accuracy" className="text-link text-ink">

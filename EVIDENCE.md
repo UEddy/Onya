@@ -223,7 +223,7 @@ calls). A partial figure uses only the components XBRL could supply:
 |---|---|---|
 | Python | 662 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
 | JS | 29 passed | `npm run test:what-if` in `web/` |
-| Playwright | 34 passed | `npx playwright test` in `web/` |
+| Playwright | 35 passed | `npx playwright test` in `web/` |
 | Watch storage | passed | `web/lib/watch.test.ts` via `test:what-if` |
 | Watch plus request flow | 3 passed | `web/e2e/watch-request.spec.ts` |
 | Recomputed section, 1366px and 360px | 3 passed | `web/e2e/accuracy-recompute.spec.ts` |

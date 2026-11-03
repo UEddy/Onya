@@ -330,7 +330,7 @@ Tests, with counts from a real run:
 ```bash
 .venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 662 passed
 cd web && npm run test:what-if   # 29 passed
-cd web && npx playwright test    # 34 passed
+cd web && npx playwright test    # 35 passed
 ```
 
 (The Python suite runs as named `tests.test_*` modules; bare discovery

@@ -33,3 +33,18 @@ test("old case URL redirects to the app case with the row highlighted", async ({
     /figure-highlight/,
   );
 });
+
+test("landing page states contract limits as 19 of 21, with the qualifier", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByText("19 of 21", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByText("contract limits matched; 2 changed by later amendments, flagged"),
+  ).toBeVisible();
+  const text = await page.locator("body").innerText();
+  expect(text).not.toContain("19 of 19");
+  expect(text).not.toContain("thresholds correct");
+});
