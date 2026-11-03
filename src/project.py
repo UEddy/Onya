@@ -26,6 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import covenant  # noqa: E402
+from runtime_paths import overlay_root  # noqa: E402
 
 DEFAULT_BASE = "2026-01-03"
 RISK_RULE = "HIGH if quarters_of_cushion < 2, MEDIUM if < 4, else LOW"
@@ -496,8 +497,9 @@ def print_result(result):
 
 def save_result(result):
     """Save to data/results/snbr_projection_<base>.json."""
-    path = (PROJECT_ROOT / "data" / "results" /
-            f"snbr_projection_{result['base']}.json")
+    overlay = overlay_root()  # with one set, committed results stay untouched
+    base = overlay if overlay is not None else PROJECT_ROOT / "data"
+    path = base / "results" / f"snbr_projection_{result['base']}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return path

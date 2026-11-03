@@ -168,7 +168,7 @@ class StreamCase(unittest.TestCase):
         return self.store.total(limits.tokens_key())
 
     def post_agent(self):
-        r = self.client.post("/agent/run", json={"question": "q?"},
+        r = self.client.post("/agent/run", json={"question": "Check SNBR?"},
                              headers={"X-Onya-Token": TOKEN})
         self.assertEqual(r.status_code, 200)
         return [json.loads(x) for x in r.text.splitlines() if x]
@@ -193,9 +193,11 @@ class AgentStream(StreamCase):
     def run_with(self, client, **kwargs):
         real = agent.run_agent
 
-        def with_client(question, run_id=None, on_event=None, call_log=None):
+        def with_client(question, run_id=None, on_event=None, call_log=None,
+                        **extra):
             return real(question, client=client, run_id=run_id,
-                        on_event=on_event, call_log=call_log, **kwargs)
+                        on_event=on_event, call_log=call_log,
+                        **{**kwargs, **extra})
 
         tmp = patch.object(agent, "run_agent", with_client)
         tmp.start()

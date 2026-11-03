@@ -2080,7 +2080,7 @@ class _RunEnded(Exception):
 def run_agent(user_prompt, client=None, run_id=None,
               max_tool_calls=MAX_TOOL_CALLS,
               deadline_s=STREAM_DEADLINE_SECONDS, on_event=None,
-              call_log=None):
+              call_log=None, pin=None, memo_note=None):
     """Run the tool-calling loop; returns the final answer plus run stats.
 
     Every trace entry is also passed to on_event as it happens, so a
@@ -2090,16 +2090,40 @@ def run_agent(user_prompt, client=None, run_id=None,
     outcome when a model call fails for good. A retry is passed to
     on_event as a model_retry event, and call_log collects each call's
     label, duration, and outcome.
+
+    pin ({"period_end": ..., "as_of": ...}) overrides those arguments on
+    tool calls, so the test date and cutoff are set in Python whatever the
+    model passes. memo_note is put first in a finished memo.
     """
     try:
-        return _run_agent(user_prompt, client, run_id, max_tool_calls,
-                          deadline_s, on_event, call_log)
+        outcome = _run_agent(user_prompt, client, run_id, max_tool_calls,
+                             deadline_s, on_event, call_log, pin)
     except _RunEnded as ended:
         return ended.outcome
+    if memo_note and outcome.get("reason") in ("done", "max_tool_calls"):
+        outcome["answer"] = memo_note + "\n" + (outcome.get("answer") or "")
+    return outcome
+
+
+def _pin_arguments(name, arguments, pin):
+    """Tool arguments with the run's fixed test date and cutoff applied."""
+    if not pin or not isinstance(arguments, dict):
+        return arguments
+    params = next((tool["function"]["parameters"].get("properties", {})
+                   for tool in TOOL_SCHEMAS
+                   if tool["function"]["name"] == name), {})
+    pinned = dict(arguments)
+    if "as_of" in params:
+        pinned["as_of"] = pin["as_of"]
+    if "period_end" in params:
+        pinned["period_end"] = pin["period_end"]
+    if "base_period" in params:
+        pinned["base_period"] = pin["period_end"]
+    return pinned
 
 
 def _run_agent(user_prompt, client, run_id, max_tool_calls, deadline_s,
-               on_event, call_log):
+               on_event, call_log, pin):
     os.chdir(PROJECT_ROOT)
     reset_corpus()
     run_id = run_id or uuid.uuid4().hex[:12]
@@ -2305,6 +2329,7 @@ def _run_agent(user_prompt, client, run_id, max_tool_calls, deadline_s,
                 arguments = {}
                 result = {"error": "tool arguments were not valid JSON"}
             else:
+                arguments = _pin_arguments(name, arguments, pin)
                 cache_key = (name, json.dumps(arguments, sort_keys=True,
                                               default=str))
                 if cache_key in seen_results:

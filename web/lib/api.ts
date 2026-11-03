@@ -377,6 +377,8 @@ export interface AgentRunState {
   error: string | null;
   figure_fields?: { raw: string; field: string; value: number }[];
   info_request?: string | null;
+  period_end?: string | null;
+  as_of?: string | null;
 }
 
 export interface PrivateComparisonRow {

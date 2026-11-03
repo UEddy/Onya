@@ -97,6 +97,12 @@ def _classify(exc):
     return f"error_{type(exc).__name__}", False
 
 
+def _status_of(exc):
+    """The HTTP status of a failed call, or None. Never its body."""
+    status = getattr(exc, "status_code", None)
+    return status if isinstance(status, int) else None
+
+
 def _log_line(**fields):
     log.info(json.dumps({"event": "model_call", **fields}))
 
@@ -140,11 +146,13 @@ def call(client, *, label, deadline, run_id="", call_log=None, on_retry=None,
                                  "duration_s": duration, "outcome": "ok"})
             return response
         outcome, retryable = _classify(failure)
+        status = _status_of(failure)
         _log_line(phase="end", label=label, run_id=run_id, attempt=attempt,
-                  duration_s=duration, outcome=outcome)
+                  duration_s=duration, outcome=outcome, status=status)
         if call_log is not None:
             call_log.append({"label": label, "attempt": attempt,
-                             "duration_s": duration, "outcome": outcome})
+                             "duration_s": duration, "outcome": outcome,
+                             "status": status})
         if (not retryable or attempt > max_retries
                 or deadline.remaining() < MIN_RETRY_SECONDS):
             raise ModelCallFailed(label, outcome, attempt) from None

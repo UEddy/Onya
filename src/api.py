@@ -48,6 +48,7 @@ secret_files.load_secret_files()
 
 import agent  # noqa: E402
 import limits  # noqa: E402
+import question_router  # noqa: E402
 import score_disclosed  # noqa: E402
 import xbrl  # noqa: E402
 
@@ -121,12 +122,21 @@ _REDACT_RES = (
 REDACTED = "[redacted]"
 
 
+SECRET_ENV_NAMES = ("META_API_KEY", "BASETEN_API_KEY", "ONYA_DEMO_TOKEN",
+                    "UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_URL",
+                    "META_BASE_URL", "BASETEN_BASE_URL")
+
+
 def redact(text):
-    """Strip file paths from text before it leaves the API."""
+    """Strip file paths and secret values from text leaving the API."""
     if not isinstance(text, str):
         return text
     for rx in _REDACT_RES:
         text = rx.sub(REDACTED, text)
+    for name in SECRET_ENV_NAMES:
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            text = text.replace(value, REDACTED)
     return text
 
 
@@ -458,6 +468,79 @@ def _waiting_on(events, started):
         yield event
 
 
+def _covered_list():
+    names = [name for name, _ in question_router.COVERED.values()]
+    return ["Sleep Number (full recalculation)"] + sorted(names)
+
+
+def _format_limit(value):
+    """A limit or figure as the filing states it."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return "Not stated"
+    return f"{value:.2f}x" if abs(value) < 100 else f"{value:,.0f}"
+
+
+def _backtested_notice(ticker):
+    name = question_router.COVERED[ticker][0]
+    try:
+        disclosed = score_disclosed.load_disclosed(ticker) or {}
+    except (OSError, ValueError):
+        disclosed = {}
+    rows = [{"name": normalize_covenant_name(cov.get("name")),
+             "direction": cov.get("direction"),
+             "limit": _format_limit(cov.get("threshold")),
+             "disclosed": _format_limit(cov.get("actual")),
+             "in_compliance": cov.get("in_compliance")}
+            for cov in disclosed.get("covenants") or []]
+    period = disclosed.get("period_end")
+    return {
+        "route": question_router.ROUTE_BACKTESTED,
+        "title": f"{name} is in the back-test",
+        "message": (f"These are the covenants and limits {name} disclosed "
+                    f"for the quarter ended {agent.prose_date(period)}, as "
+                    "scored in the back-test. The full recalculation covers "
+                    "Sleep Number."),
+        "rows": rows,
+        "accuracy_link": True,
+    }
+
+
+def _route_notice(route):
+    """The answer for a route that needs no model call."""
+    if route.kind == question_router.ROUTE_BACKTESTED:
+        return _backtested_notice(route.ticker)
+    if route.kind == question_router.ROUTE_UNKNOWN:
+        return {"route": route.kind,
+                "title": "Onya does not cover that company",
+                "message": ("Onya recalculates Sleep Number in full and has "
+                            "back-tested the disclosed covenants of the "
+                            "companies below."),
+                "covered": _covered_list(),
+                "accuracy_link": True}
+    return {"route": route.kind,
+            "title": "Onya only checks credit covenants",
+            "message": ("Onya only monitors credit covenants, so it cannot "
+                        "help with that.")}
+
+
+def _notice_text(notice):
+    lines = [notice["message"]]
+    lines += [f"{row['name']}: limit {row['limit']}, "
+              f"disclosed {row['disclosed']}"
+              for row in notice.get("rows") or []]
+    if notice.get("covered"):
+        lines.append("Covered: " + ", ".join(notice["covered"]) + ".")
+    return "\n".join(lines)
+
+
+def _iter_notice(route):
+    notice = _route_notice(route)
+    yield {"type": "run_result", "reason": "routed",
+           "route": route.kind, "answer": _notice_text(notice),
+           "notice": notice, "total_tokens": 0, "tool_calls": 0,
+           "figure_fields": [], "info_request": None, "model_calls": []}
+
+
 def _iter_replay(store):
     """Stream the saved sample run step by step (no model calls)."""
     sample = _load_sample_memo() or {}
@@ -475,7 +558,7 @@ def _iter_replay(store):
            "figure_fields": sample.get("figure_fields", [])}
 
 
-def _iter_live(question, run_id, store):
+def _iter_live(question, run_id, store, route=None):
     """Run the agent in a worker thread, yielding steps as they happen."""
     events = queue.Queue()
     box = {}
@@ -488,9 +571,14 @@ def _iter_live(question, run_id, store):
 
     def worker():
         try:
+            pinned = {}
+            if route is not None:
+                pinned = {"pin": {"period_end": route.period_end,
+                                  "as_of": route.as_of},
+                          "memo_note": route.memo_note}
             outcome = agent.run_agent(
                 question, run_id=run_id, on_event=on_event,
-                call_log=call_log)
+                call_log=call_log, **pinned)
             meter.up_to(outcome.get("total_tokens"))
             box["outcome"] = outcome
         except SystemExit:
@@ -550,7 +638,9 @@ def _iter_live(question, run_id, store):
            "tool_calls": outcome.get("tool_calls", 0),
            "figure_fields": outcome.get("figure_fields", []),
            "info_request": redact(outcome.get("info_request") or None),
-           "model_calls": list(call_log)}
+           "model_calls": list(call_log),
+           "period_end": route.period_end if route else None,
+           "as_of": route.as_of if route else None}
 
 
 def _iter_info_request(company, period_end, store):
@@ -1185,16 +1275,26 @@ def stream_agent_run(body: RunRequest, request: Request,
     if not secrets.compare_digest(x_onya_token or "", expected):
         return JSONResponse(status_code=401,
                             content={"detail": "invalid token"})
-    if not _agent_enabled():
-        return _paused()
     question = (body.question or "").strip()
     if not question:
         return JSONResponse(status_code=422,
                             content={"detail": "question is required"})
     if len(question) > MAX_QUESTION_CHARS:
-        return JSONResponse(status_code=413,
-                            content={"detail": "question too long"})
-    if _estimate_tokens(question) > agent.TOKEN_BUDGET:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": ("question too long: keep it under "
+                                f"{MAX_QUESTION_CHARS:,} characters")})
+    # Decided in Python first: these answers call no model and claim nothing.
+    route = question_router.route_question(question)
+    if route.kind != question_router.ROUTE_SNBR:
+        return StreamingResponse(
+            (json.dumps(event, default=str) + "\n"
+             for event in _one_final(_iter_notice(route))),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-store"})
+    if not _agent_enabled():
+        return _paused()
+    if _estimate_tokens(route.prompt) > agent.TOKEN_BUDGET:
         return JSONResponse(
             status_code=429,
             content={"detail": "per-run token budget would be exceeded"})
@@ -1216,7 +1316,8 @@ def stream_agent_run(body: RunRequest, request: Request,
         if _agent_replay_enabled():
             yield from _iter_replay(store)
         else:
-            yield from _iter_live(question, run_id, store)
+            # The fixed prompt, never the visitor's text, reaches the model.
+            yield from _iter_live(route.prompt, run_id, store, route)
 
     def body_lines():
         for event in _one_final(events()):

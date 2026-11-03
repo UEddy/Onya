@@ -11,6 +11,8 @@ import { stepSentence } from "../../../lib/step-sentences";
 const PREFILL =
   "Check Sleep Number's covenants as of the April 2026 test and tell me what to do.";
 
+// A replayed run carries no test date; its saved memo is this test.
+const DEFAULT_PERIOD = "2026-04-04";
 const MAX_RUN_SECONDS = 290;
 const STALL_SECONDS = 60;
 
@@ -70,6 +72,26 @@ function friendlyError(status: number, detail: string): string {
   return "The check could not start. Please try again in a moment.";
 }
 
+type RouteNotice = {
+  route: string;
+  title: string;
+  message: string;
+  rows?: {
+    name: string;
+    limit: string;
+    disclosed: string;
+    in_compliance: boolean | null;
+  }[];
+  covered?: string[];
+  accuracy_link?: boolean;
+};
+
+function complianceLabel(value: boolean | null): string {
+  if (value === true) return "In compliance";
+  if (value === false) return "Not in compliance";
+  return "Not stated";
+}
+
 export default function AgentPage() {
   const [question, setQuestion] = useState(PREFILL);
   const [run, setRun] = useState<AgentRunState | null>(null);
@@ -78,6 +100,7 @@ export default function AgentPage() {
   const [elapsed, setElapsed] = useState(0);
   const [stalledStep, setStalledStep] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [notice, setNotice] = useState<RouteNotice | null>(null);
   const startedAt = useRef<number | null>(null);
   const lastStepCount = useRef(0);
   const lastProgressAt = useRef<number | null>(null);
@@ -128,6 +151,11 @@ export default function AgentPage() {
         setRetrying(true);
         return;
       }
+      if (record.type === "run_result" && record.reason === "routed") {
+        setNotice(record.notice as RouteNotice);
+        setRunning(false);
+        return;
+      }
       if (record.type === "run_result") {
         const reason = typeof record.reason === "string" ? record.reason : "";
         if (reason === "done" || reason === "replay") {
@@ -152,6 +180,12 @@ export default function AgentPage() {
               typeof record.info_request === "string"
                 ? record.info_request
                 : null,
+            period_end:
+              typeof record.period_end === "string"
+                ? record.period_end
+                : DEFAULT_PERIOD,
+            as_of:
+              typeof record.as_of === "string" ? record.as_of : DEFAULT_PERIOD,
           }));
           setRunning(false);
         } else {
@@ -194,8 +228,9 @@ export default function AgentPage() {
     [noteProgress],
   );
 
-  const submit = useCallback(async () => {
-    if (running || question.trim().length === 0) return;
+  const submit = useCallback(async (asked?: string) => {
+    const text = (asked ?? question).trim();
+    if (running || text.length === 0) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -205,6 +240,7 @@ export default function AgentPage() {
     setElapsed(0);
     setStalledStep(null);
     setRetrying(false);
+    setNotice(null);
     startedAt.current = Date.now();
     lastStepCount.current = 0;
     lastProgressAt.current = Date.now();
@@ -212,7 +248,7 @@ export default function AgentPage() {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: question.trim() }),
+        body: JSON.stringify({ question: text }),
         cache: "no-store",
         signal: controller.signal,
       });
@@ -326,6 +362,65 @@ export default function AgentPage() {
         </div>
       )}
 
+      {notice && (
+        <section aria-label="Answer" className="card enter p-5 sm:p-8">
+          <h2 className="text-[22px] font-semibold tracking-tight">
+            {notice.title}
+          </h2>
+          <p className="mt-2 max-w-[70ch] text-[15px] text-ink-muted">
+            {notice.message}
+          </p>
+          {notice.rows && notice.rows.length > 0 && (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-[14px]">
+                <thead>
+                  <tr className="border-b border-hairline text-left text-ink-muted">
+                    <th className="py-2 pr-4 font-medium">Covenant</th>
+                    <th className="py-2 pr-4 text-right font-medium">Limit</th>
+                    <th className="py-2 pr-4 text-right font-medium">Disclosed</th>
+                    <th className="py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notice.rows.map((row) => (
+                    <tr key={row.name} className="border-b border-hairline">
+                      <td className="py-2 pr-4">{row.name}</td>
+                      <td className="py-2 pr-4 text-right">{row.limit}</td>
+                      <td className="py-2 pr-4 text-right">{row.disclosed}</td>
+                      <td className="py-2">{complianceLabel(row.in_compliance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {notice.covered && (
+            <ul className="mt-4 grid gap-x-6 gap-y-1 text-[14px] sm:grid-cols-2">
+              {notice.covered.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setQuestion(PREFILL);
+                void submit(PREFILL);
+              }}
+              className="btn btn-primary btn-sm"
+            >
+              Run the Sleep Number check
+            </button>
+            {notice.accuracy_link && (
+              <Link href="/app/accuracy" className="text-link text-[15px]">
+                See the accuracy page
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
+
       {(running || steps.length > 0) && (
         <section
           aria-label="Progress"
@@ -399,13 +494,13 @@ export default function AgentPage() {
             answer={run.answer}
             figureFields={run.figure_fields}
             ticker="SNBR"
-            periodEnd="2026-04-04"
+            periodEnd={run.period_end ?? DEFAULT_PERIOD}
           />
           <MemoActions
             answer={run.answer}
             ticker="SNBR"
-            periodEnd="2026-04-04"
-            asOf="2026-04-04"
+            periodEnd={run.period_end ?? DEFAULT_PERIOD}
+            asOf={run.as_of ?? DEFAULT_PERIOD}
             timestamp={run.steps?.[0]?.timestamp ?? null}
           />
           <p className="no-print mt-6 text-[13px] text-ink-muted">
@@ -431,13 +526,13 @@ export default function AgentPage() {
               request={run.info_request}
               figureFields={run.figure_fields}
               ticker="SNBR"
-              periodEnd="2026-04-04"
+              periodEnd={run.period_end ?? DEFAULT_PERIOD}
             />
           </div>
           <RequestActions
             request={run.info_request}
             ticker="SNBR"
-            periodEnd="2026-04-04"
+            periodEnd={run.period_end ?? DEFAULT_PERIOD}
           />
         </section>
       )}

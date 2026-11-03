@@ -32,6 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ttm import DATA_QUALITY_WARNINGS, instant, ttm  # noqa: E402
+from runtime_paths import overlay_root  # noqa: E402
 
 CONTRACT_PATH = PROJECT_ROOT / "data" / "extracted" / "snbr_covenants.reviewed.json"
 CASH_DEDUCTION_THRESHOLD = 40_000_000
@@ -975,7 +976,10 @@ def print_result(result):
 
 def save_result(result):
     """Save the result to data/results/snbr_<period_end>.json."""
-    path = PROJECT_ROOT / "data" / "results" / f"snbr_{result['period_end']}.json"
+    name = f"snbr_{result['period_end']}.json"
+    overlay = overlay_root()  # with one set, committed results stay untouched
+    base = overlay if overlay is not None else PROJECT_ROOT / "data"
+    path = base / "results" / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return path

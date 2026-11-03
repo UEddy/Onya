@@ -1,5 +1,5 @@
 /* Reads a streamed run. The server ends each stream with exactly one final
-   event and sends a heartbeat every 10 seconds, so a close with no final
+   event and sends a heartbeat after 10 seconds of silence, so a close with no final
    event, or a long silence, means the run was lost. */
 
 export const FINAL_EVENT_TYPES = ["run_result", "private_result", "error"];

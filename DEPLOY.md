@@ -21,7 +21,7 @@ value; never paste a secret into chat, git, or a file in this repo.
   the same way, ending in `private_result` or `error`). There is no
   polling: `GET /agent/run/{id}` answers 404. The run stops with a
   clear `took_too_long` result at 270 s, before the 300 s function cap.
-- During a run the stream sends a `heartbeat` every 10 s of silence.
+- During a run the stream sends a `heartbeat` after each 10 s of silence.
   Model calls ([src/model_calls.py](src/model_calls.py)) have a 90 s
   limit that fits inside the time left, and at most one retry, sent to
   the page as `model_retry`. Each call logs its start, duration, and

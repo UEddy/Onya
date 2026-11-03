@@ -431,7 +431,7 @@ class AgentRun(ApiTestBase):
             raise RuntimeError(f"boom {PROJECT_ROOT}/x")
 
         with patch.object(agent, "run_agent", boom):
-            r = self.client.post("/agent/run", json={"question": "q?"},
+            r = self.client.post("/agent/run", json={"question": "Check SNBR?"},
                                  headers=self.auth())
         events = _stream_events(r)
         errors = [e for e in events if e["type"] == "error"]
@@ -456,7 +456,7 @@ class AgentRun(ApiTestBase):
                     "tool_calls": 1, "total_tokens": 1, "figure_fields": []}
 
         with patch.object(agent, "run_agent", leaky):
-            r = self.client.post("/agent/run", json={"question": "q?"},
+            r = self.client.post("/agent/run", json={"question": "Check SNBR?"},
                                  headers=self.auth())
         summary = _stream_events(r)[0]["result_summary"]
         self.assertNotIn(str(PROJECT_ROOT), summary)
@@ -509,7 +509,7 @@ class AgentLimits(ApiTestBase):
     def test_five_per_hour_per_ip(self):
         with patch.object(agent, "run_agent", self.fake_run()):
             codes = [self.client.post(
-                "/agent/run", json={"question": f"q{i}"},
+                "/agent/run", json={"question": f"Check SNBR {i}"},
                 headers=self.auth()).status_code for i in range(6)]
         self.assertEqual(codes, [200, 200, 200, 200, 200, 429])
 
@@ -518,7 +518,7 @@ class AgentLimits(ApiTestBase):
         for _ in range(30):
             store.claim(limits.day_key(), 2 * 86400)
         with patch.object(agent, "run_agent", self.fake_run()):
-            r = self.client.post("/agent/run", json={"question": "q"},
+            r = self.client.post("/agent/run", json={"question": "Check SNBR"},
                                  headers=self.auth())
         self.assertEqual(r.status_code, 429)
 

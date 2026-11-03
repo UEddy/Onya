@@ -26,6 +26,7 @@ Saves the analysis into the result JSON under ``"cure"``.
 import json
 import sys
 from pathlib import Path
+from runtime_paths import overlay_root  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -358,9 +359,14 @@ def print_result(cure):
 
 def save_result(period_end, cure):
     """Save the analysis into the result JSON under "cure"."""
-    path = PROJECT_ROOT / "data" / "results" / f"snbr_{period_end}.json"
-    result = json.loads(path.read_text(encoding="utf-8"))
+    name = f"snbr_{period_end}.json"
+    committed = PROJECT_ROOT / "data" / "results" / name
+    overlay = overlay_root()  # with one set, committed results stay untouched
+    path = overlay / "results" / name if overlay is not None else committed
+    source = path if path.exists() else committed
+    result = json.loads(source.read_text(encoding="utf-8"))
     result["cure"] = cure
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return path
 
