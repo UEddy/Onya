@@ -23,6 +23,35 @@ export interface WhatIfResult {
   interest_coverage_pass: boolean;
 }
 
+export const DEBT_REDUCTION_STEP = 10_000;
+export const DEBT_REDUCTION_MAX = 400_000_000;
+
+interface CureFigures {
+  base?: Record<
+    string,
+    { figures?: Record<string, { value: number }> } | undefined
+  > | null;
+}
+
+/**
+ * The exact debt reduction that cures net leverage for a period, read from
+ * its cure data. Null when the period has no such figure, as when it passes.
+ */
+export function cureDebtReduction(
+  cure: CureFigures | null | undefined,
+): number | null {
+  const value =
+    cure?.base?.net_leverage?.figures?.debt_reduction_needed?.value;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+/** Slider ceiling, raised when a period's cure exceeds the usual range. */
+export function debtReductionMax(cureAmount: number | null): number {
+  return Math.max(DEBT_REDUCTION_MAX, cureAmount ?? 0);
+}
+
 export function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { StatusMark } from "./site";
 import {
   formatMoney,
@@ -8,7 +8,14 @@ import {
   formatSignedRatio,
   type PeriodDetail,
 } from "../lib/api";
-import { computeWhatIf, round2, type WhatIfBase } from "../lib/what-if";
+import {
+  computeWhatIf,
+  cureDebtReduction,
+  DEBT_REDUCTION_STEP,
+  debtReductionMax,
+  round2,
+  type WhatIfBase,
+} from "../lib/what-if";
 
 function Slider({
   label,
@@ -17,6 +24,7 @@ function Slider({
   max,
   step,
   onChange,
+  children,
 }: {
   label: string;
   value: number;
@@ -24,6 +32,7 @@ function Slider({
   max: number;
   step: number;
   onChange: (value: number) => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="card-inset p-4">
@@ -42,6 +51,7 @@ function Slider({
         onChange={(event) => onChange(Number(event.target.value))}
         className="mt-2 w-full accent-[#15222C] dark:accent-[#E6ECE9]"
       />
+      {children}
     </div>
   );
 }
@@ -67,6 +77,7 @@ export function whatIfBase(detail: PeriodDetail): WhatIfBase {
 
 export default function WhatIfPanel({ detail }: { detail: PeriodDetail }) {
   const base = whatIfBase(detail);
+  const cureAmount = cureDebtReduction(detail.cure);
   const [debtReduction, setDebtReduction] = useState(0);
   const [ebitdaChange, setEbitdaChange] = useState(0);
   const [savings, setSavings] = useState(0);
@@ -103,10 +114,20 @@ export default function WhatIfPanel({ detail }: { detail: PeriodDetail }) {
           label="Debt reduction"
           value={debtReduction}
           min={0}
-          max={400_000_000}
-          step={1_000_000}
+          max={debtReductionMax(cureAmount)}
+          step={DEBT_REDUCTION_STEP}
           onChange={setDebtReduction}
-        />
+        >
+          {cureAmount !== null && (
+            <button
+              type="button"
+              onClick={() => setDebtReduction(cureAmount)}
+              className="btn btn-secondary btn-sm mt-3"
+            >
+              Set to cure
+            </button>
+          )}
+        </Slider>
         <Slider
           label="EBITDA change"
           value={ebitdaChange}

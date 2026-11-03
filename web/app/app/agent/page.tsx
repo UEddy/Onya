@@ -296,7 +296,7 @@ export default function AgentPage() {
           />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-[13px] text-ink-muted">
-              Reads filings dated on or before the test date.
+              Reads only filings available when the test was reported.
             </p>
             <button
               type="submit"
