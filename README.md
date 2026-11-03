@@ -396,8 +396,6 @@ kill switch.
 Built Oct 26 to Nov 4, 2026. First commit in this repo: `c16dbc4`,
 Oct 30, 2026 ("Project setup and Meta API test").
 
-Later passes and the final code review used Claude Code.
-
 ## Limitations
 
 - A question that names Sleep Number runs the standard check; the check does
