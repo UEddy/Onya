@@ -14,6 +14,19 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import edgar
 
+
+def setUpModule():
+    # Committed ticker subset, so get_cik never reaches SEC, and a throwaway
+    # select cache, so these tests neither read nor write data/cache.
+    cache = tempfile.TemporaryDirectory()
+    unittest.addModuleCleanup(cache.cleanup)
+    fixtures = PROJECT_ROOT / "tests" / "fixtures" / "sec"
+    for name, path in (("RAW_DIR", fixtures), ("CACHE_DIR", Path(cache.name))):
+        patcher = patch.object(edgar, name, path)
+        patcher.start()
+        unittest.addModuleCleanup(patcher.stop)
+
+
 TICKERS = {
     "0": {"cik_str": 827187, "ticker": "SNBR", "title": "Sleep Number Corp"},
     "1": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."},

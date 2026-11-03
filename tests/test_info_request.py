@@ -5,6 +5,7 @@ import re
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -13,6 +14,16 @@ import covenant  # noqa: E402
 import edgar  # noqa: E402
 import info_request  # noqa: E402
 import project  # noqa: E402
+
+
+def setUpModule():
+    # Committed public SEC data, not the gitignored data/cache, so a fresh
+    # clone gets the same May 19, 2026 agreement selection with no network.
+    fixtures = PROJECT_ROOT / "tests" / "fixtures" / "sec"
+    for name in ("RAW_DIR", "CACHE_DIR"):
+        patcher = patch.object(edgar, name, fixtures)
+        patcher.start()
+        unittest.addModuleCleanup(patcher.stop)
 
 
 def _inputs():

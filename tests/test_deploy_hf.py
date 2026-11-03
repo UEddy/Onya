@@ -60,7 +60,10 @@ class StagingSet(unittest.TestCase):
 
     def test_runtime_dirs_present(self):
         prefixes = ("src/", "data/results/", "data/extracted/",
-                    "data/backtest/", "data/samples/", "data/cache/")
+                    "data/backtest/", "data/samples/")
+        # data/cache is gitignored: required only where it exists locally.
+        if any((PROJECT_ROOT / "data" / "cache").glob("*")):
+            prefixes += ("data/cache/",)
         names = self.rel()
         for prefix in prefixes:
             self.assertTrue(

@@ -20,6 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SIZE_BUDGET = 100_000_000
 
 RAW_PREFIXES = ("827187_", "snbr_")
+# Trimmed SEC list behind GET /company/SNBR/filings-since.
+FILINGS_SINCE_SNAPSHOT = "submissions_CIK0000827187.filings_since.json"
 
 
 def _excludes():
@@ -69,12 +71,14 @@ class BundleAudit(unittest.TestCase):
                 any(n.startswith(prefix) for n in self.rel), prefix)
         raw = [n for n in self.rel if n.startswith("data/raw/")]
         self.assertTrue(raw, "Sleep Number raw subset must ship")
+        self.assertIn(f"data/raw/{FILINGS_SINCE_SNAPSHOT}", self.rel)
 
     def test_raw_only_sleep_number(self):
         for name in self.rel:
             if name.startswith("data/raw/"):
                 base = Path(name).name
-                self.assertTrue(base.startswith(RAW_PREFIXES), name)
+                self.assertTrue(base.startswith(RAW_PREFIXES)
+                                or base == FILINGS_SINCE_SNAPSHOT, name)
 
     def test_forbidden_absent(self):
         for name in self.rel:

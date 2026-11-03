@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from textify import html_to_text  # noqa: E402
-from runtime_paths import overlay_root  # noqa: E402
+from runtime_paths import bundled_path, overlay_root  # noqa: E402
 
 urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
 
@@ -319,14 +319,32 @@ def cached_submissions(cik):
     return data if isinstance(data, dict) else None
 
 
+def _filings_since_snapshot(cik):
+    """Committed trimmed submissions for filings_since, or None.
+
+    A separate name on purpose: edgar.fetch serves any file named
+    submissions_CIK<cik>.json as the full list, and list_filings needs
+    fields this snapshot leaves out, such as 8-K items.
+    """
+    try:
+        name = f"submissions_CIK{_cik_10(cik)}.filings_since.json"
+        data = json.loads(bundled_path("raw", name).read_text(
+            encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def filings_since(cik, after_date):
     """10-K/10-Q/8-K rows filed after after_date, cached data only.
 
     Returns None when the submissions cache is missing. Only the
     cached recent-filings block is read; older archive files are
-    never fetched in a request path.
+    never fetched in a request path. The trimmed snapshot committed
+    for a company wins over a full cached copy, so the answer is the
+    same locally and in production.
     """
-    data = cached_submissions(cik)
+    data = _filings_since_snapshot(cik) or cached_submissions(cik)
     if data is None:
         return None
     after = str(after_date or "")[:10]

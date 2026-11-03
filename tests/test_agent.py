@@ -387,9 +387,14 @@ class FindAgreementsTimeout(unittest.TestCase):
         self.assertIn("find_agreements", result["error"])
 
     def test_cached_discovery_flag(self):
-        self.assertTrue(agent._discovery_cache_present("SNBR"))
-        self.assertTrue(agent._discovery_cache_present("827187"))
-        self.assertFalse(agent._discovery_cache_present("ZZZZ"))
+        registry = {"SNBR": {"cik": "827187"}}
+        with patch.object(agent, "DATA_DIR",
+                          PROJECT_ROOT / "tests" / "fixtures" / "sec"), \
+             patch.object(agent, "_load_companies_registry",
+                          return_value=registry):
+            self.assertTrue(agent._discovery_cache_present("SNBR"))
+            self.assertTrue(agent._discovery_cache_present("827187"))
+            self.assertFalse(agent._discovery_cache_present("ZZZZ"))
 
 
 class ExtractCovenantsReviewed(unittest.TestCase):

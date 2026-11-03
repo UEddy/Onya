@@ -306,8 +306,9 @@ unavailable. Code: `src/private_compare.py`.
 
 Prerequisites: Python 3.14 and Node 24 (the versions this repo runs
 under). Secrets live outside the repo in `~/.config/onya/.env`; only
-variable names appear here: `META_API_KEY`, `META_BASE_URL`,
-`ONYA_DEMO_TOKEN`, `BASETEN_API_KEY` and `BASETEN_BASE_URL` for the
+variable names appear here: `SEC_USER_AGENT`, `META_API_KEY`,
+`META_BASE_URL`, `ONYA_DEMO_TOKEN`, `BASETEN_API_KEY` and
+`BASETEN_BASE_URL` for the
 private check, plus `UPSTASH_REDIS_REST_URL` and
 `UPSTASH_REDIS_REST_TOKEN` for limits in production.
 

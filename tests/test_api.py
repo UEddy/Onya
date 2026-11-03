@@ -559,8 +559,9 @@ class FilingsSince(ApiTestBase):
                 row["sec_url"].startswith(
                     "https://www.sec.gov/Archives/edgar/data/827187/"))
         dates = [row["filingDate"] for row in body["filings"]]
-        self.assertTrue(any(d.startswith("2026-06") for d in dates),
-                        dates)
+        self.assertEqual(len(dates), 8)
+        self.assertEqual((dates[0], dates[-1]),
+                         ("2026-08-03", "2026-05-27"))
 
     def test_no_live_call_in_request_path(self):
         import edgar
@@ -595,10 +596,16 @@ class FilingsSince(ApiTestBase):
 
 class InfoRequestEndpoint(ApiTestBase):
     def test_streams_request(self):
-        r = self.client.post("/agent/info-request",
-                             json={"company": "SNBR",
-                                   "period_end": "2026-04-04"},
-                             headers=self.auth())
+        import edgar
+
+        # Committed ticker subset and selection, not gitignored data.
+        fixtures = PROJECT_ROOT / "tests" / "fixtures" / "sec"
+        with patch.object(edgar, "RAW_DIR", fixtures), \
+             patch.object(edgar, "CACHE_DIR", fixtures):
+            r = self.client.post("/agent/info-request",
+                                 json={"company": "SNBR",
+                                       "period_end": "2026-04-04"},
+                                 headers=self.auth())
         self.assertEqual(r.status_code, 200)
         events = _stream_events(r)
         self.assertEqual(events[0]["type"], "tool_call")

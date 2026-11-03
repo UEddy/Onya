@@ -31,7 +31,7 @@ its source, and the command or test that reproduces it.
 | Cure: debt reduction to pass Apr 4 | $267,190,000 | `data/results/snbr_2026-04-04.json` (cure.figures.debt_reduction_needed) | `.venv/bin/python -m unittest tests.test_cure` |
 | Cure: EBITDA increase to pass Apr 4 | $56,250,526.32 | `data/results/snbr_2026-04-04.json` (cure.figures.ebitda_increase_needed) | `.venv/bin/python -m unittest tests.test_cure` |
 | Next test | Jul 4, 2026, limit 4.80x, projected 6.58x, high risk | `data/results/snbr_projection_2026-04-04.json` | `.venv/bin/python -m unittest tests.test_api` |
-| Filings after May 19, 2026 | 8 8-K rows, May 27 to Aug 3, 2026, with SEC links, cache only | `data/raw/submissions_CIK0000827187.json` | `.venv/bin/python -m unittest tests.test_api.FilingsSince` |
+| Filings after May 19, 2026 | 8 8-K rows, May 27 to Aug 3, 2026, with SEC links, no live SEC call; snapshot cut off at Oct 30, 2026 | `data/raw/submissions_CIK0000827187.filings_since.json` | `.venv/bin/python -m unittest tests.test_api.FilingsSince` |
 | Memo verifier on sample run `7c2a49625f4e` | 42 of 42 memo figures traced to tool output | `data/samples/snbr_memo.json` (`figures_checked`); corpus `data/results/snbr_2026-04-04.json`, `data/results/snbr_projection_2026-04-04.json`, `data/extracted/snbr_covenants.reviewed.json`, `tests/fixtures/sec/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_agent.MemoValidators.test_sample_memo_verifies_42_of_42` |
 
 ## Why Muse Spark
@@ -163,7 +163,7 @@ Contract thresholds per company, from `data/backtest/terms_<TICKER>.json`
 | QUAD | 3 matched; agreement found by incorporated reference (Aug 20, 2025 agreement, EX-4.7 of the Feb 18, 2026 10-K). The disclosed total net leverage ratio has no separate covenant in the agreement |
 | STGW | 1 matched |
 | TRS | 2 matched |
-| Total | 19 matched, 2 amended after agreement, 0 mismatched, 21 quotes verified |
+| Total | 19 matched, 2 amended after agreement, 0 mismatched, 21 covenant quotes verified |
 
 Rescoring saved extractions costs no tokens:
 `PYTHONPATH=src .venv/bin/python src/backtest_terms.py --rescore`. The
