@@ -196,6 +196,17 @@ def reporting_as_of(period_end):
             + timedelta(days=REPORTING_WINDOW_DAYS)).isoformat()
 
 
+# A test whose figures came on file later than the 45-day window: the Jan 3,
+# 2026 figures are in the 10-K and earnings release filed Mar 12, 2026.
+FIGURES_ON_FILE = {"2026-01-03": "2026-03-12"}
+
+
+def test_as_of(period_end):
+    """Cutoff for a computed test: when all its figures were on file."""
+    period = str(period_end)[:10]
+    return max(reporting_as_of(period), FIGURES_ON_FILE.get(period, ""))
+
+
 _MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -1226,6 +1237,49 @@ def summarize_extraction(data):
             "equity_cure": equity_cure}
 
 
+# The reviewed extraction is of the agreement as amended Apr 28, 2026.
+REVIEWED_AGREEMENT_FILED = "2026-04-28"
+_LATER_TERMS_RE = re.compile(r"thirteenth|fourteenth|forbearance", re.I)
+
+
+def _reviewed_as_of(data, as_of):
+    """The reviewed extraction without terms dated after as_of.
+
+    Before the reviewed agreement was filed, a run keeps only the schedule
+    entries for tests up to as_of and drops wording from the later filing.
+    The kept limits and caps are also in the Twelfth Amendment.
+    """
+    if not as_of or str(as_of)[:10] >= REVIEWED_AGREEMENT_FILED:
+        return data
+    cutoff = str(as_of)[:10]
+
+    def later_entry(item):
+        return (isinstance(item, dict)
+                and ("period_end" in item or "applies_after" in item)
+                and str(item.get("period_end")
+                        or item.get("applies_after") or "9999") > cutoff)
+
+    def prune(value):
+        if isinstance(value, dict):
+            kept = {k: prune(v) for k, v in value.items()}
+            return {k: v for k, v in kept.items()
+                    if not (isinstance(v, str)
+                            and _LATER_TERMS_RE.search(v))}
+        if isinstance(value, list):
+            return [prune(item) for item in value
+                    if not later_entry(item)
+                    and not (isinstance(item, str)
+                             and _LATER_TERMS_RE.search(item))
+                    and not (isinstance(item, dict)
+                             and _LATER_TERMS_RE.search(
+                                 json.dumps(item, default=str))
+                             and "thresholds" not in item
+                             and "schedule" not in item)]
+        return value
+
+    return prune(data)
+
+
 def tool_extract_covenants(company, agreement_url, as_of=None,
                          client=None, max_tokens=None):
     """Download + textify + LLM-extract + quote-verify a credit agreement.
@@ -1239,6 +1293,7 @@ def tool_extract_covenants(company, agreement_url, as_of=None,
     reviewed_path = DATA_DIR / "extracted" / f"{slug}_covenants.reviewed.json"
     if reviewed_path.exists():
         data = json.loads(reviewed_path.read_text(encoding="utf-8"))
+        data = _reviewed_as_of(data, as_of)
         return _record({
             "reviewed": True,
             "company": company,

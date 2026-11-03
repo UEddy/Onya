@@ -73,7 +73,7 @@ class BundleAudit(unittest.TestCase):
         self.assertTrue(raw, "Sleep Number raw subset must ship")
         self.assertIn(f"data/raw/{FILINGS_SINCE_SNAPSHOT}", self.rel)
         # What the information request and private check read for SNBR.
-        for as_of in ("2025-11-11", "2026-02-17", "2026-05-19"):
+        for as_of in ("2025-11-11", "2026-02-17", "2026-03-12", "2026-05-19"):
             self.assertIn(
                 f"data/cache/select_0000827187_{as_of}.json", self.rel)
 

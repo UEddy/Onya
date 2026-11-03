@@ -189,7 +189,7 @@ def route_question(question, tests=None):
         prompt = ("Check Sleep Number's covenants as of the "
                   f"{agent.prose_date(period)} test and tell me what to do.")
         return Route(ROUTE_SNBR, ticker="SNBR", period_end=period,
-                     as_of=agent.reporting_as_of(period), prompt=prompt,
+                     as_of=agent.test_as_of(period), prompt=prompt,
                      memo_note=note)
     ticker = _covered_ticker(text)
     if ticker:

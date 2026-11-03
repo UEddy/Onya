@@ -52,7 +52,7 @@ TABLE = [
     ("Check Sleep Number", qr.ROUTE_SNBR, "2026-04-04", "2026-05-19",
      "No test date given"),
     ("Sleep Number as of Jan 3, 2026", qr.ROUTE_SNBR,
-     "2026-01-03", "2026-02-17", ""),
+     "2026-01-03", "2026-03-12", ""),
     ("SNBR on 2025-12-15", qr.ROUTE_SNBR, "2025-09-27", "2025-11-11",
      "on or before"),
     ("Sleep Number in 2026", qr.ROUTE_SNBR, "2026-04-04", "2026-05-19",
@@ -251,7 +251,7 @@ class Endpoint(unittest.TestCase):
         """Whatever the model asks for, tools get the chosen test's cutoff."""
         for question, period, as_of in (
                 ("Check Sleep Number as of 2024", "2025-09-27", "2025-11-11"),
-                ("Sleep Number as of Jan 3, 2026", "2026-01-03", "2026-02-17"),
+                ("Sleep Number as of Jan 3, 2026", "2026-01-03", "2026-03-12"),
                 ("Check Sleep Number as of the July 2026 test",
                  "2026-04-04", "2026-05-19")):
             with self.subTest(question=question):
@@ -315,6 +315,60 @@ class Endpoint(unittest.TestCase):
         spy = Spy(turn(content=f"Summary\nKey {SECRETS['META_API_KEY']}."))
         r = self.run_snbr("Check Sleep Number", spy)
         self.assert_clean(r.text)
+
+
+class NothingPastTheCutoff(unittest.TestCase):
+    """Each test's figures and tool outputs stay within its as-of date."""
+
+    def test_each_xbrl_figure_was_on_file_by_the_as_of_date(self):
+        import xbrl
+
+        facts = xbrl.load_facts()["facts"]
+        for period in TESTS:
+            as_of = agent.test_as_of(period)
+            result = json.loads((PROJECT_ROOT / "data" / "results"
+                                 / f"snbr_{period}.json").read_text())
+            checked = 0
+            for component in result["components"]:
+                source = str(component["source"])
+                if not source.startswith("xbrl:"):
+                    continue
+                _, namespace, name = source.split(":", 2)
+                units = facts[namespace][name]["units"].values()
+                filed = [fact["filed"] for unit in units for fact in unit
+                         if fact.get("end") == period]
+                with self.subTest(period=period, source=source):
+                    self.assertTrue(filed, "no fact for this period")
+                    self.assertLessEqual(min(filed), as_of)
+                checked += 1
+            self.assertGreater(checked, 5)
+
+    def test_as_of_dates(self):
+        self.assertEqual([agent.test_as_of(t) for t in TESTS],
+                         ["2025-11-11", "2026-03-12", "2026-05-19"])
+
+    def test_agreement_selected_for_each_cutoff_is_on_file(self):
+        for period in TESTS:
+            as_of = agent.test_as_of(period)
+            saved = json.loads((PROJECT_ROOT / "data" / "cache" /
+                                f"select_0000827187_{as_of}.json").read_text())
+            self.assertLessEqual(saved["base"]["filingDate"], as_of)
+
+    def test_reviewed_extraction_hides_later_terms_before_it_was_filed(self):
+        for as_of in ("2025-11-11", "2026-03-12"):
+            with self.subTest(as_of=as_of):
+                agent.reset_corpus()
+                out = agent.tool_extract_covenants("SNBR", "unused", as_of)
+                text = json.dumps(out, default=str)
+                for word in ("Thirteenth", "THIRTEENTH", "orbearance",
+                             "FORBEARANCE", "ourteenth", "2026-07-04"):
+                    self.assertNotIn(word, text)
+                self.assertIn("Net Leverage Ratio", text)
+
+    def test_reviewed_extraction_is_whole_after_it_was_filed(self):
+        agent.reset_corpus()
+        out = agent.tool_extract_covenants("SNBR", "unused", "2026-05-19")
+        self.assertIn("2026-07-04", json.dumps(out, default=str))
 
 
 class FailedCallStatus(unittest.TestCase):
