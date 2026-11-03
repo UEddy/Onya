@@ -99,6 +99,136 @@ sent anywhere.
 | Muse Spark Open on Baseten | `src/extract_disclosed.py`, `src/backtest_terms.py` | Back-test extraction of disclosed figures and contract terms |
 | Muse Code with Muse Wonder 1.0 and Muse Spark 1.3 | development | Built this repo; no runtime role |
 
+## Why Muse Spark
+
+Each figure here comes from files in this repo or the SEC filings and
+model page they link to; writing this section made no new model calls. Muse Spark 1.3 read the Sleep Number agreement.
+Muse Spark Open ran the back-test and runs the private check.
+
+### Long context, one pass
+
+`src/extract.py` sends the whole Sleep Number exhibit and its
+instructions in one request. The exhibit holds the forbearance agreement,
+the thirteenth amendment and the amended credit agreement: 496,322
+characters, or 500,622 with instructions. That is about 106,000 prompt
+tokens. This is an estimate, because that run printed its token count
+without saving it.
+
+The back-test sends each borrower's agreement the same way. Only AMCX and
+QUAD have logged token counts (`model_usage` in
+`data/backtest/terms_<TICKER>.json`). Their ratio, 4.74 characters per
+token, gives the estimates for the other rows and for Sleep Number,
+which ran on a different model. Character counts come from the agreement
+text and current prompt, using the filing at `agreement_url` in each
+terms file.
+
+| Borrower | Prompt characters | Prompt tokens | Basis |
+|---|---:|---:|---|
+| GPK | 809,926 | about 171,000 | estimate |
+| QUAD | 705,998 | 148,372 | logged |
+| AMCX | 696,312 | 147,634 | logged |
+| TRS | 662,824 | about 140,000 | estimate |
+| HAIN | 607,769 | about 128,000 | estimate |
+| STGW | 594,892 | about 126,000 | estimate |
+| CRS | 556,849 | about 118,000 | estimate |
+| NUVR | 542,693 | about 115,000 | estimate |
+| AIN | 509,006 | about 107,000 | estimate |
+| ORLY | 430,673 | about 91,000 | estimate |
+
+OPTX is absent: its agreement was filed as scanned images and was not
+read.
+
+### The shared cap
+
+Clauses (a)(iv) and (a)(viii) are separate add-backs in the Consolidated
+EBITDA definition, but they share one cap. The proviso that sets it comes
+after the (a)(ix) cap and clause (b), about 1,500 characters past
+(a)(viii). All of this sits in one definition, so the trap is the
+structure, not the distance. From cap group `cap_ebitda_aiv_aviii` in
+`data/extracted/snbr_covenants.reviewed.json`:
+
+> the aggregate amount of cash losses and cash expenses included as
+> addbacks in any determination of Consolidated EBITDA under the foregoing
+> clauses (a)(iv) and (a)(viii) shall not exceed the following amounts for
+> the following periods: ... (y) $25,000,000 for the trailing four
+> consecutive Quarterly Reporting Periods ending September 27, 2025,
+> January 3, 2026, April 4, 2026, ...
+
+At the Apr 4, 2026 test, (a)(iv) is $19,841,000 and (a)(viii) is
+$23,891,000. Each is under $25,000,000 alone, but together they are
+$43,732,000, so $18,732,000 is disallowed (`data/results/snbr_2026-04-04.json`).
+
+| Reading | Disallowed | Net leverage | With $44M savings (limit 4.75x) |
+|---|---:|---:|---|
+| Each clause against the cap alone | $0 | 5.83x | 4.60x, pass |
+| One shared cap | $18,732,000 | 6.58x | 5.06x, fail |
+
+The first row is arithmetic on those figures, not a recorded model run.
+It shows what the wrong reading would do: with savings, it turns a breach
+into a pass. The extraction prompt requires one group for an aggregate
+cap, and `src/covenant.py` computes the excess.
+
+### Verified reading
+
+All 52 quotes in the reviewed Sleep Number extraction (50 distinct) appear
+word for word in the agreement text
+(`data/raw/827187_000082718726000035_ex101thirteenthamendmentto.htm`),
+ignoring differences in whitespace and quote marks (`normalize` in
+`src/extract.py`). The check shows the
+quoted text exists; it does not by itself prove each parsed value.
+
+On the back-test, Muse Spark Open matched 23 of 23 disclosed figures, 22
+with a verified quote. See [Accuracy](#accuracy).
+
+### Agent judgment, bounded by code
+
+In sample run `7c2a49625f4e` (`data/samples/snbr_memo.json`), asked about
+"the April 2026 test", Muse Spark passed an as-of date of May 19, 2026 to
+all 7 tool calls. That is the test date plus the 45-day reporting window
+set in the system prompt.
+
+Python then applies the cutoff: `select_agreement` returns the forbearance
+agreement and thirteenth amendment, filed Apr 28, 2026, not the fourteenth
+amendment, filed Jun 16, 2026. The run's `find_agreements` step records
+that result. The tool reports the document type as forbearance, and the
+memo's actions follow from it: review the forbearance terms and check the
+expiry date.
+
+`tests/test_asof_regression.py` proves the code path:
+`DiscoveryCutoff.test_live_discovery_excludes_post_cutoff_filing` keeps
+the fourteenth amendment out, and
+`VerifierRejectsForeignLabels.test_foreign_ordinal_and_title_flagged`
+flags a memo that cites it. These tests make no model calls, so they do
+not test the model's choice of date. The two classes hold 4 tests, all
+passing:
+
+```bash
+.venv/bin/python -m unittest tests.test_asof_regression.DiscoveryCutoff \
+  tests.test_asof_regression.VerifierRejectsForeignLabels
+```
+
+### Open weights
+
+Compliance certificates are confidential, so where the model runs
+matters. The [Muse Model License](https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md)
+grants the right "to deal in the Software without restriction, including
+without limitation, the rights to use, copy, modify", subject to its
+conditions, including the Usage Policy and the "Built with Muse Spark
+Open" attribution. Its Model as a Service terms do not apply to "internal
+use, research, or any commercial activity that is not Model as a Service".
+The model page offers the weights for download to run "on your own
+system", which needs a GPU with at least 700GB of VRAM (NVFP4).
+
+That permits a lender to run the certificate step on infrastructure they
+control. Onya has not done this: the demo sends certificate text to
+Muse Spark Open on Baseten. `make_baseten_client` in
+`src/private_compare.py` is an OpenAI-compatible client that reads its
+base URL from `BASETEN_BASE_URL`, so the code has a place to point at
+another endpoint, but no self-hosted endpoint has been tested. Lenders
+should review the license themselves.
+
+Muse reads. Python computes. Each does the part it is suited for.
+
 ## Accuracy
 
 Back-test extraction was run with Muse Spark Open; the committed outputs
