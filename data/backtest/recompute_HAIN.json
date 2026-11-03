@@ -1,0 +1,130 @@
+{
+  "ticker": "HAIN",
+  "period_end": "2025-09-30",
+  "xbrl_period_end": "2025-09-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/910406/000119312522309599/d423508dex101.htm",
+  "ratios": [
+    {
+      "name": "Consolidated Secured Leverage Ratio",
+      "disclosed_name": "consolidated secured leverage ratio",
+      "recomputed": null,
+      "disclosed": 4.81,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "secured Consolidated Total Net Debt: XBRL does not split out the secured debt subset",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "other non-cash charges: not available from XBRL",
+        "non-cash restructuring and impairment: not available from XBRL",
+        "extraordinary, unusual or non-recurring items: not available from XBRL",
+        "credits from contingent payments: not available from XBRL",
+        "extraordinary or unusual gains: not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 48243000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestIncomeExpenseNet"
+          ],
+          "value": 47920000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": -531803000
+        },
+        {
+          "component": "restructuring",
+          "concepts": [
+            "us-gaap:RestructuringCharges"
+          ],
+          "value": 33891000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 10518000
+        }
+      ]
+    },
+    {
+      "name": "Consolidated Leverage Ratio",
+      "disclosed_name": "consolidated leverage ratio",
+      "recomputed": null,
+      "disclosed": 4.81,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "unreimbursed drawings on letters of credit: not available from XBRL",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "other non-cash charges: not available from XBRL",
+        "non-cash restructuring and impairment: not available from XBRL",
+        "extraordinary, unusual or non-recurring items: not available from XBRL",
+        "credits from contingent payments: not available from XBRL",
+        "extraordinary or unusual gains: not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 48243000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestIncomeExpenseNet"
+          ],
+          "value": 47920000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": -531803000
+        },
+        {
+          "component": "restructuring",
+          "concepts": [
+            "us-gaap:RestructuringCharges"
+          ],
+          "value": 33891000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 10518000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities"
+          ],
+          "value": 716210000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -47886000
+        }
+      ]
+    }
+  ]
+}

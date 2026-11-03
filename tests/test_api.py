@@ -326,11 +326,36 @@ class Backtest(ApiTestBase):
         self.assertEqual(len(disclosed["rows"]), 23)
         terms = body["terms"]
         self.assertEqual(terms["totals"], {
-            "covenants": 16, "companies": 11, "matched": 12,
-            "amended_after_agreement": 3, "no_disclosed_match": 0,
-            "mismatched": 1, "quote_verified": 16})
-        self.assertEqual(len(terms["rows"]), 16)
+            "covenants": 21, "companies": 11, "matched": 19,
+            "amended_after_agreement": 2, "no_disclosed_match": 0,
+            "mismatched": 0, "quote_verified": 21})
+        self.assertEqual(len(terms["rows"]), 21)
         self.assertEqual(len(terms["records"]), 11)
+        self.assertTrue(any("OPTX status: agreement filed as scanned images"
+                            in note for note in terms["notes"]))
+        self.assertTrue(any("AMCX Cash Flow Ratio is paired" in note
+                            for note in terms["notes"]))
+
+    def test_recompute_is_reported_apart_and_never_overstated(self):
+        body = self.client.get("/backtest").json()
+        recompute = body["recompute"]
+        totals = recompute["totals"]
+        self.assertEqual(totals["ratios"], len(recompute["rows"]))
+        self.assertEqual(
+            totals["full"] + totals["partial"] + totals["mismatched"],
+            totals["ratios"])
+        self.assertEqual(totals["full"], 0)
+        self.assertEqual(totals["companies"], 10)
+        self.assertTrue(any("OPTX" in n for n in recompute["notes"]))
+        for row in recompute["rows"]:
+            if row["status"] == "partial":
+                self.assertTrue(row["missing"], row)
+            if row["recomputed"] is None:
+                self.assertIsNone(row["difference"])
+                self.assertEqual(row["status"], "partial")
+        crs = next(r for r in recompute["rows"] if r["ticker"] == "CRS")
+        self.assertEqual(crs["status"], "partial")
+        self.assertLessEqual(abs(crs["difference"]), 0.10)
 
 
 class AgentAuth(ApiTestBase):

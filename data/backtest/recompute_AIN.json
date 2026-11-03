@@ -1,0 +1,76 @@
+{
+  "ticker": "AIN",
+  "period_end": "2026-06-30",
+  "xbrl_period_end": "2026-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/819793/000081979324000051/ain-20240630xex101.htm",
+  "ratios": [
+    {
+      "name": "Leverage Ratio",
+      "disclosed_name": "leverage ratio",
+      "recomputed": null,
+      "disclosed": 1.71,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Receivables consideration: not available from XBRL",
+        "Marketable Securities deduction: not available from XBRL",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "non-cash charges: not available from XBRL",
+        "early retirement charges: not available from XBRL",
+        "pension settlement expense: not available from XBRL",
+        "losses on sales: not available from XBRL",
+        "Heimbach charges: not available from XBRL",
+        "non-cash gains: not available from XBRL",
+        "gains on early retirement: not available from XBRL",
+        "gains on sales: not available from XBRL",
+        "Total Debt: stated limits are not available from XBRL",
+        "interest: no XBRL fact for the four quarters ending 2026-06-30"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:Depreciation",
+            "us-gaap:AmortizationOfIntangibleAssets"
+          ],
+          "value": 79372000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": -51185000
+        },
+        {
+          "component": "restructuring",
+          "concepts": [
+            "us-gaap:RestructuringCharges"
+          ],
+          "value": 18122000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 619000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebt"
+          ],
+          "value": 450669000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -77349000
+        }
+      ]
+    }
+  ]
+}

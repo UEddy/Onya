@@ -1,0 +1,94 @@
+{
+  "ticker": "QUAD",
+  "period_end": "2026-06-30",
+  "xbrl_period_end": "2026-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1481792/000148179226000042/exhibit47-quad2025amendmen.htm",
+  "ratios": [
+    {
+      "name": "Maximum Total Leverage Ratio",
+      "disclosed_name": "Total Leverage Ratio",
+      "recomputed": null,
+      "disclosed": 2.0,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Maximum drawing amount of letters of credit and bankers acceptances: not available from XBRL",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "Permitted Cash Restructuring Charges: not available from XBRL",
+        "Cost savings and synergies related to Permitted Acquisition: not available from XBRL",
+        "Interest income: not available from XBRL",
+        "depreciation_amortization: no XBRL fact for the four quarters ending 2026-06-30"
+      ],
+      "components": [
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpense"
+          ],
+          "value": 43800000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 31200000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 8400000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtNoncurrent",
+            "us-gaap:LongTermDebtCurrent"
+          ],
+          "value": 400000000
+        }
+      ]
+    },
+    {
+      "name": "Maximum Senior Secured Leverage Ratio",
+      "disclosed_name": "Senior Secured Leverage Ratio",
+      "recomputed": null,
+      "disclosed": 1.99,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Consolidated Net Indebtedness that is secured and not subordinated: XBRL does not split out the secured debt subset",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "Permitted Cash Restructuring Charges: not available from XBRL",
+        "Cost savings and synergies related to Permitted Acquisition: not available from XBRL",
+        "Interest income: not available from XBRL",
+        "depreciation_amortization: no XBRL fact for the four quarters ending 2026-06-30"
+      ],
+      "components": [
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpense"
+          ],
+          "value": 43800000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 31200000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 8400000
+        }
+      ]
+    }
+  ]
+}

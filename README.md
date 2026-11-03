@@ -108,13 +108,21 @@ sit in `data/backtest/` and the site accuracy page reads them. See
 - Disclosed figures: 23 of 23 matched (ratios and limits), 22 of the 23
   with a verified quote. The one match without a verified quote is AMCX
   interest coverage.
-- Contract thresholds: 12 matched where the signed agreement covers the
-  test period. Three more rows are flagged as amended after the signed
-  agreement, so they count separately rather than as misses. One row
-  mismatches: GPK interest expense ratio, where selection returned an
-  agreement whose schedule ends Dec 31, 2025 while the company discloses
-  a 5.0x limit for Jun 30, 2026. Base agreements were not found for AMCX,
-  QUAD and OPTX after searching EDGAR back to 2015.
+- Contract thresholds: 19 of 21 matched where the agreement covers the
+  test period, each with a verified covenant quote. The other two rows are
+  HAIN limits changed by later amendments, flagged and counted separately
+  rather than as misses. No row mismatches. AMCX and QUAD were found by
+  following incorporated-by-reference pointers from their 10-K and 10-Q
+  exhibit lists. OPTX stays unread: its credit agreement (EX-10.12, Nov 14,
+  2023 8-K) was filed as 56 scanned images with no text layer.
+- Recomputed from filings: 12 leverage ratios across 10 companies rebuilt
+  from XBRL using the extracted definitions. 0 full matches, 12 partial, 0
+  mismatched. Four have a figure, and none of the four is a covenant
+  calculation: CRS 0.60x vs 0.59x disclosed, TRS 2.80x vs 2.29x, GPK 5.03x
+  vs 4.37x, NUVR 4.45x vs 4.99x. CRS landing close is not a match, because
+  its definition has components XBRL cannot supply. The other eight could
+  not be built from XBRL, and the missing components are listed for each.
+  These results are not in the accuracy totals above.
 
 ## Why the numbers can be trusted
 
@@ -207,6 +215,8 @@ kill switch.
 
 Built Oct 26 to Nov 4, 2026. First commit in this repo: `c16dbc4`,
 Oct 30, 2026 ("Project setup and Meta API test").
+
+Later passes and the final code review used Claude Code.
 
 ## Limitations
 

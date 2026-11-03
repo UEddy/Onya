@@ -1,0 +1,68 @@
+{
+  "ticker": "TRS",
+  "period_end": "2025-09-30",
+  "xbrl_period_end": "2025-09-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/842633/000084263325000073/ex101creditagreement.htm",
+  "ratios": [
+    {
+      "name": "Total Net Leverage Ratio",
+      "disclosed_name": "total net leverage ratio",
+      "recomputed": 2.8,
+      "disclosed": 2.29,
+      "difference": 0.51,
+      "status": "partial",
+      "missing": [
+        "Net Investment under Receivables Transfer Agreement: not available from XBRL",
+        "off-balance sheet Indebtedness: not available from XBRL",
+        "Freely Transferable cash adjustment: netting limits are not available from XBRL, so balance sheet cash is used without them",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "run rate cost savings: not available from XBRL",
+        "gains on retirement of Indebtedness: not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 65050000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpenseNonoperating"
+          ],
+          "value": 17990000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 44080000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 6320000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtAndCapitalLeaseObligations"
+          ],
+          "value": 407070000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -33640000
+        }
+      ]
+    }
+  ]
+}

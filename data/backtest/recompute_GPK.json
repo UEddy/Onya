@@ -1,0 +1,65 @@
+{
+  "ticker": "GPK",
+  "period_end": "2026-06-30",
+  "xbrl_period_end": "2026-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1408075/000119312526077943/d106221dex101.htm",
+  "ratios": [
+    {
+      "name": "Consolidated Total Leverage Ratio",
+      "disclosed_name": "Consolidated Total Leverage Ratio",
+      "recomputed": 5.03,
+      "disclosed": 4.37,
+      "difference": 0.66,
+      "status": "partial",
+      "missing": [
+        "EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "non-cash expenses and charges: not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 559000000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpenseNonoperating"
+          ],
+          "value": 248000000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 194000000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 61000000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebt",
+            "us-gaap:ShortTermBorrowings"
+          ],
+          "value": 5551000000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -205000000
+        }
+      ]
+    }
+  ]
+}

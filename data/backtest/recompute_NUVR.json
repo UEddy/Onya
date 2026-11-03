@@ -1,0 +1,64 @@
+{
+  "ticker": "NUVR",
+  "period_end": "2026-06-30",
+  "xbrl_period_end": "2026-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/71557/000151316224000083/exhibit10_1.htm",
+  "ratios": [
+    {
+      "name": "Maximum Leverage Ratio",
+      "disclosed_name": "Total Leverage Ratio",
+      "recomputed": 4.45,
+      "disclosed": 4.99,
+      "difference": -0.54,
+      "status": "partial",
+      "missing": [
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "unrealized losses on financial derivatives: not available from XBRL",
+        "extraordinary executive compensation: not available from XBRL",
+        "transaction costs and expenses: not available from XBRL",
+        "pro forma run rate cost savings: not available from XBRL",
+        "unrealized gains on financial derivatives: not available from XBRL",
+        "interest income, dividends and patronage income: not available from XBRL",
+        "income from unconsolidated subsidiaries: not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 18681638
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpenseNonoperating"
+          ],
+          "value": 12128934
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 1140457
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 565397
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtNoncurrent",
+            "us-gaap:LongTermDebtCurrent"
+          ],
+          "value": 144766972
+        }
+      ]
+    }
+  ]
+}

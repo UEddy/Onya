@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -16,7 +16,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 import backtest_terms
 import extract
 import extract_disclosed
-from openai import APIConnectionError
+from openai import APIConnectionError, APITimeoutError
 
 
 def _response(content, prompt=10, completion=5):
@@ -127,7 +127,7 @@ class ModelConfig(unittest.TestCase):
                          {"BASETEN_API_KEY": "k", "BASETEN_BASE_URL": "u"}),
               patch.object(backtest_terms, "OpenAI") as factory):
             backtest_terms.make_client()
-        factory.assert_called_once_with(api_key="k", base_url="u", timeout=120, max_retries=2)
+        factory.assert_called_once_with(api_key="k", base_url="u", timeout=300, max_retries=0)
 
     def test_reuses_extract_logic(self):
         self.assertIs(backtest_terms.INSTRUCTIONS, extract.INSTRUCTIONS)
@@ -159,6 +159,40 @@ class SelectionInputs(unittest.TestCase):
         name = backtest_terms.agreement_cache_filename(
             "TST", "https://example.invalid/files/agreement.htm")
         self.assertEqual(name, "backtest_terms_TST_agreement.htm")
+
+
+def _gpk_candidates():
+    old_base = {
+        "url": "https://www.sec.gov/Archives/edgar/data/1408075/old-base.htm",
+        "filingDate": "2024-06-03", "form": "8-K",
+        "description": "EX-10.1", "title": "FIFTH AMENDED AND RESTATED CREDIT AGREEMENT",
+        "is_forbearance": False, "is_amendment": False,
+        "is_complete": True, "char_count": 700000,
+        "character_count": 700000,
+    }
+    amendment = {
+        "url": "https://www.sec.gov/Archives/edgar/data/1408075/000119312526077943/d106221dex101.htm",
+        "filingDate": "2026-02-27", "form": "8-K",
+        "description": "EX-10.1", "title": "AMENDMENT NO. 1 TO FIFTH AMENDED AND RESTATED CREDIT AGREEMENT",
+        "is_forbearance": False, "is_amendment": True,
+        "is_complete": True, "char_count": 805626,
+        "character_count": 805626,
+    }
+    return [amendment, old_base]
+
+
+class SelectionPrefersRestatingAmendment(unittest.TestCase):
+    def test_newest_complete_amendment_wins(self):
+        import edgar
+
+        with patch.object(edgar, "find_credit_agreements",
+                          return_value=_gpk_candidates()):
+            base, _amendments = edgar.select_agreement(
+                "1408075", as_of="2026-08-14")
+        self.assertEqual(
+            base["url"],
+            "https://www.sec.gov/Archives/edgar/data/1408075/"
+            "000119312526077943/d106221dex101.htm")
 
 
 class BuildContent(unittest.TestCase):
@@ -533,6 +567,48 @@ class ExtractOne(unittest.TestCase):
             self.assertTrue((backtest_dir / "terms_TST_raw.txt").exists())
             self.assertEqual(len(client.chat.completions.requests), 1)
 
+    def test_incorporated_reference_used_when_no_base(self):
+        candidate = dict(BASE)
+        candidate["is_complete"] = False
+        candidate["restates_covenants"] = True
+        client = FakeClient([_response(json.dumps(PARSED))])
+        with tempfile.TemporaryDirectory() as tmp:
+            backtest_dir = self._disclosed_dir(tmp)
+            with (patch.object(backtest_terms, "select_agreement",
+                               return_value=(None, [])),
+                  patch.object(backtest_terms,
+                               "resolve_incorporated_agreement",
+                               return_value=[candidate]),
+                  patch.object(backtest_terms, "fetch_agreement",
+                               return_value=(DOCUMENT, candidate["url"]))):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    record = backtest_terms.extract_one(
+                        _case(), client, backtest_dir)
+            self.assertIn("incorporated reference", buf.getvalue())
+            self.assertEqual(record["status"], backtest_terms.STATUS_OK)
+            self.assertEqual(record["agreement_url"], candidate["url"])
+            self.assertEqual(len(client.chat.completions.requests), 1)
+
+    def test_incomplete_incorporated_reference_skipped(self):
+        candidate = dict(BASE)
+        candidate["is_complete"] = False
+        candidate["restates_covenants"] = False
+        client = FakeClient([])
+        with tempfile.TemporaryDirectory() as tmp:
+            backtest_dir = self._disclosed_dir(tmp)
+            with (patch.object(backtest_terms, "select_agreement",
+                               return_value=(None, [])),
+                  patch.object(backtest_terms, "find_image_only_credit_exhibits",
+                               return_value=[]), \
+                  patch.object(backtest_terms,
+                               "resolve_incorporated_agreement",
+                               return_value=[candidate])):
+                record = backtest_terms.extract_one(
+                    _case(), client, backtest_dir)
+            self.assertEqual(record["status"], "base agreement not found")
+            self.assertEqual(client.chat.completions.requests, [])
+
     def test_too_long_skips_model(self):
         client = FakeClient([])
         with tempfile.TemporaryDirectory() as tmp:
@@ -557,7 +633,12 @@ class ExtractOne(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             backtest_dir = Path(tmp) / "backtest"
             with patch.object(backtest_terms, "select_agreement",
-                               return_value=(None, [])):
+                               return_value=(None, [])), \
+                 patch.object(backtest_terms, "find_image_only_credit_exhibits",
+                              return_value=[]), \
+                 patch.object(backtest_terms,
+                              "resolve_incorporated_agreement",
+                              return_value=[]):
                 buf = io.StringIO()
                 with redirect_stdout(buf):
                     record = backtest_terms.extract_one(
@@ -997,6 +1078,320 @@ class RepairQuotes(unittest.TestCase):
         kwargs = client.chat.completions.requests[0]
         self.assertEqual(kwargs["model"], "meta-models/muse-spark-open-1026")
         self.assertEqual(kwargs["temperature"], 0)
+
+
+GPK_LEVERAGE_SCHEDULE = [
+    {"period_end": "2025-12-31", "applies_after": None, "value": 4.25,
+     "condition": "June 30, 2024 through and including December 31, 2025"},
+    {"period_end": "2026-12-31", "applies_after": None, "value": 5.0,
+     "condition": "March 31, 2026 through and including December 31, 2026"},
+    {"period_end": "2027-06-30", "applies_after": None, "value": 4.75,
+     "condition": "March 31, 2027 through and including June 30, 2027"},
+    {"period_end": None, "applies_after": "2027-06-30", "value": 4.25,
+     "condition": "September 30, 2027 and thereafter"},
+]
+
+GPK_INTEREST_SCHEDULE = [
+    {"period_end": None, "applies_after": "2024-06-30", "value": 3.0,
+     "condition": "as of the end of any Test Period ending on or after "
+                  "June 30, 2024"},
+]
+
+
+class ConditionCovers(unittest.TestCase):
+    def test_range_covers_test_date(self):
+        self.assertTrue(backtest_terms.condition_covers(
+            "March 31, 2026 through and including December 31, 2026",
+            "2026-06-30"))
+        self.assertFalse(backtest_terms.condition_covers(
+            "June 30, 2024 through and including December 31, 2025",
+            "2026-06-30"))
+
+    def test_open_start_covers(self):
+        self.assertTrue(backtest_terms.condition_covers(
+            "as of the end of any Test Period ending on or after "
+            "June 30, 2024", "2026-06-30"))
+        self.assertTrue(backtest_terms.condition_covers(
+            "September 30, 2027 and thereafter", "2027-12-31"))
+        self.assertFalse(backtest_terms.condition_covers(
+            "September 30, 2027 and thereafter", "2026-06-30"))
+
+    def test_event_condition_never_covers(self):
+        self.assertFalse(backtest_terms.condition_covers(
+            "during Elevated Ratio Period following acquisition "
+            ">$100,000,000", "2026-06-30"))
+        self.assertFalse(backtest_terms.condition_covers(
+            "during a Covenant Holiday Period", "2025-09-30"))
+        self.assertFalse(backtest_terms.condition_covers(None, "2026-06-30"))
+
+
+class CoveringAlternative(unittest.TestCase):
+    def test_gpk_leverage_resolves_to_covering_row(self):
+        self.assertEqual(
+            backtest_terms.conditional_alternatives(
+                GPK_LEVERAGE_SCHEDULE, "2026-06-30"),
+            [{"value": 5.0,
+              "condition": "March 31, 2026 through and including "
+                           "December 31, 2026"}])
+
+    def test_gpk_interest_resolves_to_covering_row(self):
+        self.assertEqual(
+            backtest_terms.conditional_alternatives(
+                GPK_INTEREST_SCHEDULE, "2026-06-30"),
+            [{"value": 3.0,
+              "condition": "as of the end of any Test Period ending on "
+                           "or after June 30, 2024"}])
+
+    def test_falls_back_without_covering_row(self):
+        self.assertEqual(
+            backtest_terms.conditional_alternatives(
+                TRS_SCHEDULE, "2025-09-30"),
+            [{"value": 4.5,
+              "condition": "during a Covenant Holiday Period"}])
+
+
+def _gpk_agreement_covs():
+    return [
+        {"name": "Consolidated Total Leverage Ratio", "direction": "max",
+         "thresholds": GPK_LEVERAGE_SCHEDULE},
+        {"name": "Consolidated Interest Expense Ratio", "direction": "min",
+         "thresholds": GPK_INTEREST_SCHEDULE},
+    ]
+
+
+def _gpk_disclosed_covs():
+    return [
+        {"name": "total leverage", "direction": "max", "threshold": 5.0,
+         "actual": 4.37, "in_compliance": True,
+         "waiver_or_amendment_note": None},
+        {"name": "interest expense ratio", "direction": "min",
+         "threshold": 3.0, "actual": 4.86, "in_compliance": True,
+         "waiver_or_amendment_note": None},
+    ]
+
+
+class CoveringScheduleScores(unittest.TestCase):
+    def test_covering_match_needs_no_waiver_note(self):
+        rows, _ = backtest_terms.score_terms(
+            "GPK", "2026-06-30", _gpk_agreement_covs(),
+            _gpk_disclosed_covs(), "http://example.invalid/agreement",
+            [True, True])
+        self.assertTrue(all(r["match"] for r in rows))
+        self.assertTrue(all(r["status"] == "match" for r in rows))
+
+    def test_event_conditional_still_needs_note(self):
+        sched = [{"period_end": None, "applies_after": "2024-12-31",
+                  "value": 4.5,
+                  "condition": "during a Covenant Holiday Period"}]
+        agr = [{"name": "Total Leverage", "direction": "max",
+                "thresholds": sched}]
+        dis = [{"name": "total leverage", "direction": "max",
+                "threshold": 4.5, "actual": 4.37, "in_compliance": True,
+                "waiver_or_amendment_note": None}]
+        rows, _ = backtest_terms.score_terms(
+            "TST", "2025-09-30", agr, dis, "http://example.invalid/a",
+            [True])
+        self.assertFalse(rows[0]["match"])
+
+
+GPK_SCHEDULE = [
+    {"period_end": "2025-12-31", "applies_after": None, "value": 4.25,
+     "condition": "June 30, 2024 through and including December 31, 2025"},
+    {"period_end": "2026-12-31", "applies_after": None, "value": 5.0,
+     "condition": "March 31, 2026 through and including December 31, 2026"},
+    {"period_end": "2027-06-30", "applies_after": None, "value": 4.75,
+     "condition": "March 31, 2027 through and including June 30, 2027"},
+    {"period_end": None, "applies_after": "2027-06-30", "value": 4.25,
+     "condition": "September 30, 2027 and thereafter"},
+    {"period_end": None, "applies_after": "2027-12-31", "value": 4.75,
+     "condition": "during Elevated Ratio Period following acquisition"},
+]
+
+AMCX_SCHEDULE = [
+    {"period_end": "2021-12-31", "applies_after": None, "value": 5.25,
+     "condition": "From and including January 1, 2021 to and including "
+                  "December 31, 2021"},
+    {"period_end": "2024-04-09", "applies_after": None, "value": 5.0,
+     "condition": "From and including January 1, 2022 to but excluding "
+                  "the Amendment No. 3 Effective Date"},
+    {"period_end": "2026-03-31", "applies_after": None, "value": 5.75,
+     "condition": "From and including the Amendment No. 3 Effective Date "
+                  "to and including March 31, 2026"},
+    {"period_end": None, "applies_after": "2026-03-31", "value": 5.5,
+     "condition": "After March 31, 2026"},
+]
+
+
+class ScheduleRows(unittest.TestCase):
+    def score(self, schedule, period_end, disclosed, note=None):
+        rows, _extras = backtest_terms.score_terms(
+            "TST", period_end,
+            [{"name": "Leverage Ratio", "direction": "max",
+              "thresholds": schedule}],
+            [{"name": "leverage ratio", "direction": "max",
+              "threshold": disclosed, "waiver_or_amendment_note": note}],
+            "u", [True])
+        return rows[0]
+
+    def test_gpk_row_in_force_is_the_agreement_limit(self):
+        row = self.score(GPK_SCHEDULE, "2026-06-30", 5.0)
+        self.assertEqual(row["agreement_threshold"], 5.0)
+        self.assertEqual(row["status"], "match")
+
+    def test_schedule_row_can_still_mismatch(self):
+        row = self.score(GPK_SCHEDULE, "2026-06-30", 4.25)
+        self.assertEqual(row["agreement_threshold"], 5.0)
+        self.assertFalse(row["match"])
+        self.assertEqual(row["status"], "mismatch")
+
+    def test_each_gpk_period_resolves_to_its_row(self):
+        for when, value in (("2025-06-30", 4.25), ("2027-03-31", 4.75),
+                            ("2027-09-30", 4.25)):
+            row = self.score(GPK_SCHEDULE, when, value)
+            self.assertEqual(row["agreement_threshold"], value, when)
+
+    def test_event_row_never_covers(self):
+        self.assertFalse(backtest_terms.condition_covers(
+            GPK_SCHEDULE[4]["condition"], "2028-03-31"))
+
+    def test_amcx_row_starting_at_an_event(self):
+        row = self.score(AMCX_SCHEDULE, "2025-09-30", 5.75)
+        self.assertEqual(row["agreement_threshold"], 5.75)
+        self.assertEqual(row["status"], "match")
+
+    def test_event_start_is_bounded_by_the_row_before(self):
+        entry = backtest_terms.covering_entry(AMCX_SCHEDULE, "2023-06-30")
+        self.assertNotEqual((entry or {}).get("value"), 5.75)
+
+    def test_ending_after_starts_the_next_day(self):
+        condition = "for each Quarter ending after September 30, 2026"
+        self.assertFalse(
+            backtest_terms.condition_covers(condition, "2026-09-30"))
+        self.assertTrue(
+            backtest_terms.condition_covers(condition, "2026-12-31"))
+
+
+class PairByDirection(unittest.TestCase):
+    def test_lone_leftovers_pair_and_are_flagged(self):
+        rows, extras = backtest_terms.score_terms(
+            "TST", "2025-09-30",
+            [{"name": "Cash Flow Ratio", "direction": "max",
+              "thresholds": [{"period_end": "2025-09-30", "value": 5.75,
+                              "condition": None}]}],
+            [{"name": "total net leverage", "direction": "max",
+              "threshold": 5.75}],
+            "u", [True])
+        self.assertEqual(extras, [])
+        self.assertTrue(rows[0]["paired_by_direction"])
+        self.assertEqual(rows[0]["disclosed_name"], "total net leverage")
+        self.assertTrue(rows[0]["match"])
+
+    def test_pairing_ignores_values_so_it_can_mismatch(self):
+        rows, _extras = backtest_terms.score_terms(
+            "TST", "2025-09-30",
+            [{"name": "Cash Flow Ratio", "direction": "max",
+              "thresholds": [{"period_end": "2025-09-30", "value": 5.0,
+                              "condition": None}]}],
+            [{"name": "total net leverage", "direction": "max",
+              "threshold": 5.75}],
+            "u", [True])
+        self.assertFalse(rows[0]["match"])
+        self.assertEqual(rows[0]["status"], "mismatch")
+
+    def test_two_leftovers_stay_unpaired(self):
+        pairs, extras, flags = backtest_terms.pair_covenants(
+            [{"name": "Cash Flow Ratio", "direction": "max"}],
+            [{"name": "alpha", "direction": "max"},
+             {"name": "beta", "direction": "max"}])
+        self.assertIsNone(pairs[0][1])
+        self.assertEqual(len(extras), 2)
+        self.assertEqual(flags, [False])
+
+    def test_other_direction_never_pairs(self):
+        pairs, extras, _flags = backtest_terms.pair_covenants(
+            [{"name": "Cash Flow Ratio", "direction": "max"}],
+            [{"name": "coverage", "direction": "min"}])
+        self.assertIsNone(pairs[0][1])
+        self.assertEqual(len(extras), 1)
+
+
+class Rescore(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name)
+        (self.dir / "terms_TST.json").write_text(json.dumps({
+            "ticker": "TST", "period_end": "2026-06-30", "status": "ok",
+            "agreement_url": "u",
+            "covenants": [{"name": "Leverage Ratio",
+                           "agreement_threshold": None,
+                           "quote_verified": True, "repaired": True,
+                           "status": "mismatch"}]}))
+        (self.dir / "terms_TST_raw.txt").write_text(json.dumps({
+            "financial_covenants": [{
+                "name": "Leverage Ratio", "direction": "max",
+                "thresholds": GPK_SCHEDULE, "quote": "not in raw"}]}))
+        (self.dir / "disclosed_TST.json").write_text(json.dumps({
+            "covenants": [{"name": "leverage ratio", "direction": "max",
+                           "threshold": 5.0}]}))
+
+    def test_rescores_without_a_client_and_keeps_quote_flags(self):
+        with patch.object(backtest_terms, "make_client") as factory:
+            record, changes = backtest_terms.rescore_terms(
+                {"ticker": "TST"}, self.dir)
+        factory.assert_not_called()
+        row = record["covenants"][0]
+        self.assertEqual(row["agreement_threshold"], 5.0)
+        self.assertEqual(row["status"], "match")
+        self.assertTrue(row["quote_verified"])
+        self.assertTrue(row["repaired"])
+        self.assertEqual(len(changes), 1)
+        saved = json.loads((self.dir / "terms_TST.json").read_text())
+        self.assertEqual(saved["covenants"][0]["status"], "match")
+
+    def test_no_saved_extraction_returns_none(self):
+        self.assertIsNone(backtest_terms.rescore_terms(
+            {"ticker": "NONE"}, self.dir))
+
+
+class UsageAndScans(unittest.TestCase):
+    def test_usage_adds_up(self):
+        before = dict(backtest_terms.USAGE)
+        response = SimpleNamespace(usage=SimpleNamespace(
+            prompt_tokens=100, completion_tokens=20, total_tokens=120))
+        backtest_terms.record_usage(response)
+        self.assertEqual(backtest_terms.USAGE["calls"], before["calls"] + 1)
+        self.assertEqual(backtest_terms.USAGE["total_tokens"],
+                         before["total_tokens"] + 120)
+
+    def test_timeout_retry_is_reported(self):
+        client = MagicMock()
+        ok = SimpleNamespace(usage=None)
+        client.chat.completions.create.side_effect = [
+            APITimeoutError(request=MagicMock()), ok]
+        buf = io.StringIO()
+        with patch.object(backtest_terms.time, "sleep"), redirect_stdout(buf):
+            self.assertIs(backtest_terms.request_completion(client, "x"), ok)
+        self.assertIn("attempt 1 failed", buf.getvalue())
+
+    def test_scanned_agreement_is_recorded_without_a_model_call(self):
+        scan = {"url": "https://www.sec.gov/x/ex10-12.htm",
+                "filingDate": "2023-11-14", "exhibit": "EX-10.12", "pages": 56}
+        client = MagicMock()
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch.object(backtest_terms, "select_agreement",
+                             return_value=(None, [])), \
+                patch.object(backtest_terms, "resolve_incorporated_agreement",
+                             return_value=[]), \
+                patch.object(backtest_terms, "find_image_only_credit_exhibits",
+                             return_value=[scan]), \
+                redirect_stdout(io.StringIO()):
+            record = backtest_terms.extract_one(
+                {"ticker": "TST", "period_end": "2026-03-31"}, client, tmp)
+        client.chat.completions.create.assert_not_called()
+        self.assertEqual(record["status"], backtest_terms.STATUS_IMAGE_ONLY)
+        self.assertEqual(record["image_pages"], 56)
+        self.assertEqual(record["agreement_url"], scan["url"])
 
 
 if __name__ == "__main__":

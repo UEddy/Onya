@@ -1,0 +1,73 @@
+{
+  "ticker": "ORLY",
+  "period_end": "2026-06-30",
+  "xbrl_period_end": "2026-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/898173/000110465925030592/tm2510899d1_ex10-1.htm",
+  "ratios": [
+    {
+      "name": "Consolidated Leverage Ratio",
+      "disclosed_name": "consolidated leverage ratio",
+      "recomputed": null,
+      "disclosed": 2.07,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Purchase money Indebtedness: not available from XBRL",
+        "LC and bankers acceptance obligations: not available from XBRL",
+        "Guarantees: not available from XBRL",
+        "Partnership/JV Indebtedness: not available from XBRL",
+        "Consolidated EBITDAR: other adjustments the definition names but the extraction did not itemize",
+        "Other non-recurring non-cash expenses: not available from XBRL",
+        "Financing fees and charges: not available from XBRL",
+        "Income tax credits: not available from XBRL",
+        "Non-cash income increases: not available from XBRL",
+        "rent: no XBRL fact for the four quarters ending 2026-06-30",
+        "finance leases: no XBRL balance at 2026-06-30"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 537714000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpenseDebt"
+          ],
+          "value": 252779000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 2650374000
+        },
+        {
+          "component": "share_based_comp",
+          "concepts": [
+            "us-gaap:ShareBasedCompensation"
+          ],
+          "value": 33815000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 748155000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtNoncurrent"
+          ],
+          "value": 7014543000
+        }
+      ]
+    }
+  ]
+}

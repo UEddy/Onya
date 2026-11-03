@@ -1,0 +1,539 @@
+{
+  "borrower": "Quad/Graphics, Inc.",
+  "agreement": {
+    "title": "SECOND AMENDED AND RESTATED CREDIT AGREEMENT",
+    "dated": "April 28, 2014",
+    "administrative_agent": "JPMorgan Chase Bank, N.A."
+  },
+  "financial_covenants": [
+    {
+      "id": "total_leverage_ratio",
+      "name": "Maximum Total Leverage Ratio",
+      "section": "6.11(a)",
+      "direction": "max",
+      "metric_term": "Total Leverage Ratio",
+      "unit": "ratio",
+      "thresholds": [
+        {
+          "period_end": "2024-09-30",
+          "applies_after": null,
+          "value": 3.5,
+          "condition": null
+        },
+        {
+          "period_end": null,
+          "applies_after": "2024-09-30",
+          "value": 3.5,
+          "condition": null
+        }
+      ],
+      "quote": "The Borrower will not permit the ratio (the “Total Leverage Ratio”), determined as of the end of each of its Fiscal Quarters, of (i) Consolidated Total Indebtedness to (ii) Consolidated EBITDA"
+    },
+    {
+      "id": "senior_secured_leverage_ratio",
+      "name": "Maximum Senior Secured Leverage Ratio",
+      "section": "6.11(c)",
+      "direction": "max",
+      "metric_term": "Senior Secured Leverage Ratio",
+      "unit": "ratio",
+      "thresholds": [
+        {
+          "period_end": "2024-09-30",
+          "applies_after": null,
+          "value": 3.0,
+          "condition": null
+        },
+        {
+          "period_end": null,
+          "applies_after": "2024-09-30",
+          "value": 3.0,
+          "condition": null
+        }
+      ],
+      "quote": "The Borrower will not permit the ratio (the “Senior Secured Leverage Ratio”), determined as of the end of each of its Fiscal Quarters, of (i) Consolidated Senior Secured Net Indebtedness to (ii) Consolidated EBITDA"
+    },
+    {
+      "id": "interest_coverage_ratio",
+      "name": "Minimum Interest Coverage Ratio",
+      "section": "6.11(d)",
+      "direction": "min",
+      "metric_term": "Interest Coverage Ratio",
+      "unit": "ratio",
+      "thresholds": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "value": 3.0,
+          "condition": null
+        }
+      ],
+      "quote": "The Borrower will not permit the Interest Coverage Ratio, determined as of the end of each of its Fiscal Quarters for the period of the then most-recently ended four (4) consecutive Fiscal Quarters, to be less than 3.00 to 1.00."
+    }
+  ],
+  "cap_groups": [
+    {
+      "id": "cap_permitted_cash_restructuring",
+      "applies_to_clauses": [
+        "Consolidated EBITDA(ix)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 100000000,
+          "condition": "amounts in excess of U.S. $25,000,000 for any Fiscal Year shall be limited to (i) plant closures, (ii) employee severance payments, (iii) equipment relocation and (iv) lease and contract termination costs"
+        }
+      ],
+      "quote": "“Permitted Cash Restructuring Charges” means an aggregate amount for any Fiscal Year in respect of cash restructuring charges not in excess of U.S. $100,000,000;"
+    },
+    {
+      "id": "cap_cost_savings_20pct",
+      "applies_to_clauses": [
+        "Consolidated EBITDA(xii)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 0,
+          "condition": "does not exceed 20% of Consolidated EBITDA for such Period (calculated prior to giving effect to any add-backs pursuant to this clause (xii))"
+        }
+      ],
+      "quote": "so long as the aggregate amount added back to Consolidated EBITDA for any measurement period pursuant to this clause (xii) does not exceed 20% of Consolidated EBITDA for such Period"
+    },
+    {
+      "id": "cap_asset_sale_allowance",
+      "applies_to_clauses": [
+        "2.11(b)(i)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 50000000,
+          "condition": "if the Total Net Leverage Ratio is greater than 3.00 to 1.00 (giving effect to the applicable transaction, event or occurrence on a Pro Forma Basis)"
+        },
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 2000000,
+          "condition": "additional Net Proceeds not in excess of U.S. $2,000,000 may be retained if Asset Sale Allowance is fully utilized in a Fiscal Year"
+        }
+      ],
+      "quote": "“Asset Sale Allowance” means, with respect to all Prepayment Events described in clause (a) thereof that occur on or after the Amendment No. 9 Effective Date, an aggregate amount equal to the U.S. Dollar Amount of U.S. $50,000,000"
+    },
+    {
+      "id": "cap_netting",
+      "applies_to_clauses": [
+        "Asset Sale and Purchase Offset"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 250000000,
+          "condition": null
+        }
+      ],
+      "quote": "“Netting Cap” means the U.S. Dollar Amount of U.S. $250,000,000, with asset sales, transfers, leases and Dispositions under the foregoing clauses (i), (ii) and (iv) counting toward such U.S. $250,000,000 amount."
+    },
+    {
+      "id": "cap_restricted_intercompany",
+      "applies_to_clauses": [
+        "6.03(a)(iii)(E)",
+        "6.04(d)(ii)",
+        "6.04(d)(v)",
+        "6.04(e)(iv)",
+        "6.04(e)(v)",
+        "6.04(f)"
+      ],
+      "schedule": [
+        {
+          "period_end": null,
+          "applies_after": null,
+          "amount_usd": 25000000,
+          "condition": null
+        }
+      ],
+      "quote": "“Restricted Intercompany Transactions Amount” means, in respect of Restricted Intercompany Transactions, an aggregate amount not to at any time exceed the U.S. Dollar Amount of U.S. $25,000,000;"
+    }
+  ],
+  "definitions": [
+    {
+      "term": "Consolidated EBITDA",
+      "section": "1.01",
+      "formula_summary": "Consolidated Net Income plus add-backs (i) through (xii) minus deductions (xiii) through (xvi), calculated for Consolidated Financial Covenant Entities on consolidated basis in accordance with GAAP",
+      "components": [
+        {
+          "label": "Consolidated Net Income",
+          "sign": "+",
+          "clause_ref": "Consolidated EBITDA base",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "“Consolidated EBITDA” means, for the Consolidated Financial Covenant Entities, Consolidated Net Income plus, to the extent deducted from revenues in determining Consolidated Net Income, (i) Consolidated Interest Expense, (ii) expense for taxes paid or accrued, (iii) depreciation,"
+        },
+        {
+          "label": "Consolidated Interest Expense",
+          "sign": "+",
+          "clause_ref": "(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "Consolidated Interest Expense,"
+        },
+        {
+          "label": "Permitted Cash Restructuring Charges",
+          "sign": "+",
+          "clause_ref": "(ix)",
+          "cap_group_id": "cap_permitted_cash_restructuring",
+          "requires_agent_approval": true,
+          "publicly_verifiable": "partial",
+          "quote": "Permitted Cash Restructuring Charges,"
+        },
+        {
+          "label": "Cost savings and synergies related to Permitted Acquisition",
+          "sign": "+",
+          "clause_ref": "(xii)",
+          "cap_group_id": "cap_cost_savings_20pct",
+          "requires_agent_approval": false,
+          "publicly_verifiable": "no",
+          "quote": "so long as the aggregate amount added back to Consolidated EBITDA for any measurement period pursuant to this clause (xii) does not exceed 20% of Consolidated EBITDA for such Period"
+        },
+        {
+          "label": "Interest income",
+          "sign": "-",
+          "clause_ref": "(xiii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "interest income,"
+        }
+      ],
+      "quote": "“Consolidated EBITDA” means, for the Consolidated Financial Covenant Entities, Consolidated Net Income plus, to the extent deducted from revenues in determining Consolidated Net Income, (i) Consolidated Interest Expense, (ii) expense for taxes paid or accrued, (iii) depreciation,"
+    },
+    {
+      "term": "Consolidated Interest Expense",
+      "section": "1.01",
+      "formula_summary": "Interest expense of Consolidated Financial Covenant Entities for period with respect to (a) all outstanding Indebtedness allocable to period plus (b) interest component of all Attributable Receivables Indebtedness",
+      "components": [
+        {
+          "label": "Interest on all outstanding Indebtedness",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "with respect to (a) all outstanding Indebtedness of the Consolidated Financial Covenant Entities allocable to such period in accordance with GAAP"
+        },
+        {
+          "label": "Interest component of Attributable Receivables Indebtedness",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "and (b) the interest component of all Attributable Receivables Indebtedness of the Consolidated Financial Covenant Entities for such period."
+        }
+      ],
+      "quote": "“Consolidated Interest Expense” means, with reference to any period, the interest expense (including without limitation interest expense under Capital Lease Obligations that is treated as interest in accordance with GAAP) of the Consolidated Financial Covenant Entities"
+    },
+    {
+      "term": "Consolidated Net Income",
+      "section": "1.01",
+      "formula_summary": "Consolidated net income (or loss) of Consolidated Financial Covenant Entities determined on consolidated basis in accordance with GAAP, excluding income of Person accrued prior to becoming Consolidated Financial Covenant Entity",
+      "components": [
+        {
+          "label": "Consolidated net income (or loss)",
+          "sign": "+",
+          "clause_ref": "base",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Consolidated Net Income” means, for any period, the consolidated net income (or loss) of the Consolidated Financial Covenant Entities, determined on a consolidated basis (without duplication) in accordance with GAAP;"
+        }
+      ],
+      "quote": "“Consolidated Net Income” means, for any period, the consolidated net income (or loss) of the Consolidated Financial Covenant Entities, determined on a consolidated basis (without duplication) in accordance with GAAP;"
+    },
+    {
+      "term": "Consolidated Total Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Aggregate principal amount of all Indebtedness of Consolidated Financial Covenant Entities plus aggregate amount relating to maximum drawing amount of all letters of credit and bankers’ acceptances plus guaranteed Indebtedness of another Person; Pension and Post-Employment Benefit Amounts excluded",
+      "components": [
+        {
+          "label": "Aggregate principal amount of all Indebtedness",
+          "sign": "+",
+          "clause_ref": "base",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Consolidated Total Indebtedness” means, at any date and without duplication, the aggregate principal amount of all Indebtedness of the Consolidated Financial Covenant Entities at such date, determined on a consolidated basis in accordance with GAAP"
+        },
+        {
+          "label": "Maximum drawing amount of letters of credit and bankers acceptances",
+          "sign": "+",
+          "clause_ref": "plus clause",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "plus the aggregate amount of Indebtedness of the Consolidated Financial Covenant Entities relating to the maximum drawing amount of all letters of credit outstanding and to all bankers’ acceptances"
+        }
+      ],
+      "quote": "“Consolidated Total Indebtedness” means, at any date and without duplication, the aggregate principal amount of all Indebtedness of the Consolidated Financial Covenant Entities at such date, determined on a consolidated basis in accordance with GAAP"
+    },
+    {
+      "term": "Total Leverage Ratio",
+      "section": "6.11(a)",
+      "formula_summary": "Numerator: Consolidated Total Indebtedness; Denominator: Consolidated EBITDA for period of then most-recently ended four consecutive Fiscal Quarters; Ratio must not exceed threshold",
+      "components": [
+        {
+          "label": "Consolidated Total Indebtedness",
+          "sign": "+",
+          "clause_ref": "6.11(a)(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "of (i) Consolidated Total Indebtedness to (ii) Consolidated EBITDA for the period of the then most-recently ended four (4) consecutive Fiscal Quarters, all calculated for the Consolidated Financial Covenant Entities on a consolidated basis,"
+        },
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "6.11(a)(ii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "of (i) Consolidated Total Indebtedness to (ii) Consolidated EBITDA for the period of the then most-recently ended four (4) consecutive Fiscal Quarters, all calculated for the Consolidated Financial Covenant Entities on a consolidated basis,"
+        }
+      ],
+      "quote": "The Borrower will not permit the ratio (the “Total Leverage Ratio”), determined as of the end of each of its Fiscal Quarters, of (i) Consolidated Total Indebtedness to (ii) Consolidated EBITDA"
+    },
+    {
+      "term": "Senior Secured Leverage Ratio",
+      "section": "6.11(c)",
+      "formula_summary": "Numerator: Consolidated Senior Secured Net Indebtedness; Denominator: Consolidated EBITDA for period of then most-recently ended four consecutive Fiscal Quarters",
+      "components": [
+        {
+          "label": "Consolidated Senior Secured Net Indebtedness",
+          "sign": "+",
+          "clause_ref": "6.11(c)(i)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "of (i) Consolidated Senior Secured Net Indebtedness to (ii) Consolidated EBITDA for the period of the then most-recently ended four (4) consecutive Fiscal Quarters, all calculated for the Consolidated Financial Covenant Entities on a consolidated basis,"
+        },
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "6.11(c)(ii)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "of (i) Consolidated Senior Secured Net Indebtedness to (ii) Consolidated EBITDA for the period of the then most-recently ended four (4) consecutive Fiscal Quarters, all calculated for the Consolidated Financial Covenant Entities on a consolidated basis,"
+        }
+      ],
+      "quote": "The Borrower will not permit the ratio (the “Senior Secured Leverage Ratio”), determined as of the end of each of its Fiscal Quarters, of (i) Consolidated Senior Secured Net Indebtedness to (ii) Consolidated EBITDA"
+    },
+    {
+      "term": "Interest Coverage Ratio",
+      "section": "1.01",
+      "formula_summary": "Numerator: Consolidated EBITDA for period of four consecutive Fiscal Quarters; Denominator: cash Consolidated Interest Expense for such period",
+      "components": [
+        {
+          "label": "Consolidated EBITDA",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "partial",
+          "quote": "“Interest Coverage Ratio” means, for any period of four consecutive Fiscal Quarters of the Borrower, the ratio of (a) Consolidated EBITDA for such period to (b) cash Consolidated Interest Expense for such period."
+        },
+        {
+          "label": "cash Consolidated Interest Expense",
+          "sign": "+",
+          "clause_ref": "(b)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Interest Coverage Ratio” means, for any period of four consecutive Fiscal Quarters of the Borrower, the ratio of (a) Consolidated EBITDA for such period to (b) cash Consolidated Interest Expense for such period."
+        }
+      ],
+      "quote": "“Interest Coverage Ratio” means, for any period of four consecutive Fiscal Quarters of the Borrower, the ratio of (a) Consolidated EBITDA for such period to (b) cash Consolidated Interest Expense for such period."
+    },
+    {
+      "term": "Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Sum of obligations for borrowed money, bonds, conditional sale, deferred purchase price, secured Indebtedness, Guarantees, Off-Balance Sheet Liabilities, Capital Lease Obligations, letters of credit, bankers acceptances, Swap Agreements, earn-outs, Sale and Leaseback, etc.",
+      "components": [
+        {
+          "label": "Obligations for borrowed money",
+          "sign": "+",
+          "clause_ref": "(a)",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Indebtedness” of any Person means, without duplication, (a) all obligations of such Person for borrowed money or with respect to deposits or advances of any kind, (b) all obligations of such Person evidenced by bonds, debentures, notes or similar instruments,"
+        }
+      ],
+      "quote": "“Indebtedness” of any Person means, without duplication, (a) all obligations of such Person for borrowed money or with respect to deposits or advances of any kind, (b) all obligations of such Person evidenced by bonds, debentures, notes or similar instruments,"
+    },
+    {
+      "term": "Consolidated Net Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Aggregate principal amount of all Indebtedness plus letters of credit and bankers acceptances plus guaranteed Indebtedness minus unrestricted cash and Permitted Investments not subject to Liens; Pension amounts excluded; floored at zero",
+      "components": [
+        {
+          "label": "Aggregate principal amount of all Indebtedness",
+          "sign": "+",
+          "clause_ref": "base",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Consolidated Net Indebtedness” means, at any date and without duplication, the aggregate principal amount of all Indebtedness of the Consolidated Financial Covenant Entities at such date, determined on a consolidated basis in accordance with GAAP"
+        },
+        {
+          "label": "Unrestricted cash and Permitted Investments",
+          "sign": "-",
+          "clause_ref": "minus clause",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "minus the aggregate amount of unrestricted cash and Permitted Investments of the Borrower and its Restricted Subsidiaries at such time maintained in accounts in the United States"
+        }
+      ],
+      "quote": "“Consolidated Net Indebtedness” means, at any date and without duplication, the aggregate principal amount of all Indebtedness of the Consolidated Financial Covenant Entities at such date, determined on a consolidated basis in accordance with GAAP"
+    },
+    {
+      "term": "Consolidated Senior Secured Net Indebtedness",
+      "section": "1.01",
+      "formula_summary": "Aggregate principal amount of Consolidated Net Indebtedness that is secured by Lien on property of Consolidated Financial Covenant Entities and is not Subordinated Indebtedness",
+      "components": [
+        {
+          "label": "Consolidated Net Indebtedness that is secured and not subordinated",
+          "sign": "+",
+          "clause_ref": "base",
+          "cap_group_id": null,
+          "requires_agent_approval": false,
+          "publicly_verifiable": "yes",
+          "quote": "“Consolidated Senior Secured Net Indebtedness” means, at any date and without duplication, the aggregate principal amount of Consolidated Net Indebtedness that (x) is secured by a Lien on any property of the Consolidated Financial Covenant Entities"
+        }
+      ],
+      "quote": "“Consolidated Senior Secured Net Indebtedness” means, at any date and without duplication, the aggregate principal amount of Consolidated Net Indebtedness that (x) is secured by a Lien on any property of the Consolidated Financial Covenant Entities"
+    },
+    {
+      "term": "Consolidated EBITDAR",
+      "section": "Not defined",
+      "formula_summary": "Not defined in document",
+      "components": [],
+      "quote": ""
+    },
+    {
+      "term": "Consolidated Funded Indebtedness",
+      "section": "Not defined",
+      "formula_summary": "Not defined in document; Consolidated Total Indebtedness is defined as aggregate principal amount of all Indebtedness plus LC and bankers acceptance amounts",
+      "components": [],
+      "quote": ""
+    },
+    {
+      "term": "Consolidated Rent Expense",
+      "section": "Not defined",
+      "formula_summary": "Not defined in document",
+      "components": [],
+      "quote": ""
+    },
+    {
+      "term": "Consolidated Net Earnings",
+      "section": "Not defined",
+      "formula_summary": "Not defined in document; Consolidated Net Income is defined as consolidated net income (or loss) of Consolidated Financial Covenant Entities in accordance with GAAP",
+      "components": [],
+      "quote": ""
+    },
+    {
+      "term": "Liquidity",
+      "section": "Not defined",
+      "formula_summary": "Not defined in document",
+      "components": [],
+      "quote": ""
+    }
+  ],
+  "specified_defaults": [],
+  "equity_cure": {
+    "present": false,
+    "section": null,
+    "max_uses": null,
+    "limits": null,
+    "how_applied": null,
+    "quote": null
+  },
+  "uncertainties": [
+    "Minimum Consolidated Adjusted EBITDA test (90 percent of forecast) not found in document; no such covenant appears in Section 6.11",
+    "Consolidated EBITDAR not defined in document",
+    "Consolidated Funded Indebtedness not defined; only Consolidated Total Indebtedness, Consolidated Net Indebtedness and Consolidated Senior Secured Net Indebtedness are defined",
+    "Consolidated Rent Expense not defined in document",
+    "Consolidated Net Earnings not defined; only Consolidated Net Income is defined",
+    "Liquidity not defined in document",
+    "Interest Coverage Ratio threshold period not dated; document states determined as of end of each Fiscal Quarter without start date, represented as single ongoing threshold with null dates",
+    "Cost savings cap in Consolidated EBITDA(xii) is 20% of Consolidated EBITDA, a percent-based cap not representable as USD amount_usd; represented with amount_usd 0 and condition describing percent",
+    "Permitted Cash Restructuring Charges contains sub-limit of U.S. $25,000,000 for excess amounts limited to specific categories; represented as condition on $100,000,000 cap",
+    "Annual Asset Sale Limitation is 35% of Consolidated Total Assets and 15% per Fiscal Year, percent-based caps not representable as USD amount_usd and not included as cap_groups"
+  ]
+}
+
+--- QUOTE DIAGNOSTICS (appended, not model output) ---
+[
+  {
+    "quote": "\u201cNetting Cap\u201d means the U.S. Dollar Amount of U.S. $250,000,000, with asset sales, transfers, leases and Dispositions under the foregoing clauses (i), (ii) and (iv) counting toward such U.S. $250,000,000 amount.",
+    "matched_prefix_len": 28,
+    "quote_next": "Dollar Amount of U.S. $250,000,000, with asset sales, transf",
+    "source_context": "\"Netting Cap\"means the U.S. 7 Dollar Amount of U.S. $250,000",
+    "source_pos": 50267,
+    "reason": null
+  },
+  {
+    "quote": "with respect to (a) all outstanding Indebtedness of the Consolidated Financial Covenant Entities allocable to such period in accordance with GAAP",
+    "matched_prefix_len": 36,
+    "quote_next": "Indebtedness of the Consolidated Financial Covenant Entities",
+    "source_context": "with respect to (a) all outstanding 16 Indebtedness of the C",
+    "source_pos": 85650,
+    "reason": null
+  },
+  {
+    "quote": "",
+    "matched_prefix_len": 0,
+    "quote_next": "",
+    "source_context": "",
+    "source_pos": null,
+    "reason": "empty quote"
+  },
+  {
+    "quote": "",
+    "matched_prefix_len": 0,
+    "quote_next": "",
+    "source_context": "",
+    "source_pos": null,
+    "reason": "empty quote"
+  },
+  {
+    "quote": "",
+    "matched_prefix_len": 0,
+    "quote_next": "",
+    "source_context": "",
+    "source_pos": null,
+    "reason": "empty quote"
+  },
+  {
+    "quote": "",
+    "matched_prefix_len": 0,
+    "quote_next": "",
+    "source_context": "",
+    "source_pos": null,
+    "reason": "empty quote"
+  },
+  {
+    "quote": "",
+    "matched_prefix_len": 0,
+    "quote_next": "",
+    "source_context": "",
+    "source_pos": null,
+    "reason": "empty quote"
+  }
+]

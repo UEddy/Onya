@@ -23,13 +23,15 @@ only the disclosed_<TICKER>.json extractor outputs are compared
 against.
 
 Usage:
-    python src/backtest_terms.py [--force] [--reverify] [TICKER ...]
+    python src/backtest_terms.py [--force] [--reverify] [--rescore] [TICKER ...]
 with no tickers covering every company in companies.json except SNBR.
 Companies whose terms_<TICKER>.json already exists are skipped unless
 --force is given. A company that raises is recorded with status
 "error" and the run continues. --reverify re-runs quote verification
 plus failed-quote diagnostics from the saved raw output without
-calling the model.
+calling the model. --rescore re-applies score_terms to the saved raw
+extraction and the disclosed figures, also without calling the model.
+Runs that call the model print and record their token usage.
 """
 
 import json
@@ -45,7 +47,9 @@ from dotenv import load_dotenv
 from openai import APIConnectionError, OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from edgar import DISCOVERY_SINCE, fetch, select_agreement  # noqa: E402
+from edgar import (DISCOVERY_SINCE, fetch,  # noqa: E402
+                   find_image_only_credit_exhibits,
+                   resolve_incorporated_agreement, select_agreement)
 from extract import (  # noqa: E402
     INSTRUCTIONS,
     SCHEMA,
@@ -84,6 +88,7 @@ SKIP_TICKERS = frozenset({"SNBR"})
 STATUS_OK = "ok"
 STATUS_TOO_LONG = "too long"
 STATUS_NO_AGREEMENT = "base agreement not found"
+STATUS_IMAGE_ONLY = "agreement filed as scanned images"
 STATUS_ERROR = "error"
 
 DIAGNOSTICS_MARKER = (
@@ -104,8 +109,8 @@ def make_client():
     return OpenAI(
         api_key=os.environ["BASETEN_API_KEY"],
         base_url=os.environ["BASETEN_BASE_URL"],
-        timeout=120,
-        max_retries=2,
+        timeout=300,
+        max_retries=0,
     )
 
 
@@ -159,20 +164,37 @@ def build_content(document):
 
 REQUEST_RETRY_DELAYS = (5, 15, 30)
 
+# Token usage of the current process, by company once extract_one runs.
+USAGE = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
+         "total_tokens": 0}
+
+
+def record_usage(response):
+    """Add a completion's token usage to USAGE."""
+    usage = getattr(response, "usage", None)
+    USAGE["calls"] += 1
+    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        USAGE[key] += int(getattr(usage, key, 0) or 0)
+
 
 def request_completion(client, content):
     """One chat completion, retrying Baseten connection errors."""
     for attempt in range(len(REQUEST_RETRY_DELAYS) + 1):
         try:
-            return client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL,
                 messages=[{"role": "user", "content": content}],
                 max_tokens=MAX_TOKENS,
                 temperature=TEMPERATURE,
             )
-        except APIConnectionError:
+            record_usage(response)
+            return response
+        except APIConnectionError as exc:
             if attempt == len(REQUEST_RETRY_DELAYS):
                 raise
+            # A timed-out attempt may still bill tokens, so say so.
+            print(f"model request attempt {attempt + 1} failed: "
+                  f"{type(exc).__name__}; retrying")
             time.sleep(REQUEST_RETRY_DELAYS[attempt])
 
 
@@ -347,16 +369,117 @@ def applicable_threshold(thresholds, period_end):
     return entry.get("value") if entry is not None else None
 
 
+_MONTH_NUMBERS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5,
+    "june": 6, "july": 7, "august": 8, "september": 9, "october": 10,
+    "november": 11, "december": 12,
+}
+
+_EVENT_WORDS = ("during", "following", "upon", "while", "if ",
+                "in the event", "elevated", "holiday", "acquisition",
+                "default", "waiver")
+
+
+def _condition_dates(condition):
+    """ISO dates from 'Month D, YYYY' mentions, in text order."""
+    dates = []
+    for match in re.finditer(
+            r"(January|February|March|April|May|June|July|August|"
+            r"September|October|November|December)\s+(\d{1,2}),\s*(\d{4})",
+            str(condition or ""), re.IGNORECASE):
+        month = _MONTH_NUMBERS[match.group(1).lower()]
+        dates.append("%s-%02d-%02d" % (match.group(3), month,
+                                       int(match.group(2))))
+    return dates
+
+
+def _condition_span(condition):
+    """(start, end) ISO dates for a schedule-period condition, or None.
+
+    Date ranges ("X through [and including] Y", "X to and including
+    Y"), open starts ("on or after X", "X and thereafter", "ending
+    after X"), and single test-period dates match by calendar. A range
+    whose start is a named event ("the Effective Date to and including
+    Y") has start None and is bounded by the rows before it. Event
+    conditions (holidays, elevated periods, acquisitions, defaults) are
+    not schedule rows, so they never span.
+    """
+    text = str(condition or "")
+    lowered = text.lower()
+    if not text.strip() or any(word in lowered for word in _EVENT_WORDS):
+        return None
+    dates = sorted(set(_condition_dates(text)))
+    ranged = "through" in lowered or "to and including" in lowered
+    if ranged and len(dates) >= 2:
+        return (dates[0], dates[-1])
+    if ranged and len(dates) == 1:
+        return (None, dates[0])
+    if "ending after" in lowered and dates:
+        following = date.fromisoformat(dates[-1]) + timedelta(days=1)
+        return (following.isoformat(), None)
+    if ("thereafter" in lowered or "on or after" in lowered) and dates:
+        return (dates[-1], None)
+    if len(dates) == 1 and ("ending" in lowered or "as of" in lowered):
+        return (dates[0], dates[0])
+    return None
+
+
+def condition_covers(condition, period_end):
+    """True when a schedule-period condition covers period_end.
+
+    A range with an event start (start None) covers up to its end date;
+    covering_entry applies the lower bound from the rows before it.
+    """
+    span = _condition_span(condition)
+    if span is None:
+        return False
+    start, end = span
+    when = str(period_end)[:10]
+    if start is not None and when < start:
+        return False
+    return end is None or when <= end
+
+
+def covering_entry(entries, period_end):
+    """The schedule row in force at period_end, or None.
+
+    When rows overlap the latest start wins. A row with an event start
+    begins after the latest dated row that ends before it, so "January
+    1, 2022 to the Effective Date" and "the Effective Date to March 31,
+    2026" do not both cover 2023.
+    """
+    when = str(period_end)[:10]
+    dated_ends = sorted(t["period_end"] for t in entries
+                        if t.get("period_end"))
+    best = None
+    best_start = ""
+    for entry in entries:
+        if not condition_covers(entry.get("condition"), when):
+            continue
+        start, end = _condition_span(entry.get("condition"))
+        if start is None:
+            earlier = [d for d in dated_ends if d < (end or when)]
+            start = earlier[-1] if earlier else ""
+            if start and when <= start:
+                continue
+        if best is None or start >= best_start:
+            best, best_start = entry, start
+    return best
+
+
 def conditional_alternatives(thresholds, period_end):
     """Conditional threshold entries in force at period_end.
 
-    Returns [{"value", "condition"}] for the date-resolved winner
-    among entries with a non-null condition (same date tiers as
-    applicable_threshold), or [] when the schedule has no
+    Returns [{"value", "condition"}] for the schedule row whose
+    condition period covers period_end (latest start wins when rows
+    overlap), falling back to the date-resolved winner among entries
+    with a non-null condition, or [] when the schedule has no
     conditional entries.
     """
     entries = [t for t in thresholds or [] if t.get("condition")]
-    entry = _resolve_entry(entries, period_end)
+    entry = covering_entry(entries, period_end)
+    if entry is None:
+        entry = _resolve_entry(entries, period_end)
     if entry is None:
         return []
     return [{"value": entry.get("value"),
@@ -388,6 +511,32 @@ def disclosure_cites_amendment(dis_cov):
     return isinstance(note, str) and bool(AMENDMENT_RE.search(note))
 
 
+def pair_covenants(agreement_covs, disclosed_covs):
+    """Pair covenants by name tokens, then a lone leftover by direction.
+
+    Agreements and filings can name one covenant differently (AMC's
+    "Cash Flow Ratio" is the "total net leverage ratio" of its 10-Q).
+    When exactly one agreement covenant has no partner and exactly one
+    disclosed covenant of the same direction is left, they pair. Values
+    play no part in the pairing, so such a pair can still mismatch.
+    Returns (pairs, extras, name_paired_flags).
+    """
+    pairs, extras = match_covenants(agreement_covs, disclosed_covs)
+    pairs = list(pairs)
+    extras = list(extras)
+    by_direction = [False] * len(pairs)
+    open_rows = [i for i, (_agr, dis) in enumerate(pairs) if dis is None]
+    for direction in ("max", "min"):
+        rows = [i for i in open_rows
+                if (pairs[i][0] or {}).get("direction") == direction]
+        spare = [e for e in extras if e.get("direction") == direction]
+        if len(rows) == 1 and len(spare) == 1:
+            pairs[rows[0]] = (pairs[rows[0]][0], spare[0])
+            by_direction[rows[0]] = True
+            extras.remove(spare[0])
+    return pairs, extras, by_direction
+
+
 def score_terms(ticker, period_end, agreement_covs, disclosed_covs,
                 agreement_url, quote_flags, repair_flags=None):
     """Compare agreement thresholds against disclosed ones.
@@ -395,19 +544,25 @@ def score_terms(ticker, period_end, agreement_covs, disclosed_covs,
     Each agreement covenant pairs with the best same-direction
     disclosed covenant by name tokens (score_disclosed matching); the
     agreement threshold is the schedule value applicable at
-    period_end (unconditional entries only, unless the disclosure
-    explicitly says a conditional alternative is active) and matches
-    within 0.01. A mismatch whose disclosure cites an amendment or
+    period_end (the schedule row whose stated dates cover period_end,
+    else unconditional entries, unless the disclosure explicitly says
+    a conditional alternative is active) and matches within 0.01. A mismatch whose disclosure cites an amendment or
     waiver is "amended after agreement", not a miss. Returns (rows,
     unmatched_disclosed_names).
     """
-    pairs, extras = match_covenants(agreement_covs, disclosed_covs)
+    pairs, extras, by_direction = pair_covenants(
+        agreement_covs, disclosed_covs)
     rows = []
     for i, (agr_cov, dis_cov) in enumerate(pairs):
         thresholds = (agr_cov or {}).get("thresholds")
         agr_value = applicable_threshold(thresholds, period_end)
         alternatives = conditional_alternatives(thresholds, period_end)
         for alt in alternatives:
+            # A schedule row whose dates cover the test date is the
+            # limit in force, not a conditional alternative.
+            if condition_covers(alt["condition"], period_end):
+                agr_value = alt["value"]
+                break
             if condition_active(alt["condition"], alt["value"], dis_cov):
                 agr_value = alt["value"]
                 break
@@ -441,6 +596,8 @@ def score_terms(ticker, period_end, agreement_covs, disclosed_covs,
                 else False,
                 "status": status,
                 "agreement_url": agreement_url,
+                "paired_by_direction": by_direction[i],
+                "disclosed_name": (dis_cov or {}).get("name"),
             }
         )
     extra_names = [e.get("name", "?") for e in extras]
@@ -459,14 +616,59 @@ def save_record(record, backtest_dir):
     return json_path
 
 
+def _saved_rows(rows):
+    return [
+        {k: row[k] for k in (
+            "name", "direction", "agreement_threshold",
+            "conditional_alternatives", "disclosed_threshold",
+            "match", "quote_verified", "repaired",
+            "status", "agreement_url")}
+        | ({"disclosed_name": row["disclosed_name"],
+            "paired_by_direction": True}
+           if row.get("paired_by_direction") else {})
+        for row in rows
+    ]
+
+
 def extract_one(case, client, backtest_dir=BACKTEST_DIR):
     """Run one company; save terms JSON (+ raw); return the record."""
     ticker = case["ticker"]
     period_end = case["period_end"]
     as_of = as_of_for(period_end)
     base, _amendments = select_agreement(company_key(case), as_of=as_of)
+    selected_via = "discovery"
+    if base is None:
+        incorporated = resolve_incorporated_agreement(
+            company_key(case), as_of=as_of)
+        usable = [c for c in incorporated
+                  if c.get("is_complete") or c.get("restates_covenants")]
+        if usable:
+            base = usable[0]
+            selected_via = "incorporated reference"
+            print(f"=== {ticker} (incorporated reference: "
+                  f"{base['url']}) ===")
     if base is None:
         searched_range = f"{DISCOVERY_SINCE} to {as_of}"
+        scans = find_image_only_credit_exhibits(
+            company_key(case), as_of=as_of)
+        if scans:
+            scan = scans[0]
+            print(f"=== {ticker} (agreement filed as {scan['pages']} "
+                  f"scanned images: {scan['url']}) ===")
+            record = {
+                "ticker": ticker,
+                "period_end": period_end,
+                "as_of": as_of,
+                "agreement_url": scan["url"],
+                "agreement_filing_date": scan["filingDate"],
+                "status": STATUS_IMAGE_ONLY,
+                "searched_range": searched_range,
+                "image_pages": scan["pages"],
+                "covenants": [],
+                "unmatched_disclosed": [],
+            }
+            print(f"saved: {save_record(record, backtest_dir)}")
+            return record
         print(f"=== {ticker} (base agreement not found; "
               f"searched {searched_range}) ===")
         record = {
@@ -501,6 +703,7 @@ def extract_one(case, client, backtest_dir=BACKTEST_DIR):
         print(f"saved: {save_record(record, backtest_dir)}")
         return record
 
+    usage_before = dict(USAGE)
     content = build_content(document)
     parsed, raw, _response = parse_response(client, content)
     repair_quotes(parsed, document, client)
@@ -525,16 +728,11 @@ def extract_one(case, client, backtest_dir=BACKTEST_DIR):
         "as_of": as_of,
         "agreement_url": url,
         "agreement_filing_date": base.get("filingDate"),
+        "selected_via": selected_via,
         "status": STATUS_OK,
-        "covenants": [
-            {k: row[k] for k in (
-                "name", "direction", "agreement_threshold",
-                "conditional_alternatives", "disclosed_threshold",
-                "match", "quote_verified", "repaired",
-                "status", "agreement_url")}
-            for row in rows
-        ],
+        "covenants": _saved_rows(rows),
         "unmatched_disclosed": extra_names,
+        "model_usage": {k: USAGE[k] - usage_before[k] for k in USAGE},
     }
     backtest_dir = Path(backtest_dir)
     raw_path = backtest_dir / f"terms_{ticker}_raw.txt"
@@ -630,6 +828,49 @@ def reverify_terms(case, backtest_dir=BACKTEST_DIR):
     }
 
 
+def rescore_terms(case, backtest_dir=BACKTEST_DIR):
+    """Re-apply score_terms to a saved extraction (no model calls).
+
+    Thresholds come from terms_<TICKER>_raw.txt and limits from
+    disclosed_<TICKER>.json. Quote flags stay as saved, because the
+    saved raw output predates any quote repair. Saves the record and
+    returns (record, changes), or None without a saved extraction.
+    """
+    backtest_dir = Path(backtest_dir)
+    ticker = case["ticker"]
+    raw_path = raw_terms_path(ticker, backtest_dir)
+    json_path = terms_path(ticker, backtest_dir)
+    if not raw_path.exists() or not json_path.exists():
+        print(f"note: {ticker} has no saved extraction to rescore")
+        return None
+    saved = json.loads(json_path.read_text(encoding="utf-8"))
+    parsed = json.JSONDecoder().raw_decode(
+        raw_path.read_text(encoding="utf-8").strip())[0]
+    agreement_covs = parsed.get("financial_covenants", []) or []
+    flags = {c.get("name"): c for c in saved.get("covenants", [])}
+    quote_flags = [bool(flags.get(c.get("name"), {}).get("quote_verified"))
+                   for c in agreement_covs]
+    repair_flags = [bool(flags.get(c.get("name"), {}).get("repaired"))
+                    for c in agreement_covs]
+    disclosed = load_disclosed(ticker, backtest_dir)
+    rows, extras = score_terms(
+        ticker, saved["period_end"], agreement_covs,
+        (disclosed or {}).get("covenants", []) or [],
+        saved.get("agreement_url"), quote_flags, repair_flags)
+    before = {c.get("name"): (c.get("agreement_threshold"), c.get("status"))
+              for c in saved.get("covenants", [])}
+    changes = []
+    for row in rows:
+        after = (row["agreement_threshold"], row["status"])
+        if before.get(row["name"]) != after:
+            changes.append(f"{ticker} {row['name']}: "
+                           f"{before.get(row['name'])} -> {after}")
+    saved["covenants"] = _saved_rows(rows)
+    saved["unmatched_disclosed"] = extras
+    save_record(saved, backtest_dir)
+    return saved, changes
+
+
 def fmt(value):
     if value is None:
         return "null"
@@ -686,6 +927,8 @@ def main(argv=None, backtest_dir=BACKTEST_DIR):
     args = [a for a in args if a != "--force"]
     reverify = "--reverify" in args
     args = [a for a in args if a != "--reverify"]
+    rescore = "--rescore" in args
+    args = [a for a in args if a != "--rescore"]
     unknown_flags = [a for a in args if a.startswith("--")]
     if unknown_flags:
         print(f"unknown flag(s): {unknown_flags}", file=sys.stderr)
@@ -712,6 +955,13 @@ def main(argv=None, backtest_dir=BACKTEST_DIR):
     if reverify:
         return [r for c in companies
                 if (r := reverify_terms(c, backtest_dir)) is not None]
+
+    if rescore:
+        results = [r for c in companies
+                   if (r := rescore_terms(c, backtest_dir)) is not None]
+        changes = [line for _record, lines in results for line in lines]
+        print("\n".join(changes) if changes else "no score changes")
+        return [record for record, _lines in results]
 
     backtest_dir = Path(backtest_dir)
     need_client = force or any(
@@ -765,6 +1015,8 @@ def main(argv=None, backtest_dir=BACKTEST_DIR):
     print(f"no disclosed match: {no_disclosed}")
     print(f"mismatched: {mismatched}")
     print(f"quote verified: {verified}/{n}")
+    if USAGE["calls"]:
+        print(f"model usage: {USAGE}")
     return records
 
 

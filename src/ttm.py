@@ -146,6 +146,69 @@ def ttm(concept, period_end, cik=None):
     return sum(quarters[end] for end in window)
 
 
+ANNUAL_DAYS = (340, 380)
+ALIGN_DAYS = 10
+
+
+def ttm_from_annual(concept, period_end, cik=None):
+    """Four quarters as last full year + current YTD - prior-year YTD.
+
+    For filers whose facts leave a gap that ``quarterly`` cannot
+    isolate. Needs three durations: the full year (from a 10-K, or the
+    pay-versus-performance table of a DEF 14A when the 10-K left it
+    untagged), this year to date, and the same span a year ago. Raises
+    ValueError when any of them is absent.
+    """
+    entry = _entry(concept, cik=cik)
+    facts = [
+        fact
+        for unit_facts in entry.get("units", {}).values()
+        for fact in unit_facts
+        if "start" in fact and "end" in fact
+    ]
+    best = _dedup(facts)
+    for fact in facts:
+        key = (fact.get("end"), fact.get("start"))
+        if fact.get("form") == "DEF 14A" and key not in best:
+            best[key] = fact
+    target = date.fromisoformat(period_end)
+
+    def span(end, start):
+        return (date.fromisoformat(end) - date.fromisoformat(start)).days
+
+    annual = sorted(
+        (key for key in best
+         if key[0] <= period_end
+         and ANNUAL_DAYS[0] <= span(*key) <= ANNUAL_DAYS[1]),
+        reverse=True)
+    if not annual:
+        raise ValueError(f"no annual value for {concept} by {period_end}")
+    fy_end, fy_start = annual[0]
+    if fy_end == period_end:
+        return best[annual[0]]["val"]
+    fy_end_date = date.fromisoformat(fy_end)
+    fy_start_date = date.fromisoformat(fy_start)
+    if (target - fy_end_date).days > ANNUAL_DAYS[1]:
+        raise ValueError(f"annual value for {concept} is stale at {period_end}")
+
+    def near(day, other):
+        return abs((date.fromisoformat(day) - other).days) <= ALIGN_DAYS
+
+    current = [
+        key for key in best
+        if key[0] == period_end and near(key[1], fy_end_date + timedelta(days=1))
+    ]
+    year_ago = target - timedelta(days=365)
+    prior = [
+        key for key in best
+        if near(key[0], year_ago) and near(key[1], fy_start_date)
+    ]
+    if not current or not prior:
+        raise ValueError(f"no matching year-to-date values for {concept}")
+    return (best[annual[0]]["val"] + best[current[0]]["val"]
+            - best[prior[0]]["val"])
+
+
 def instant(concept, period_end, cik=None):
     """Balance at period_end (latest filed when repeated across filings)."""
     entry = _entry(concept, cik=cik)

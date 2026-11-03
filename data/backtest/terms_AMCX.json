@@ -2,10 +2,53 @@
   "ticker": "AMCX",
   "period_end": "2025-09-30",
   "as_of": "2025-11-14",
-  "agreement_url": null,
-  "agreement_filing_date": null,
-  "status": "base agreement not found",
-  "searched_range": "2015-01-01 to 2025-11-14",
-  "covenants": [],
-  "unmatched_disclosed": []
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1514991/000151499124000013/amc-thirdamendmenttosecond.htm",
+  "agreement_filing_date": "2024-04-10",
+  "selected_via": "incorporated reference",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Adjusted Operating Income to Total Interest Expense",
+      "direction": "min",
+      "agreement_threshold": 2.0,
+      "conditional_alternatives": [
+        {
+          "value": 2.0,
+          "condition": "for each Quarter from and including the Quarter ending on September 30, 2024 to and including the Quarter ending on September 30, 2026"
+        }
+      ],
+      "disclosed_threshold": 2.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1514991/000151499124000013/amc-thirdamendmenttosecond.htm"
+    },
+    {
+      "name": "Cash Flow Ratio",
+      "direction": "max",
+      "agreement_threshold": 5.75,
+      "conditional_alternatives": [
+        {
+          "value": 5.75,
+          "condition": "From and including the Amendment No. 3 Effective Date to and including March 31, 2026"
+        }
+      ],
+      "disclosed_threshold": 5.75,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1514991/000151499124000013/amc-thirdamendmenttosecond.htm",
+      "disclosed_name": "maximum total net leverage ratio",
+      "paired_by_direction": true
+    }
+  ],
+  "unmatched_disclosed": [],
+  "model_usage": {
+    "calls": 1,
+    "prompt_tokens": 147634,
+    "completion_tokens": 9208,
+    "total_tokens": 156842
+  }
 }

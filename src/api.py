@@ -984,6 +984,11 @@ def get_backtest():
             row = dict(cov)
             row["ticker"] = ticker
             term_rows.append(row)
+            if cov.get("paired_by_direction"):
+                term_notes.append(
+                    f"{ticker} {cov.get('name')} is paired with the disclosed "
+                    f"{cov.get('disclosed_name')} by direction, because the "
+                    "agreement and the filing name it differently.")
     m = len(term_rows)
     matched = sum(1 for r in term_rows if r.get("match"))
     amended = sum(1 for r in term_rows if r.get("status") == TERMS_AMENDED)
@@ -1002,7 +1007,44 @@ def get_backtest():
     return {"disclosed": {"rows": rows, "totals": disclosed_totals,
                           "notes": notes},
             "terms": {"rows": term_rows, "totals": terms_totals,
-                      "records": records, "notes": term_notes}}
+                      "records": records, "notes": term_notes},
+            "recompute": _recompute_section(cases)}
+
+
+def _recompute_section(cases):
+    """XBRL recomputation results, reported apart from the headline totals."""
+    rows = []
+    companies = set()
+    notes = []
+    for case in cases:
+        ticker = case["ticker"]
+        if ticker.upper() == "SNBR":
+            continue
+        try:
+            record = _read_json(
+                _data_file("backtest", f"recompute_{ticker}.json"))
+        except (OSError, ValueError):
+            notes.append(f"{ticker} was not recomputed, because no agreement "
+                         "text was read.")
+            continue
+        for ratio in record.get("ratios", []) or []:
+            companies.add(ticker)
+            rows.append({"ticker": ticker,
+                         **{k: ratio.get(k) for k in (
+                             "name", "disclosed_name", "recomputed",
+                             "disclosed", "difference", "status", "missing")}})
+    return {
+        "rows": rows,
+        "totals": {
+            "ratios": len(rows),
+            "companies": len(companies),
+            "full": sum(1 for r in rows if r["status"] == "match"),
+            "partial": sum(1 for r in rows if r["status"] == "partial"),
+            "mismatched": sum(1 for r in rows if r["status"] == "mismatch"),
+            "numeric": sum(1 for r in rows if r["recomputed"] is not None),
+        },
+        "notes": notes,
+    }
 
 
 class RunRequest(BaseModel):

@@ -832,6 +832,341 @@ def select_agreement(ticker_or_cik, as_of=None, verbose=False):
     return AgreementSelection(base, amendments)
 
 
+_REF_MONTHS = {
+    "january": "01", "february": "02", "march": "03", "april": "04",
+    "may": "05", "june": "06", "july": "07", "august": "08",
+    "september": "09", "october": "10", "november": "11",
+    "december": "12",
+}
+
+_REF_RE = re.compile(
+    r"incorporated\s+(?:herein\s+)?by\s+reference\s+to\s+"
+    r"Exhibit\s+(\d+(?:\.\d+)?)\b"
+    r".{0,400}?\bForm\s+"
+    r"(8-K/A|10-K/A|10-Q/A|8-K|10-K|10-Q|S-1|S-3|S-4|10)(?![\w-])"
+    r".{0,400}?filed"
+    r"(?:\s+with\s+the\s+(?:SEC|Securities\s+and\s+Exchange\s+Commission))?"
+    r"(?:\s+on)?\s+"
+    r"([A-Z][a-z]+\s+\d{1,2},\s*\d{4})",
+    re.IGNORECASE | re.DOTALL,
+)
+
+_ENTRY_RE = re.compile(r"(?m)^\s*\(?(\d{1,2}\.\d+)\)?\s*$")
+
+_DASH_TABLE = str.maketrans({c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2212"})
+
+
+def _normalize_filing_text(text):
+    """ASCII hyphens and spaces so exhibit indexes parse uniformly."""
+    return text.translate(_DASH_TABLE).replace("\xa0", " ")
+
+
+def _month_date_to_iso(text):
+    match = re.search(
+        r"(January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+(\d{1,2}),\s*(\d{4})",
+        text, re.IGNORECASE)
+    if not match:
+        return None
+    return "%s-%s-%02d" % (
+        match.group(3), _REF_MONTHS[match.group(1).lower()],
+        int(match.group(2)))
+
+
+def exhibit_index_entries(doc_text):
+    """Credit-ish exhibit entries with incorporation pointers.
+
+    Parses the in-filing exhibit index (10-K Item 15 / 10-Q list):
+    returns [{number, description, ref_exhibit, ref_form, ref_date}]
+    for entries whose description looks like a credit agreement and
+    that point at another filing. Employment and other unrelated
+    agreements are skipped, like discovery.
+    """
+    text = _normalize_filing_text(str(doc_text or ""))
+    start = text.lower().find("exhibit index")
+    region = text[start:] if start >= 0 else text
+    end = region.lower().find("signatures")
+    if end > 0:
+        region = region[:end]
+    region = region[:60000]
+    bounds = [m.start() for m in _ENTRY_RE.finditer(region)]
+    entries = []
+    for i, pos in enumerate(bounds):
+        number = _ENTRY_RE.search(region, pos).group(1)
+        chunk = region[pos:bounds[i + 1] if i + 1 < len(bounds) else len(region)]
+        chunk = chunk[:3000]
+        if _matches_any(EXCLUDE_RES, chunk[:EXCLUDE_HEAD_CHARS]):
+            continue
+        if not _matches_any(INCLUDE_RES, chunk):
+            continue
+        ref = _REF_RE.search(chunk)
+        if not ref:
+            continue
+        ref_date = _month_date_to_iso(ref.group(3))
+        if ref_date is None:
+            continue
+        entries.append({
+            "number": number,
+            "description": " ".join(chunk.split()),
+            "ref_exhibit": ref.group(1),
+            "ref_form": ref.group(2).upper(),
+            "ref_date": ref_date,
+        })
+    return entries
+
+
+def find_filing_accession(recent, form, date):
+    """Accession of the filing with form filed on date, or None."""
+    forms = (recent or {}).get("form", []) or []
+    dates = (recent or {}).get("filingDate", []) or []
+    accessions = (recent or {}).get("accessionNumber", []) or []
+    for filing_form, filing_date, accession in zip(forms, dates,
+                                                   accessions):
+        if str(filing_form).upper() == str(form).upper() \
+                and str(filing_date)[:10] == str(date)[:10]:
+            return accession
+    return None
+
+
+def _incorporated_main_text(cik_plain, form, accession):
+    try:
+        docs = filing_documents(cik_plain, accession)
+    except (requests.RequestException, OSError, ValueError):
+        return None
+    main = next((d for d in docs
+                 if str(d.get("type", "")).upper() == form.upper()
+                 and str(d.get("name", "")).lower().endswith(".htm")),
+                None)
+    if main is None:
+        return None
+    url = ARCHIVE_URL.format(
+        cik=cik_plain,
+        accession=accession.replace("-", ""),
+        document=main["name"])
+    try:
+        path = fetch(url, f"{cik_plain}_{accession.replace('-', '')}_"
+                           f"{main['name']}")
+        return html_to_text(path.read_bytes())
+    except (requests.RequestException, OSError, ValueError):
+        return None
+
+
+def resolve_incorporated_agreement(ticker_or_cik, as_of, recent=None,
+                                   main_docs=None):
+    """Credit exhibits reached via incorporated-by-reference pointers.
+
+    Reads the exhibit index of the latest 10-K and 10-Q filed
+    on/before as_of, follows each credit pointer to the original
+    filing, and fetches that exhibit through edgar.fetch (cached).
+    Returns discovery-shaped candidates, newest first. `recent` (the
+    submissions recent block) and `main_docs` ({accession: text})
+    override fetching for tests. Only the submissions "recent" block is
+    searched, so a pointer to a filing older than that block is not
+    followed. ``restates_covenants`` means a full-length document with
+    a financial-covenant section; a short amendment that merely mentions
+    a ratio does not qualify.
+    """
+    cutoff = _as_of_str(as_of)
+    cik10 = get_cik(ticker_or_cik)
+    cik_plain = _cik_plain(cik10)
+    if recent is None:
+        submissions = _read_first(
+            RAW_DIR, f"submissions_CIK{cik10}.json")
+        if submissions is None:
+            return []
+        try:
+            data = json.loads(submissions.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        recent = (data.get("filings") or {}).get("recent") or {}
+    mains = []
+    for form in ("10-K", "10-Q"):
+        best = None
+        for filing_form, filing_date, accession in zip(
+                recent.get("form", []) or [],
+                recent.get("filingDate", []) or [],
+                recent.get("accessionNumber", []) or []):
+            if str(filing_form).upper() != form:
+                continue
+            if cutoff and str(filing_date)[:10] > cutoff:
+                continue
+            if best is None or filing_date > best[0]:
+                best = (filing_date, accession)
+        if best is not None:
+            mains.append((form, best[1]))
+    found = []
+    seen_urls = set()
+
+    def _consider(target, ref_acc, ref_date, description):
+        url = ARCHIVE_URL.format(
+            cik=cik_plain,
+            accession=ref_acc.replace("-", ""),
+            document=target["name"])
+        if url in seen_urls:
+            return
+        seen_urls.add(url)
+        try:
+            exhibit_path = fetch(
+                url, f"{cik_plain}_{ref_acc.replace('-', '')}_"
+                     f"{target['name']}")
+            full_text = html_to_text(exhibit_path.read_bytes())
+        except (requests.RequestException, OSError, ValueError):
+            return
+        head = full_text[:EXHIBIT_HEAD_CHARS]
+        if not head.strip():
+            return
+        if _matches_any(EXCLUDE_RES, head[:EXCLUDE_HEAD_CHARS]):
+            return
+        if not _matches_any(INCLUDE_RES, head):
+            return
+        n = len(full_text)
+        found.append({
+            "url": url,
+            "filingDate": str(ref_date)[:10],
+            "form": target.get("_form") or "",
+            "description": target.get("description") or description,
+            "title": _extract_title(head),
+            "is_forbearance": bool(FORBEARANCE_RE.search(head)),
+            "is_amendment": bool(AMENDMENT_RE.search(head)),
+            "is_complete": _is_complete_text(full_text),
+            "restates_covenants": (
+                n > COMPLETE_MIN_CHARS
+                and _matches_any(FINANCIAL_COVENANT_RES, full_text)),
+            "char_count": n,
+            "character_count": n,
+        })
+
+    for form, accession in mains:
+        # Directly filed credit exhibits some companies type EX-4.
+        try:
+            main_docs_index = filing_documents(cik_plain, accession)
+        except (requests.RequestException, OSError, ValueError):
+            main_docs_index = []
+        main_date = next(
+            (str(d)[:10] for f, d, _a in zip(
+                recent.get("form", []) or [],
+                recent.get("filingDate", []) or [],
+                recent.get("accessionNumber", []) or [])
+             if _a == accession), None)
+        for doc in main_docs_index:
+            doc_type = str(doc.get("type", "")).upper().replace(" ", "")
+            if not re.fullmatch(r"EX-(4|10)(\.\d+)?", doc_type):
+                continue
+            if not doc.get("name"):
+                continue
+            doc = dict(doc)
+            doc["_form"] = form
+            _consider(doc, accession, main_date or "", doc.get("description") or "")
+        if main_docs is not None and accession in main_docs:
+            main_text = main_docs[accession]
+        else:
+            main_text = _incorporated_main_text(cik_plain, form, accession)
+        if not main_text:
+            continue
+        for entry in exhibit_index_entries(main_text):
+            if cutoff and entry["ref_date"] > cutoff:
+                continue
+            ref_acc = find_filing_accession(recent, entry["ref_form"],
+                                            entry["ref_date"])
+            if ref_acc is None:
+                continue
+            # Archive URLs use the company CIK, not the filing agent's
+            # CIK embedded in the accession number.
+            try:
+                ref_docs = filing_documents(cik_plain, ref_acc)
+            except (requests.RequestException, OSError, ValueError):
+                continue
+            wanted = "EX-" + entry["ref_exhibit"]
+            target = next(
+                (d for d in ref_docs
+                 if str(d.get("type", "")).upper().replace(" ", "")
+                 == wanted.upper() and d.get("name")), None)
+            if target is None:
+                continue
+            target = dict(target)
+            target["_form"] = entry["ref_form"]
+            _consider(target, ref_acc, entry["ref_date"],
+                      entry["description"])
+    found.sort(key=lambda c: c["filingDate"], reverse=True)
+    return found
+
+
+IMAGE_ONLY_MAX_TEXT_CHARS = 200
+_IMG_TAG_RE = re.compile(rb"<img\b", re.IGNORECASE)
+
+
+def image_only_pages(raw_bytes):
+    """Scanned page count of an exhibit with no text layer, else 0."""
+    pages = len(_IMG_TAG_RE.findall(raw_bytes))
+    if not pages:
+        return 0
+    text = html_to_text(raw_bytes)
+    return pages if len(text.strip()) <= IMAGE_ONLY_MAX_TEXT_CHARS else 0
+
+
+def _exhibit_described_as_credit(main_text, number):
+    """True when an 8-K calls exhibit `number` a credit agreement."""
+    for match in re.finditer(r"(?<![\d.])" + re.escape(number) + r"(?![\d.])",
+                             main_text or ""):
+        around = main_text[max(0, match.start() - 200):match.end() + 120]
+        if _matches_any(INCLUDE_RES, around):
+            return True
+    return False
+
+
+def find_image_only_credit_exhibits(ticker_or_cik, as_of=None):
+    """Credit exhibits filed as scanned pages, with no extractable text.
+
+    Text classification cannot see these, so discovery drops them and
+    the agreement looks missing. Scans 8-Ks reporting item 1.01/2.03
+    on/before as_of for EX-10 documents that hold only images and that
+    the 8-K itself describes as a credit or loan agreement. Returns
+    [{url, filingDate, exhibit, pages}], newest first. It finds the
+    document only; nothing here reads the scanned pages.
+    """
+    cutoff = _as_of_str(as_of)
+    cik10 = get_cik(ticker_or_cik)
+    cik_plain = _cik_plain(cik10)
+    found = []
+    filings = list_filings(cik10, forms=("8-K",), since=DISCOVERY_SINCE)
+    for filing in filings:
+        if not _wants_index_page(filing):
+            continue
+        if cutoff and (filing.get("filingDate") or "") > cutoff:
+            continue
+        accession = filing["accessionNumber"]
+        acc = accession.replace("-", "")
+        try:
+            docs = filing_documents(cik10, accession)
+        except requests.RequestException:
+            continue
+        main_text = None
+        for doc in docs:
+            doc_type = str(doc.get("type", "")).strip()
+            name = doc.get("name", "")
+            if not name or not EXHIBIT_TYPE_RE.match(doc_type):
+                continue
+            url = ARCHIVE_URL.format(cik=cik_plain, accession=acc,
+                                     document=name)
+            try:
+                raw = fetch(url, f"{cik_plain}_{acc}_{name}").read_bytes()
+            except (requests.RequestException, OSError):
+                continue
+            pages = image_only_pages(raw)
+            if not pages:
+                continue
+            if main_text is None:
+                main_text = _incorporated_main_text(
+                    cik_plain, "8-K", accession) or ""
+            number = doc_type.upper().replace("EX-", "")
+            if not _exhibit_described_as_credit(main_text, number):
+                continue
+            found.append({"url": url, "filingDate": filing["filingDate"],
+                          "exhibit": doc_type, "pages": pages})
+    found.sort(key=lambda c: c["filingDate"], reverse=True)
+    return found
+
+
 def format_select_candidate(cand):
     markers = ""
     if cand.get("is_forbearance"):

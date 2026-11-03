@@ -63,17 +63,54 @@ Contract thresholds per company, from `data/backtest/terms_<TICKER>.json`
 | Company | Result |
 |---|---|
 | AIN | 2 matched |
-| AMCX | base agreement not found (searched 2015-01-01 to 2025-11-14) |
+| AMCX | 2 matched; agreement found by incorporated reference (Amendment No. 3, conformed copy, Apr 10, 2024 8-K). Its "Cash Flow Ratio" (Section 7.27, 5.75x through Mar 31, 2026) pairs by direction with the disclosed total net leverage ratio |
 | CRS | 2 matched |
-| GPK | 1 amended after agreement (leverage schedule ends Dec 31, 2025; company discloses 5.0x for Jun 30, 2026); 1 mismatch (interest expense ratio) |
+| GPK | 2 matched; Section 8.1 schedule states 5.00x for Mar 31 through Dec 31, 2026, and 3.00x interest expense ratio |
 | HAIN | 1 matched; 2 amended after agreement |
 | NUVR | 2 matched |
-| OPTX | base agreement not found (searched 2015-01-01 to 2026-05-15) |
+| OPTX | not read: EX-10.12 of the Nov 14, 2023 8-K holds 56 scanned images and no text |
 | ORLY | 2 matched |
-| QUAD | base agreement not found (searched 2015-01-01 to 2026-08-14) |
+| QUAD | 3 matched; agreement found by incorporated reference (Aug 20, 2025 agreement, EX-4.7 of the Feb 18, 2026 10-K). The disclosed total net leverage ratio has no separate covenant in the agreement |
 | STGW | 1 matched |
 | TRS | 2 matched |
-| Total | 12 matched, 3 amended after agreement, 1 mismatch |
+| Total | 19 matched, 2 amended after agreement, 0 mismatched, 21 quotes verified |
+
+Rescoring saved extractions costs no tokens:
+`PYTHONPATH=src .venv/bin/python src/backtest_terms.py --rescore`. The
+AMCX and QUAD extractions used 324,787 Baseten tokens in 2 calls
+(`model_usage` in `data/backtest/terms_AMCX.json` and `terms_QUAD.json`).
+
+Back-test totals before and after the extras pass:
+
+| Measure | Before | After |
+|---|---|---|
+| Disclosed | 23 of 23 matched, 22 verified | unchanged |
+| Terms rows | 16 | 21 |
+| Terms matched | 12 | 19 |
+| Terms amended after agreement | 3 | 2 |
+| Terms mismatched | 1 | 0 |
+| Companies with no agreement read | 3 (AMCX, QUAD, OPTX) | 1 (OPTX) |
+| Recomputed from XBRL, other borrowers | none | 12 ratios: 0 full, 12 partial, 0 mismatched |
+
+Recomputed leverage ratios, from `data/backtest/recompute_<TICKER>.json`
+with `PYTHONPATH=src .venv/bin/python src/backtest_recompute.py` (no model
+calls). A partial figure uses only the components XBRL could supply:
+
+| Company | Ratio | Recomputed | Disclosed | Difference | Status |
+|---|---|---|---|---|---|
+| AIN | Leverage Ratio | not computed | 1.71x |  | partial |
+| AMCX | Cash Flow Ratio | not computed | 4.33x |  | partial |
+| CRS | Consolidated Net Leverage Ratio | 0.60x | 0.59x | +0.01x | partial |
+| GPK | Consolidated Total Leverage Ratio | 5.03x | 4.37x | +0.66x | partial |
+| HAIN | Consolidated Secured Leverage Ratio | not computed | 4.81x |  | partial |
+| HAIN | Consolidated Leverage Ratio | not computed | 4.81x |  | partial |
+| NUVR | Maximum Leverage Ratio | 4.45x | 4.99x | -0.54x | partial |
+| ORLY | Consolidated Leverage Ratio | not computed | 2.07x |  | partial |
+| QUAD | Maximum Total Leverage Ratio | not computed | 2.00x |  | partial |
+| QUAD | Maximum Senior Secured Leverage Ratio | not computed | 1.99x |  | partial |
+| STGW | Total Leverage Ratio | not computed | 3.16x |  | partial |
+| TRS | Total Net Leverage Ratio | 2.80x | 2.29x | +0.51x | partial |
+| Total | 12 ratios | 4 with a figure | | | 0 full, 12 partial, 0 mismatched |
 
 ## Private check
 
@@ -92,8 +129,9 @@ Contract thresholds per company, from `data/backtest/terms_<TICKER>.json`
 
 | Suite | Count | Command |
 |---|---|---|
-| Python | 559 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
+| Python | 625 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
 | JS | 17 passed | `npm run test:what-if` in `web/` |
-| Playwright | 12 passed | `npx playwright test` in `web/` |
+| Playwright | 15 passed | `npx playwright test` in `web/` |
 | Watch storage | passed | `web/lib/watch.test.ts` via `test:what-if` |
 | Watch plus request flow | 3 passed | `web/e2e/watch-request.spec.ts` |
+| Recomputed section, 1366px and 360px | 3 passed | `web/e2e/accuracy-recompute.spec.ts` |

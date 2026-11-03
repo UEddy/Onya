@@ -332,6 +332,27 @@ export interface Backtest {
     records: { ticker: string; period_end: string; status: string }[];
     notes: string[];
   };
+  recompute: {
+    rows: {
+      ticker: string;
+      name: string;
+      disclosed_name: string | null;
+      recomputed: number | null;
+      disclosed: number | null;
+      difference: number | null;
+      status: "match" | "partial" | "mismatch";
+      missing: string[];
+    }[];
+    totals: {
+      ratios: number;
+      companies: number;
+      full: number;
+      partial: number;
+      mismatched: number;
+      numeric: number;
+    };
+    notes: string[];
+  };
 }
 
 export interface AgentStep {

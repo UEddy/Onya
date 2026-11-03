@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { DataNote, ErrorLine, LoadingLine, Panel } from "./site";
 import { Reveal } from "./fade-up";
-import { apiGet, formatRatio, type Backtest, type CompanyRow } from "../lib/api";
+import {
+  apiGet,
+  formatRatio,
+  formatSignedRatio,
+  type Backtest,
+  type CompanyRow,
+} from "../lib/api";
 import { headroomBar } from "../lib/headroom-bar";
 
 function sentenceCase(name: string): string {
@@ -225,6 +231,70 @@ export default function AccuracyView({
           </Reveal>
 
           <Reveal>
+          <Panel
+            id="recompute"
+            title="Recomputed from filings"
+            description="Each leverage ratio rebuilt from XBRL using the agreement's own definition, next to the ratio the company disclosed"
+          >
+            <p className="mb-4 max-w-[75ch] text-[15px]">
+              {recomputeTotals(backtest)}
+            </p>
+            <div className="card-inset overflow-x-auto px-3 py-1">
+              <table className="w-full min-w-[820px] border-collapse text-left text-[13px]">
+                <thead>
+                  <tr className="border-b border-hairline text-ink-muted">
+                    <th scope="col" className="py-2 pr-4 font-medium">Company</th>
+                    <th scope="col" className="py-2 pr-4 font-medium">Covenant</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Recomputed</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Disclosed</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Difference</th>
+                    <th scope="col" className="py-2 pr-4 font-medium">Status</th>
+                    <th scope="col" className="py-2 font-medium">Not available from filings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backtest.recompute.rows.map((row, i) => (
+                    <tr key={`${row.ticker}-${row.name}-${i}`} className="border-b border-hairline align-top last:border-0">
+                      <td className="py-2 pr-4 font-medium">{row.ticker}</td>
+                      <td className="py-2 pr-4">{sentenceCase(row.name)}</td>
+                      <td className="py-2 pr-4 text-right">
+                        {row.recomputed === null ? "Not computed" : formatRatio(row.recomputed)}
+                      </td>
+                      <td className="py-2 pr-4 text-right">{formatRatio(row.disclosed)}</td>
+                      <td className="py-2 pr-4 text-right">
+                        {row.difference === null ? "N/A" : formatSignedRatio(row.difference)}
+                      </td>
+                      <td className="py-2 pr-4">{RECOMPUTE_STATUS[row.status]}</td>
+                      <td className="py-2">
+                        {row.missing.length === 0 ? (
+                          "None"
+                        ) : (
+                          <details>
+                            <summary className="cursor-pointer">
+                              {row.missing.length === 1 ? "1 item" : `${row.missing.length} items`}
+                            </summary>
+                            <ul className="mt-1 max-w-[52ch] list-disc space-y-1 pl-4 text-ink-muted">
+                              {row.missing.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {backtest.recompute.notes.map((note) => (
+              <p key={note} className="mt-1 max-w-[75ch] text-[13px] text-ink-muted">
+                {note}
+              </p>
+            ))}
+          </Panel>
+          </Reveal>
+
+          <Reveal>
           <Panel id="methods" title="How this is measured">
             <div className="max-w-[75ch] space-y-4 text-[15px]">
               <p>
@@ -241,12 +311,37 @@ export default function AccuracyView({
                 after signing, so those terms are counted separately rather
                 than as misses.
               </p>
+              <p>
+                For the recomputed ratios, Onya maps each part of the
+                agreement&apos;s definition to XBRL facts for the test period.
+                Company-specific add-backs and pro forma items are not in XBRL,
+                so Onya lists them instead of guessing and marks the result
+                partial. A partial figure uses only the parts it could map, so
+                it is a reference point rather than a covenant calculation.
+                These results are not part of the accuracy totals above.
+              </p>
             </div>
           </Panel>
           </Reveal>
         </>
       )}
     </div>
+  );
+}
+
+const RECOMPUTE_STATUS = {
+  match: "Full match",
+  partial: "Partial",
+  mismatch: "Mismatch",
+} as const;
+
+function recomputeTotals(backtest: Backtest): string {
+  const t = backtest.recompute.totals;
+  return (
+    `${t.ratios} ratios across ${t.companies} companies: ${t.full} full ` +
+    `matches, ${t.partial} partial, ${t.mismatched} mismatched. ` +
+    `${t.numeric} have a figure; the others could not be built from XBRL. ` +
+    `A partial figure leaves out the items listed beside it.`
   );
 }
 

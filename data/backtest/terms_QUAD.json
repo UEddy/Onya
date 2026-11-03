@@ -2,10 +2,55 @@
   "ticker": "QUAD",
   "period_end": "2026-06-30",
   "as_of": "2026-08-14",
-  "agreement_url": null,
-  "agreement_filing_date": null,
-  "status": "base agreement not found",
-  "searched_range": "2015-01-01 to 2026-08-14",
-  "covenants": [],
-  "unmatched_disclosed": []
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1481792/000148179226000042/exhibit47-quad2025amendmen.htm",
+  "agreement_filing_date": "2026-02-18",
+  "selected_via": "incorporated reference",
+  "status": "ok",
+  "covenants": [
+    {
+      "name": "Maximum Total Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 3.5,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 3.5,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1481792/000148179226000042/exhibit47-quad2025amendmen.htm"
+    },
+    {
+      "name": "Maximum Senior Secured Leverage Ratio",
+      "direction": "max",
+      "agreement_threshold": 3.0,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 3.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1481792/000148179226000042/exhibit47-quad2025amendmen.htm"
+    },
+    {
+      "name": "Minimum Interest Coverage Ratio",
+      "direction": "min",
+      "agreement_threshold": 3.0,
+      "conditional_alternatives": [],
+      "disclosed_threshold": 3.0,
+      "match": true,
+      "quote_verified": true,
+      "repaired": false,
+      "status": "match",
+      "agreement_url": "https://www.sec.gov/Archives/edgar/data/1481792/000148179226000042/exhibit47-quad2025amendmen.htm"
+    }
+  ],
+  "unmatched_disclosed": [
+    "Total Net Leverage Ratio"
+  ],
+  "model_usage": {
+    "calls": 1,
+    "prompt_tokens": 148372,
+    "completion_tokens": 19573,
+    "total_tokens": 167945
+  }
 }

@@ -1,0 +1,20 @@
+{
+  "ticker": "STGW",
+  "period_end": "2025-06-30",
+  "xbrl_period_end": "2025-06-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/876883/000110465925038729/tm2513100d1_ex10-1.htm",
+  "ratios": [
+    {
+      "name": "Total Leverage Ratio",
+      "disclosed_name": "Total Leverage Ratio",
+      "recomputed": null,
+      "disclosed": 3.16,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Total Leverage Ratio: ratio definition not extracted"
+      ],
+      "components": []
+    }
+  ]
+}

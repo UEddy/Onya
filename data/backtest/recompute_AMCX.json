@@ -1,0 +1,38 @@
+{
+  "ticker": "AMCX",
+  "period_end": "2025-09-30",
+  "xbrl_period_end": "2025-09-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1514991/000151499124000013/amc-thirdamendmenttosecond.htm",
+  "ratios": [
+    {
+      "name": "Cash Flow Ratio",
+      "disclosed_name": "maximum total net leverage ratio",
+      "recomputed": null,
+      "disclosed": 4.33,
+      "difference": null,
+      "status": "partial",
+      "missing": [
+        "Qualified Cash: netting limits are not available from XBRL, so balance sheet cash is used without them",
+        "aggregate undrawn face amount of L/C Obligations: not available from XBRL",
+        "Adjusted Operating Income for four consecutive Quarters: not built from XBRL, because its adjustments are company-specific",
+        "Net Debt: stated limits are not available from XBRL"
+      ],
+      "components": [
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebt"
+          ],
+          "value": 1918713000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -716838000
+        }
+      ]
+    }
+  ]
+}

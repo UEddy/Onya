@@ -2,10 +2,11 @@
   "ticker": "OPTX",
   "period_end": "2026-03-31",
   "as_of": "2026-05-15",
-  "agreement_url": null,
-  "agreement_filing_date": null,
-  "status": "base agreement not found",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/1866816/000149315223041322/ex10-12.htm",
+  "agreement_filing_date": "2023-11-14",
+  "status": "agreement filed as scanned images",
   "searched_range": "2015-01-01 to 2026-05-15",
+  "image_pages": 56,
   "covenants": [],
   "unmatched_disclosed": []
 }

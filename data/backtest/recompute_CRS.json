@@ -1,0 +1,69 @@
+{
+  "ticker": "CRS",
+  "period_end": "2026-09-30",
+  "xbrl_period_end": "2026-09-30",
+  "agreement_url": "https://www.sec.gov/Archives/edgar/data/17843/000110465925114628/tm2531768d1_ex10-1.htm",
+  "ratios": [
+    {
+      "name": "Consolidated Net Leverage Ratio",
+      "disclosed_name": "Consolidated net leverage ratio",
+      "recomputed": 0.6,
+      "disclosed": 0.59,
+      "difference": 0.01,
+      "status": "partial",
+      "missing": [
+        "Guarantees: not available from XBRL",
+        "Swap Termination Value: not available from XBRL",
+        "Domestically-held unrestricted cash and Cash Equivalents: netting limits are not available from XBRL, so balance sheet cash is used without them",
+        "Non-domestic unrestricted cash and Cash Equivalents: netting limits are not available from XBRL, so balance sheet cash is used without them",
+        "Consolidated EBITDA: other adjustments the definition names but the extraction did not itemize",
+        "Depreciation, amortization and other non-cash expense: the other non-cash part is not available from XBRL",
+        "finance leases: no XBRL balance at 2026-09-30"
+      ],
+      "components": [
+        {
+          "component": "depreciation_amortization",
+          "concepts": [
+            "us-gaap:DepreciationDepletionAndAmortization"
+          ],
+          "value": 147700000
+        },
+        {
+          "component": "interest",
+          "concepts": [
+            "us-gaap:InterestExpenseNonoperating"
+          ],
+          "value": 33400000
+        },
+        {
+          "component": "net_income",
+          "concepts": [
+            "us-gaap:NetIncomeLoss"
+          ],
+          "value": 569800000
+        },
+        {
+          "component": "tax",
+          "concepts": [
+            "us-gaap:IncomeTaxExpenseBenefit"
+          ],
+          "value": 134000000
+        },
+        {
+          "component": "debt",
+          "concepts": [
+            "us-gaap:LongTermDebtNoncurrent"
+          ],
+          "value": 691000000
+        },
+        {
+          "component": "cash",
+          "concepts": [
+            "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+          ],
+          "value": -159500000
+        }
+      ]
+    }
+  ]
+}
