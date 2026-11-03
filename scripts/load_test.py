@@ -14,6 +14,7 @@ Stops before a round that could take the total over --max-tokens.
 import argparse
 import concurrent.futures
 import json
+import socket
 import sys
 import time
 import urllib.error
@@ -34,6 +35,18 @@ def post(url, body):
                  "User-Agent": "onya-load-test"})
 
 
+def open_stream(request):
+    """Open a stream, retrying a DNS failure: it never reached the site."""
+    for attempt in range(5):
+        try:
+            return urllib.request.urlopen(request, timeout=HANG_SECONDS)
+        except urllib.error.URLError as exc:
+            if (not isinstance(exc.reason, socket.gaierror)
+                    or attempt == 4):
+                raise
+            time.sleep(2)
+
+
 def run_one(name, request):
     """One stream's outcome, with the gaps between its events."""
     started = time.monotonic()
@@ -43,7 +56,7 @@ def run_one(name, request):
            "finals": 0}
     last = started
     try:
-        with urllib.request.urlopen(request, timeout=HANG_SECONDS) as res:
+        with open_stream(request) as res:
             row["http"] = res.status
             for raw in res:
                 now = time.monotonic()
@@ -98,7 +111,7 @@ def main():
                         help="tokens from earlier rounds, counted in the cap")
     args = parser.parse_args()
     site = args.site.rstrip("/")
-    with urllib.request.urlopen(f"{site}/api/private", timeout=60) as res:
+    with open_stream(urllib.request.Request(f"{site}/api/private")) as res:
         sample = json.load(res)["text"]
     jobs = ([("agent", f"{site}/api/agent", {"question": QUESTION})]
             * args.agents
