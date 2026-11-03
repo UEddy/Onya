@@ -9,6 +9,7 @@ import {
   type HeadroomPoint,
 } from "./headroom-chart";
 import WhatIfPanel from "./what-if";
+import { LOST_STREAM_MESSAGE, readEventStream } from "../lib/ndjson";
 import {
   ErrorLine,
   LoadingLine,
@@ -754,6 +755,8 @@ function FiledSinceList({ ticker, date }: { ticker: string; date: string }) {
   );
 }
 
+const REQUEST_FAILED = "The data service may be waking up. Then try again.";
+
 function CaseRequestButton({
   ticker,
   periodEnd,
@@ -763,13 +766,13 @@ function CaseRequestButton({
 }) {
   const [request, setRequest] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   const start = () => {
     setRequest(null);
     setRunning(true);
-    setFailed(false);
+    setFailure(null);
     setAttempt((n) => n + 1);
   };
 
@@ -785,43 +788,41 @@ function CaseRequestButton({
           cache: "no-store",
         });
         if (!res.ok || !res.body) {
+          const data = (await res.json().catch(() => ({}))) as {
+            detail?: unknown;
+          };
           if (!cancelled) {
             setRunning(false);
-            setFailed(true);
+            setFailure(
+              res.status === 429 && typeof data.detail === "string"
+                ? `Onya's limit was reached (${data.detail}). Please try again later.`
+                : REQUEST_FAILED,
+            );
           }
           return;
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done || cancelled) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const event = JSON.parse(line) as {
-                type?: string;
-                info_request?: string;
-              };
-              if (event.type === "run_result" && event.info_request) {
-                setRequest(event.info_request);
-              } else if (event.type === "error") {
-                setFailed(true);
-              }
-            } catch {
-              /* Partial line waits for the next chunk. */
-            }
+        let drafted = false;
+        const end = await readEventStream(res.body, (event) => {
+          if (cancelled) return;
+          const record = (event ?? {}) as {
+            type?: string;
+            info_request?: string;
+          };
+          if (record.type === "run_result" && record.info_request) {
+            drafted = true;
+            setRequest(record.info_request);
+          }
+        });
+        if (!cancelled) {
+          setRunning(false);
+          if (!drafted) {
+            setFailure(end === "closed" ? LOST_STREAM_MESSAGE : REQUEST_FAILED);
           }
         }
-        if (!cancelled) setRunning(false);
       } catch {
         if (!cancelled) {
           setRunning(false);
-          setFailed(true);
+          setFailure(LOST_STREAM_MESSAGE);
         }
       }
     })();
@@ -832,7 +833,7 @@ function CaseRequestButton({
 
   return (
     <div className="mt-5">
-      {!request && !running && !failed && (
+      {!request && !running && !failure && (
         <button
           type="button"
           onClick={start}
@@ -844,9 +845,9 @@ function CaseRequestButton({
       {running && !request && (
         <LoadingLine text="Drafting the information request." />
       )}
-      {failed && !request && (
+      {failure && !request && (
         <ErrorLine title="The request could not be drafted." onRetry={start}>
-          The data service may be waking up. Then try again.
+          {failure}
         </ErrorLine>
       )}
       {request && (

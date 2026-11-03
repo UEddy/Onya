@@ -69,6 +69,8 @@ RUN_FAILED_MESSAGE = ("The check failed unexpectedly. Nothing was completed. "
                       "Please try again.")
 PRIVATE_MODEL_FAILED_MESSAGE = ("The comparison model did not answer. "
                                 "Nothing was completed. Please try again.")
+REQUEST_TOO_LONG_MESSAGE = ("The request draft took too long without "
+                            "finishing. Please try again.")
 PRIVATE_TOO_LONG_MESSAGE = ("The comparison took too long without finishing. "
                             "Nothing was completed. Please try again.")
 
@@ -360,6 +362,30 @@ def _record_tokens(store, total_tokens):
         log.warning("token count not recorded: %s", type(exc).__name__)
 
 
+class _TokenMeter:
+    """Counts a run's tokens as they are spent, not when its stream ends.
+
+    A closed tab or dropped connection stops the stream, but the worker
+    keeps spending, so counting only at the end would miss that spend.
+    """
+
+    def __init__(self, store):
+        self._store = store
+        self._lock = threading.Lock()
+        self._recorded = 0
+
+    def up_to(self, total):
+        """Record the run's running total; safe to repeat."""
+        if isinstance(total, bool) or not isinstance(total, int):
+            return
+        with self._lock:
+            delta = total - self._recorded
+            if delta <= 0:
+                return
+            self._recorded = total
+        _record_tokens(self._store, delta)
+
+
 def _client_ip(request, token_valid):
     """Visitor IP: forwarded header trusted only with a valid token."""
     if token_valid:
@@ -454,12 +480,19 @@ def _iter_live(question, run_id, store):
     events = queue.Queue()
     box = {}
     call_log = []
+    meter = _TokenMeter(store)
+
+    def on_event(event):
+        meter.up_to(event.get("total_tokens"))
+        events.put(event)
 
     def worker():
         try:
-            box["outcome"] = agent.run_agent(
-                question, run_id=run_id, on_event=events.put,
+            outcome = agent.run_agent(
+                question, run_id=run_id, on_event=on_event,
                 call_log=call_log)
+            meter.up_to(outcome.get("total_tokens"))
+            box["outcome"] = outcome
         except SystemExit:
             events.put({"type": "error",
                         "error": "model credentials not configured"})
@@ -495,7 +528,6 @@ def _iter_live(question, run_id, store):
             yield step
     if timed_out:
         log.warning("run %s hit the stream watchdog", run_id)
-        _record_tokens(store, tokens_so_far)
         yield {"type": "run_result", "reason": "took_too_long",
                "answer": agent.TOO_LONG_ANSWER,
                "total_tokens": tokens_so_far,
@@ -506,7 +538,6 @@ def _iter_live(question, run_id, store):
     if outcome is None:
         return  # _one_final answers for a run that left nothing behind
     total = outcome.get("total_tokens", 0)
-    _record_tokens(store, total)
     if outcome.get("reason") == "model_failed":
         yield {"type": "error", "code": "model_failed",
                "error": redact(outcome.get("answer", "")),
@@ -552,21 +583,31 @@ def _iter_info_request(company, period_end, store):
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
+    stream = _waiting_on(events, time.monotonic())
     while True:
-        event = events.get()
-        if event is None:
+        try:
+            event = next(stream)
+        except StopIteration as stop:
+            timed_out = stop.value
             break
-        if event.get("type") == "error":
+        kind = event.get("type")
+        if kind == "error":
             yield {"type": "error",
                    "error": redact(event.get("error") or "")}
+            return
+        if kind == "heartbeat":
+            yield event
             continue
         step = _sanitize_step(event)
         if step is not None:
             yield step
+    if timed_out:
+        yield {"type": "error", "code": "took_too_long",
+               "error": REQUEST_TOO_LONG_MESSAGE}
+        return
     outcome = box.get("outcome")
     if outcome is None:
-        yield {"type": "error", "error": "the check was lost"}
-        return
+        return  # _one_final answers for a run that left nothing behind
     if outcome.get("error"):
         yield {"type": "error",
                "error": redact(outcome.get("error"))}
@@ -1344,6 +1385,7 @@ def _iter_private_compare(ticker, period_end, text, file_b64, filename,
                     ticker, period_end, text=text, file_b64=file_b64,
                     filename=filename, on_retry=events.put,
                     call_log=call_log)
+            _record_tokens(store, tokens)  # here, in case the stream is gone
             box["result"] = result
             box["tokens"] = tokens
         except private_compare.PrivateUnavailable as exc:
@@ -1381,7 +1423,6 @@ def _iter_private_compare(ticker, period_end, text, file_b64, filename,
     result = box.get("result")
     if result is None:
         return  # _one_final answers for a run that left nothing behind
-    _record_tokens(store, box.get("tokens") or 0)
     yield {"type": "private_result", "reason": "private_compare",
            "total_tokens": box.get("tokens") or 0,
            "comparison": _redact_json(result),

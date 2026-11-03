@@ -124,6 +124,10 @@ scripts/load_test.py https://<site-url>
   `onya-api` Production env vars and redeploy. `POST /agent/run`
   returns 503 and the site shows "The live agent is paused." with a
   link to the recorded run. Set it back to 1 to resume.
+- Rate limits count per clock hour, so a visitor can reach 10 runs
+  across an hour boundary. To read the counters without writing:
+  `.venv/bin/python scripts/limiter_keys.py <file with the two UPSTASH_ vars>`
+  (not the main `.env`: local runs would then use production counters).
 - Daily token budget: `ONYA_DAILY_TOKEN_BUDGET` in the same place
   (default 1500000). When the day's recorded tokens reach it,
   `POST /agent/run` returns 429 and the site offers the recorded run.

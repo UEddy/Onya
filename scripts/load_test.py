@@ -94,6 +94,8 @@ def main():
     parser.add_argument("--agents", type=int, default=2)
     parser.add_argument("--privates", type=int, default=1)
     parser.add_argument("--max-tokens", type=int, default=450_000)
+    parser.add_argument("--already-spent", type=int, default=0,
+                        help="tokens from earlier rounds, counted in the cap")
     args = parser.parse_args()
     site = args.site.rstrip("/")
     with urllib.request.urlopen(f"{site}/api/private", timeout=60) as res:
@@ -107,7 +109,7 @@ def main():
                 + args.privates * PRIVATE_TOKENS_ESTIMATE)
     rows = []
     for number in range(1, args.rounds + 1):
-        spent = sum(r["tokens"] for r in rows)
+        spent = args.already_spent + sum(r["tokens"] for r in rows)
         if spent + estimate > args.max_tokens:
             print(f"stopping before round {number}: {spent} tokens spent")
             break

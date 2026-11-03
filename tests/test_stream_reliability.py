@@ -290,6 +290,91 @@ class AgentStream(StreamCase):
         self.assertEqual(self.spent(), 7)
 
 
+class TokenCounting(StreamCase):
+    def test_a_dropped_stream_still_counts_what_the_run_spends(self):
+        finish = threading.Event()
+        finished = threading.Event()
+
+        def run(question, run_id=None, on_event=None, **kwargs):
+            on_event({"step": 1, "type": "tool_call", "tool": "x",
+                      "total_tokens": 30})
+            finish.wait(5)
+            on_event({"step": 2, "type": "tool_call", "tool": "x",
+                      "total_tokens": 70})
+            finished.set()
+            return {"answer": "ok", "reason": "done", "total_tokens": 90}
+
+        with patch.object(agent, "run_agent", run):
+            stream = api._iter_live("q", "r1", self.store)
+            next(stream)
+            self.assertEqual(self.spent(), 30)
+            stream.close()  # the visitor is gone; the worker is not
+            finish.set()
+            self.assertTrue(finished.wait(5))
+            deadline = time.monotonic() + 5
+            while self.spent() < 90 and time.monotonic() < deadline:
+                time.sleep(0.01)
+        self.assertEqual(self.spent(), 90)
+
+    def test_steps_and_the_result_are_not_counted_twice(self):
+        def run(question, run_id=None, on_event=None, **kwargs):
+            on_event({"step": 1, "type": "tool_call", "tool": "x",
+                      "total_tokens": 30})
+            return {"answer": "ok", "reason": "done", "total_tokens": 30}
+
+        with patch.object(agent, "run_agent", run):
+            self.post_agent()
+        self.assertEqual(self.spent(), 30)
+
+    def test_a_run_that_raises_still_counts_its_steps(self):
+        def run(question, run_id=None, on_event=None, **kwargs):
+            on_event({"step": 1, "type": "tool_call", "tool": "x",
+                      "total_tokens": 30})
+            raise RuntimeError("boom")
+
+        with patch.object(agent, "run_agent", run):
+            self.assert_one_final_last(self.post_agent())
+        self.assertEqual(self.spent(), 30)
+
+    def test_redis_failure_does_not_lose_the_result(self):
+        def run(question, run_id=None, **kwargs):
+            return {"answer": "ok", "reason": "done", "total_tokens": 5}
+
+        with patch.object(agent, "run_agent", run), \
+                patch.object(self.store, "add",
+                             side_effect=limits.RedisUnavailable("down")):
+            final = self.assert_one_final_last(self.post_agent())
+        self.assertEqual(final["reason"], "done")
+
+
+class InfoRequestStream(StreamCase):
+    def post_request(self):
+        r = self.client.post(
+            "/agent/info-request",
+            json={"company": "SNBR", "period_end": "2026-04-04"},
+            headers={"X-Onya-Token": TOKEN})
+        self.assertEqual(r.status_code, 200)
+        return [json.loads(x) for x in r.text.splitlines() if x]
+
+    def test_exception_is_one_error(self):
+        with patch.object(agent, "tool_draft_info_request",
+                          side_effect=RuntimeError("boom")):
+            final = self.assert_one_final_last(self.post_request())
+        self.assertEqual(final["type"], "error")
+
+    def test_stuck_tool_gets_heartbeats_then_an_error(self):
+        release = threading.Event()
+        self.addCleanup(release.set)
+        with patch.object(agent, "tool_draft_info_request",
+                          side_effect=lambda *a: release.wait(30)), \
+                patch.object(api, "HEARTBEAT_SECONDS", 0.05), \
+                patch.object(api, "STREAM_WATCHDOG_SECONDS", 0.2):
+            events = self.post_request()
+        final = self.assert_one_final_last(events)
+        self.assertEqual(final["code"], "took_too_long")
+        self.assertIn("heartbeat", [e["type"] for e in events])
+
+
 class OneFinal(unittest.TestCase):
     def test_nothing_after_the_first_final(self):
         out = list(api._one_final(iter([

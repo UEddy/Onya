@@ -131,6 +131,45 @@ test("private: an unavailable error says so", async ({ page }) => {
   await expect(page.getByText("Private mode is unavailable.")).toBeVisible();
 });
 
+async function draftRequest(page: Page) {
+  await page.goto("/app/company/SNBR");
+  await page.getByRole("button", { name: "Draft information request" }).click();
+}
+
+test("request panel: a stream closing with no final event shows an error", async ({ page }) => {
+  await page.route("**/api/request", (route) => route.fulfill(ndjson(STEP)));
+  await draftRequest(page);
+  await expect(page.getByText(LOST, { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("Drafting the information request.")).toHaveCount(0);
+});
+
+test("request panel: a reset connection shows the same error", async ({ page }) => {
+  await page.route("**/api/request", (route) => route.abort("connectionreset"));
+  await draftRequest(page);
+  await expect(page.getByText(LOST, { exact: false })).toBeVisible();
+});
+
+test("request panel: a server error event is shown as a failure", async ({ page }) => {
+  await page.route("**/api/request", (route) =>
+    route.fulfill(ndjson(JSON.stringify({ type: "error", error: "no" }))),
+  );
+  await draftRequest(page);
+  await expect(page.getByText("The request could not be drafted.")).toBeVisible();
+});
+
+test("request panel: the rate limit says so", async ({ page }) => {
+  await page.route("**/api/request", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "rate limit: 5 runs per hour per IP" }),
+    }),
+  );
+  await draftRequest(page);
+  await expect(page.getByText("5 runs per hour per IP", { exact: false })).toBeVisible();
+});
+
 test("recorded run is labeled with its date and its figure links work", async ({ page }) => {
   await page.goto("/app/agent/recorded");
   await expect(page.getByRole("heading", { name: "Recorded run", level: 1 })).toBeVisible();
