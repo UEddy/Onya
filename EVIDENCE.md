@@ -217,6 +217,16 @@ calls). A partial figure uses only the components XBRL could supply:
 | Missing model config | 503 with an unavailable notice | `src/api.py` (`stream_private_compare`) | `.venv/bin/python -m unittest tests.test_private_compare.Endpoint.test_503_without_baseten_key` |
 | Sample flow in the browser | Sample loads; table shows 5.06 vs 6.58 with Verified marks | `web/e2e/private.spec.ts` | `npx playwright test e2e/private.spec.ts` in `web/` |
 
+## Cost and speed
+
+Measured Nov 3, 2026 on the live site with `scripts/load_test.py`: 3 rounds of 2 agent runs plus 1 private check at the same time, 9 runs, 331,733 tokens.
+
+| Claim | Value | Source | Reproduce |
+|---|---|---|---|
+| Agent run, 4 finished | Median 86.5 s (76.4 to 102.1 s); median 75,818 tokens (55,792 to 82,478); about $0.14 ($0.11 to $0.16) at a 21.6% output share from 15 run traces, Nov 1 to 3, no cached-input discount | `docs/load_test_2026-11-03.json`; https://dev.meta.ai/docs/pricing-rate-limits ($1.25 input, $4.25 output per million, read Nov 3, 2026) | `scripts/load_test.py SITE_URL` (spends real tokens) |
+| Agent run, 2 failed | Round 1: model server errors, 151.3 s, 12,953 and 12,426 tokens, explicit error | `docs/load_test_2026-11-03.json` | Not reproducible on demand |
+| Private check, 3 runs | Median 14.8 s (12.1 to 15.9 s); median 5,855 tokens (4,465 to 6,129); under $0.03 | `docs/load_test_2026-11-03.json`; https://www.baseten.co/pricing/ (Muse Spark Open, $1.25 input, $4.25 output per million, read Nov 3, 2026) | `scripts/load_test.py SITE_URL` (spends real tokens) |
+
 ## Suite counts
 
 | Suite | Count | Command |

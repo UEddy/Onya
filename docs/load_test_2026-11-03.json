@@ -1,0 +1,413 @@
+[
+ {
+  "round": 1,
+  "name": "agent",
+  "status": "error",
+  "reason": "model_failed",
+  "seconds": 151.3,
+  "tokens": 12953,
+  "heartbeats": 12,
+  "retries": 4,
+  "max_gap_s": 10.1,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 45.74,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 7.24,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 0.59,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 25.79,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 1.14,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 31.9,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 0.33,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 36.64,
+    "outcome": "server_error"
+   }
+  ]
+ },
+ {
+  "round": 1,
+  "name": "agent",
+  "status": "error",
+  "reason": "model_failed",
+  "seconds": 151.3,
+  "tokens": 12426,
+  "heartbeats": 12,
+  "retries": 3,
+  "max_gap_s": 10.2,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 45.2,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 8.23,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 0.76,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 24.57,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 32.94,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 7.18,
+    "outcome": "server_error"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 2,
+    "duration_s": 30.09,
+    "outcome": "server_error"
+   }
+  ]
+ },
+ {
+  "round": 1,
+  "name": "private",
+  "status": "ok",
+  "reason": "private_compare",
+  "seconds": 12.1,
+  "tokens": 4465,
+  "heartbeats": 1,
+  "retries": 0,
+  "max_gap_s": 10.0,
+  "model_calls": [
+   {
+    "label": "private_extract",
+    "attempt": 1,
+    "duration_s": 10.54,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 2,
+  "name": "agent",
+  "status": "ok",
+  "reason": "done",
+  "seconds": 78.4,
+  "tokens": 55792,
+  "heartbeats": 4,
+  "retries": 0,
+  "max_gap_s": 10.1,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.81,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.41,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.24,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 29.83,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 12.51,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 19.77,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 2,
+  "name": "agent",
+  "status": "ok",
+  "reason": "done",
+  "seconds": 94.6,
+  "tokens": 82478,
+  "heartbeats": 7,
+  "retries": 0,
+  "max_gap_s": 10.0,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.19,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.89,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 1.69,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 2.71,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 1.33,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 0.7,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 44.43,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 10.05,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 21.97,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 2,
+  "name": "private",
+  "status": "ok",
+  "reason": "private_compare",
+  "seconds": 15.9,
+  "tokens": 6129,
+  "heartbeats": 1,
+  "retries": 0,
+  "max_gap_s": 9.9,
+  "model_calls": [
+   {
+    "label": "private_extract",
+    "attempt": 1,
+    "duration_s": 14.13,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 3,
+  "name": "agent",
+  "status": "ok",
+  "reason": "done",
+  "seconds": 102.1,
+  "tokens": 81419,
+  "heartbeats": 7,
+  "retries": 0,
+  "max_gap_s": 10.1,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.58,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 3.44,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 3.78,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 2.72,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 41.86,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 10.2,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 12.36,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 19.87,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 3,
+  "name": "agent",
+  "status": "ok",
+  "reason": "done",
+  "seconds": 76.4,
+  "tokens": 70216,
+  "heartbeats": 4,
+  "retries": 0,
+  "max_gap_s": 10.1,
+  "model_calls": [
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.55,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 4.36,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 2.65,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 3.48,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 3.4,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 22.36,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 15.09,
+    "outcome": "ok"
+   },
+   {
+    "label": "agent_turn",
+    "attempt": 1,
+    "duration_s": 17.21,
+    "outcome": "ok"
+   }
+  ]
+ },
+ {
+  "round": 3,
+  "name": "private",
+  "status": "ok",
+  "reason": "private_compare",
+  "seconds": 14.8,
+  "tokens": 5855,
+  "heartbeats": 1,
+  "retries": 0,
+  "max_gap_s": 10.5,
+  "model_calls": [
+   {
+    "label": "private_extract",
+    "attempt": 1,
+    "duration_s": 12.75,
+    "outcome": "ok"
+   }
+  ]
+ }
+]

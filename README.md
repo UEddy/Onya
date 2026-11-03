@@ -293,6 +293,31 @@ public Sleep Number filings
 the endpoint returns 503 and the page says private mode is
 unavailable. Code: `src/private_compare.py`.
 
+## Cost and speed
+
+Measured Nov 3, 2026 on the live site, in three rounds of two agent runs plus
+one private check started together (9 runs,
+[raw results](docs/load_test_2026-11-03.json)).
+
+| Check | Runs | Median time | Range | Median tokens | Range |
+|---|---|---|---|---|---|
+| Agent, finished | 4 | 86.5 s | 76.4 to 102.1 s | 75,818 | 55,792 to 82,478 |
+| Private check | 3 | 14.8 s | 12.1 to 15.9 s | 5,855 | 4,465 to 6,129 |
+
+The other two agent runs failed in round 1 on model server errors, each after
+151 s and about 13,000 tokens, and ended with an explicit error.
+
+At published list prices of $1.25 per million input tokens and $4.25 per
+million output tokens ([Meta](https://dev.meta.ai/docs/pricing-rate-limits),
+[Baseten](https://www.baseten.co/pricing/), read Nov 3, 2026):
+
+- A finished agent run costs about $0.14 ($0.11 to $0.16). The load test
+  recorded totals only, so this applies the 21.6% median output share of 15
+  finished run traces from Nov 1 to 3, with no cached-input discount.
+- A private check costs under $0.03: $0.006 if all its tokens were input, $0.026
+  if all were output. Baseten lists "Muse Spark Open"; this repo calls
+  `muse-spark-open-1026`.
+
 ## Security and limits
 
 - The demo token never reaches the browser: the browser only calls the
