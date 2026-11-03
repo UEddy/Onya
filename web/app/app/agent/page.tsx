@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MemoActions, MemoView } from "../../../components/memo";
 import { RequestActions, RequestView } from "../../../components/request";
 import { formatClock, formatInt, isWakingStatus, type AgentRunState, type AgentStep } from "../../../lib/api";
+import { LOST_STREAM_MESSAGE, readEventStream } from "../../../lib/ndjson";
 import { stepSentence } from "../../../lib/step-sentences";
 
 const PREFILL =
@@ -44,12 +45,15 @@ function runningSentence(steps: AgentStep[]): string {
   return "Working through the check";
 }
 
+const TRIM_QUESTION =
+  "That question needs trimming: keep it under 4,000 characters and non-empty.";
+
 function friendlyError(status: number, detail: string): string {
   if (status === 503 || detail.includes("paused")) {
-    return "The live agent is paused. See a saved run.";
+    return "The live agent is paused.";
   }
   if (detail.includes("daily token budget")) {
-    return "The daily token budget is used up for today. See a saved run.";
+    return "The daily token budget is used up for today.";
   }
   if (status === 429) {
     if (detail.includes("hour")) {
@@ -58,10 +62,10 @@ function friendlyError(status: number, detail: string): string {
     return "Onya allows thirty checks per day in total. Please try again tomorrow.";
   }
   if (status === 413 || status === 422) {
-    return "That question needs trimming: keep it under 4,000 characters and non-empty.";
+    return TRIM_QUESTION;
   }
   if (isWakingStatus(status)) {
-    return "The data service is waking up. This can take up to a minute. See a saved run.";
+    return "The data service is waking up. This can take up to a minute.";
   }
   return "The check could not start. Please try again in a moment.";
 }
@@ -73,6 +77,7 @@ export default function AgentPage() {
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [stalledStep, setStalledStep] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
   const startedAt = useRef<number | null>(null);
   const lastStepCount = useRef(0);
   const lastProgressAt = useRef<number | null>(null);
@@ -83,6 +88,7 @@ export default function AgentPage() {
   const noteProgress = useCallback(() => {
     lastProgressAt.current = Date.now();
     setStalledStep(null);
+    setRetrying(false);
   }, []);
 
   useEffect(() => {
@@ -117,6 +123,11 @@ export default function AgentPage() {
     (event: unknown) => {
       if (typeof event !== "object" || event === null) return;
       const record = event as Record<string, unknown>;
+      if (record.type === "heartbeat") return;
+      if (record.type === "model_retry") {
+        setRetrying(true);
+        return;
+      }
       if (record.type === "run_result") {
         const reason = typeof record.reason === "string" ? record.reason : "";
         if (reason === "done" || reason === "replay") {
@@ -193,6 +204,7 @@ export default function AgentPage() {
     setRun(null);
     setElapsed(0);
     setStalledStep(null);
+    setRetrying(false);
     startedAt.current = Date.now();
     lastStepCount.current = 0;
     lastProgressAt.current = Date.now();
@@ -212,37 +224,15 @@ export default function AgentPage() {
         setError(friendlyError(res.status, data.detail ?? ""));
         return;
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            applyEvent(JSON.parse(line) as unknown);
-          } catch {
-            /* A partial line waits for the next chunk. */
-            buffer = `${line}\n${buffer}`;
-            break;
-          }
-        }
-      }
-      if (buffer.trim()) {
-        try {
-          applyEvent(JSON.parse(buffer) as unknown);
-        } catch {
-          /* Trailing bytes are not a complete event; ignore them. */
-        }
+      const end = await readEventStream(res.body, applyEvent);
+      if (end === "closed") {
+        setRunning(false);
+        setError(LOST_STREAM_MESSAGE);
       }
     } catch {
       if (controller.signal.aborted) return;
       setRunning(false);
-      setError(friendlyError(502, ""));
+      setError(LOST_STREAM_MESSAGE);
     }
   }, [question, running, applyEvent]);
 
@@ -327,9 +317,9 @@ export default function AgentPage() {
             >
               Try again
             </button>
-            {error.includes("See a saved run") && (
-              <Link href="/#how-it-works" className="text-link text-[15px]">
-                See a saved run
+            {error !== TRIM_QUESTION && (
+              <Link href="/app/agent/recorded" className="text-link text-[15px]">
+                View a recorded run
               </Link>
             )}
           </div>
@@ -367,7 +357,9 @@ export default function AgentPage() {
               style={{ backgroundColor: "#16232C", border: "1px solid #2A3A43", color: "#9AA9A3" }}
             >
               <span aria-hidden="true" className="dot animate-pulse" style={{ backgroundColor: "#D49A3E" }} />
-              {stalledStep
+              {retrying
+                ? "The model did not answer, so Onya is trying once more."
+                : stalledStep
                 ? `Still working on: ${stalledStep.charAt(0).toLowerCase()}${stalledStep.slice(1)}`
                 : `${currentStep}. ${elapsed} seconds elapsed.`}
             </p>
@@ -398,6 +390,11 @@ export default function AgentPage() {
           style={{ ["--pop-x" as string]: "0px" }}
         >
           <h2 className="text-[22px] font-semibold tracking-tight">Memo</h2>
+          {run.reason === "replay" && (
+            <p className="mt-2 text-[14px] font-medium">
+              Recorded run, not a live check.
+            </p>
+          )}
           <MemoView
             answer={run.answer}
             figureFields={run.figure_fields}

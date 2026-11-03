@@ -12,6 +12,8 @@ const files = [
   "app/accuracy/page.tsx",
   "app/app/accuracy/page.tsx",
   "app/app/agent/page.tsx",
+  "app/app/agent/recorded/page.tsx",
+  "app/app/private/page.tsx",
   "app/app/company/[ticker]/page.tsx",
   "app/app/layout.tsx",
   "app/app/watchlist/page.tsx",

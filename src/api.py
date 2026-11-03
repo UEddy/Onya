@@ -20,6 +20,7 @@ Run from the project root (same entrypoint Vercel uses)::
 """
 
 import json
+import logging
 import os
 import queue
 import re
@@ -55,6 +56,21 @@ DATA_DIR = PROJECT_ROOT / "data"
 BACKTEST_DIR = DATA_DIR / "backtest"
 RESULTS_DIR = DATA_DIR / "results"
 EXTRACTED_DIR = DATA_DIR / "extracted"
+
+log = logging.getLogger("onya.api")
+
+HEARTBEAT_SECONDS = 10
+# After the run's own 270 s deadline, before the 300 s function cap.
+STREAM_WATCHDOG_SECONDS = 278
+FINAL_EVENT_TYPES = {"run_result", "private_result", "error"}
+LOST_MESSAGE = ("The check ended without a result. Nothing was completed. "
+                "Please try again.")
+RUN_FAILED_MESSAGE = ("The check failed unexpectedly. Nothing was completed. "
+                      "Please try again.")
+PRIVATE_MODEL_FAILED_MESSAGE = ("The comparison model did not answer. "
+                                "Nothing was completed. Please try again.")
+PRIVATE_TOO_LONG_MESSAGE = ("The comparison took too long without finishing. "
+                            "Nothing was completed. Please try again.")
 
 SNBR = "snbr"
 LOCAL_ORIGIN = "http://localhost:3000"
@@ -276,7 +292,7 @@ def _paused():
     """Fail-closed answer when limits cannot be enforced."""
     return JSONResponse(
         status_code=503,
-        content={"detail": "The live agent is paused. See a saved run."})
+        content={"detail": "The live agent is paused."})
 
 
 def _claim_limits(store, ip):
@@ -340,8 +356,8 @@ def _record_tokens(store, total_tokens):
         return
     try:
         store.add(limits.tokens_key(), total, 2 * 86400)
-    except limits.RedisUnavailable:
-        pass
+    except Exception as exc:  # a result must not be lost over its count
+        log.warning("token count not recorded: %s", type(exc).__name__)
 
 
 def _client_ip(request, token_valid):
@@ -375,6 +391,47 @@ def _sanitize_step(entry):
     }
 
 
+def _one_final(events):
+    """Pass events through, ending with exactly one final event.
+
+    Whatever goes wrong upstream, the browser gets a result or an error:
+    events after the first final are dropped, and a stream that ends
+    without one (or raises) gets the error here. An error never carries
+    the exception's text, which can quote paths or prompts.
+    """
+    try:
+        for event in events:
+            yield event
+            if event.get("type") in FINAL_EVENT_TYPES:
+                return
+    except Exception as exc:
+        log.warning("stream failed: %s", type(exc).__name__)
+    yield {"type": "error", "code": "lost", "error": LOST_MESSAGE}
+
+
+def _waiting_on(events, started):
+    """Yield queued events until None, with heartbeats during silence.
+
+    Returns True if STREAM_WATCHDOG_SECONDS passed first, so a stuck worker
+    cannot hold the stream open until the platform cuts it.
+    """
+    while True:
+        elapsed = time.monotonic() - started
+        left = STREAM_WATCHDOG_SECONDS - elapsed
+        if left <= 0:
+            return True
+        try:
+            event = events.get(timeout=min(HEARTBEAT_SECONDS, left))
+        except queue.Empty:
+            if time.monotonic() - started < STREAM_WATCHDOG_SECONDS:
+                yield {"type": "heartbeat",
+                       "elapsed_s": int(time.monotonic() - started)}
+            continue
+        if event is None:
+            return False
+        yield event
+
+
 def _iter_replay(store):
     """Stream the saved sample run step by step (no model calls)."""
     sample = _load_sample_memo() or {}
@@ -384,61 +441,85 @@ def _iter_replay(store):
             yield step
         time.sleep(0.35)
     total = sample.get("total_tokens", 0)
+    _record_tokens(store, total)
     yield {"type": "run_result", "reason": "replay",
            "answer": redact(sample.get("memo", "")),
            "total_tokens": total,
            "tool_calls": sample.get("tool_calls", 0),
            "figure_fields": sample.get("figure_fields", [])}
-    _record_tokens(store, total)
 
 
 def _iter_live(question, run_id, store):
     """Run the agent in a worker thread, yielding steps as they happen."""
     events = queue.Queue()
     box = {}
+    call_log = []
 
     def worker():
         try:
             box["outcome"] = agent.run_agent(
-                question, run_id=run_id, on_event=events.put)
+                question, run_id=run_id, on_event=events.put,
+                call_log=call_log)
         except SystemExit:
             events.put({"type": "error",
                         "error": "model credentials not configured"})
         except Exception as exc:  # never leak tracebacks or paths
-            events.put({"type": "error",
-                        "error": f"{type(exc).__name__}: {exc}"})
+            log.warning("run %s failed: %s", run_id, type(exc).__name__)
+            events.put({"type": "error", "error": RUN_FAILED_MESSAGE})
         finally:
             events.put(None)
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
-    saw_error = False
+    started = time.monotonic()
+    tokens_so_far = 0
+    stream = _waiting_on(events, started)
     while True:
-        event = events.get()
-        if event is None:
+        try:
+            event = next(stream)
+        except StopIteration as stop:
+            timed_out = stop.value
             break
-        if event.get("type") == "error":
-            saw_error = True
-            yield {"type": "error",
-                   "error": redact(event.get("error") or "")}
+        kind = event.get("type")
+        if kind == "error":
+            yield {"type": "error", "error": redact(event.get("error") or ""),
+                   "total_tokens": tokens_so_far,
+                   "model_calls": list(call_log)}
+            return
+        if kind in ("heartbeat", "model_retry"):
+            yield event
             continue
+        tokens_so_far = event.get("total_tokens") or tokens_so_far
         step = _sanitize_step(event)
         if step is not None:
             yield step
+    if timed_out:
+        log.warning("run %s hit the stream watchdog", run_id)
+        _record_tokens(store, tokens_so_far)
+        yield {"type": "run_result", "reason": "took_too_long",
+               "answer": agent.TOO_LONG_ANSWER,
+               "total_tokens": tokens_so_far,
+               "tool_calls": 0, "figure_fields": [],
+               "info_request": None, "model_calls": list(call_log)}
+        return
     outcome = box.get("outcome")
     if outcome is None:
-        if not saw_error:
-            yield {"type": "error", "error": "the check was lost"}
-        return
+        return  # _one_final answers for a run that left nothing behind
     total = outcome.get("total_tokens", 0)
+    _record_tokens(store, total)
+    if outcome.get("reason") == "model_failed":
+        yield {"type": "error", "code": "model_failed",
+               "error": redact(outcome.get("answer", "")),
+               "total_tokens": total, "model_calls": list(call_log)}
+        return
     yield {"type": "run_result",
            "reason": outcome.get("reason", "done"),
            "answer": redact(outcome.get("answer", "")),
            "total_tokens": total,
            "tool_calls": outcome.get("tool_calls", 0),
            "figure_fields": outcome.get("figure_fields", []),
-           "info_request": redact(outcome.get("info_request") or None)}
-    _record_tokens(store, total)
+           "info_request": redact(outcome.get("info_request") or None),
+           "model_calls": list(call_log)}
 
 
 def _iter_info_request(company, period_end, store):
@@ -448,6 +529,7 @@ def _iter_info_request(company, period_end, store):
 
     def worker():
         try:
+            agent.reset_corpus()
             outcome = agent.tool_draft_info_request(
                 company, period_end)
             box["outcome"] = outcome
@@ -489,11 +571,11 @@ def _iter_info_request(company, period_end, store):
         yield {"type": "error",
                "error": redact(outcome.get("error"))}
         return
+    _record_tokens(store, 0)
     yield {"type": "run_result", "reason": "info_request",
            "answer": "", "total_tokens": 0, "tool_calls": 1,
            "figure_fields": [],
            "info_request": redact(outcome.get("request") or "")}
-    _record_tokens(store, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -1086,8 +1168,7 @@ def stream_agent_run(body: RunRequest, request: Request,
     if _budget_exhausted(store):
         return JSONResponse(
             status_code=429,
-            content={"detail": "The daily token budget is used up for today. "
-                               "See a saved run."})
+            content={"detail": "The daily token budget is used up for today."})
     run_id = uuid.uuid4().hex[:12]
 
     def events():
@@ -1097,7 +1178,7 @@ def stream_agent_run(body: RunRequest, request: Request,
             yield from _iter_live(question, run_id, store)
 
     def body_lines():
-        for event in events():
+        for event in _one_final(events()):
             yield json.dumps(event, default=str) + "\n"
 
     return StreamingResponse(body_lines(),
@@ -1203,11 +1284,11 @@ def stream_info_request(body: InfoRequestBody, request: Request,
     if _budget_exhausted(store):
         return JSONResponse(
             status_code=429,
-            content={"detail": "The daily token budget is used up for today. "
-                               "See a saved run."})
+            content={"detail": "The daily token budget is used up for today."})
 
     def body_lines():
-        for event in _iter_info_request(company, period_end, store):
+        for event in _one_final(
+                _iter_info_request(company, period_end, store)):
             yield json.dumps(event, default=str) + "\n"
 
     return StreamingResponse(body_lines(),
@@ -1240,38 +1321,39 @@ def _private_replay_figures():
 def _iter_private_compare(ticker, period_end, text, file_b64, filename,
                           store):
     """Stream progress events, then the comparison result."""
+    import model_calls
     import private_compare
 
     events = queue.Queue()
     box = {}
+    call_log = []
 
     def worker():
         try:
             replay = _private_replay_figures()
+            events.put({"type": "progress", "step": "reading upload"})
+            events.put({"type": "progress", "step": "extracting figures"})
             if replay is not None:
                 figures = replay["figures"]
                 tokens = 0
-                events.put({"type": "progress",
-                            "step": "reading upload"})
-                events.put({"type": "progress",
-                            "step": "extracting figures"})
                 result = private_compare.compare_with_onya(
                     ticker, period_end, figures)
                 result["figures"] = figures
             else:
-                events.put({"type": "progress",
-                            "step": "reading upload"})
-                events.put({"type": "progress",
-                            "step": "extracting figures"})
                 result, tokens, _timings = private_compare.run_compare(
                     ticker, period_end, text=text, file_b64=file_b64,
-                    filename=filename)
+                    filename=filename, on_retry=events.put,
+                    call_log=call_log)
             box["result"] = result
             box["tokens"] = tokens
         except private_compare.PrivateUnavailable as exc:
-            events.put({"type": "unavailable", "error": str(exc)})
+            events.put({"type": "error", "code": "unavailable",
+                        "error": str(exc)})
         except private_compare.PrivateInputError as exc:
             events.put({"type": "error", "error": str(exc)})
+        except model_calls.ModelCallFailed:
+            events.put({"type": "error", "code": "model_failed",
+                        "error": PRIVATE_MODEL_FAILED_MESSAGE})
         except Exception:  # never leak tracebacks, paths, or content
             events.put({"type": "error",
                         "error": "comparison failed"})
@@ -1280,18 +1362,30 @@ def _iter_private_compare(ticker, period_end, text, file_b64, filename,
 
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
+    stream = _waiting_on(events, time.monotonic())
     while True:
-        event = events.get()
-        if event is None:
+        try:
+            event = next(stream)
+        except StopIteration as stop:
+            timed_out = stop.value
             break
+        if event.get("type") == "error":
+            yield {**event, "model_calls": list(call_log)}
+            return
         yield event
+    if timed_out:
+        yield {"type": "error", "code": "took_too_long",
+               "error": PRIVATE_TOO_LONG_MESSAGE,
+               "model_calls": list(call_log)}
+        return
     result = box.get("result")
     if result is None:
-        return
+        return  # _one_final answers for a run that left nothing behind
     _record_tokens(store, box.get("tokens") or 0)
     yield {"type": "private_result", "reason": "private_compare",
            "total_tokens": box.get("tokens") or 0,
-           "comparison": _redact_json(result)}
+           "comparison": _redact_json(result),
+           "model_calls": list(call_log)}
 
 
 @router.post("/private/compare")
@@ -1340,13 +1434,12 @@ def stream_private_compare(body: CompareBody, request: Request,
     if _budget_exhausted(store):
         return JSONResponse(
             status_code=429,
-            content={"detail": "The daily token budget is used up for today. "
-                               "See a saved run."})
+            content={"detail": "The daily token budget is used up for today."})
 
     def body_lines():
-        for event in _iter_private_compare(
+        for event in _one_final(_iter_private_compare(
                 ticker, period_end, body.text, body.file_b64,
-                body.filename, store):
+                body.filename, store)):
             yield json.dumps(event, default=str) + "\n"
 
     return StreamingResponse(body_lines(),

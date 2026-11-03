@@ -16,6 +16,7 @@ Run from the project root::
 """
 
 import concurrent.futures
+import contextvars
 import json
 import os
 import re
@@ -32,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import covenant  # noqa: E402
 import cure  # noqa: E402
+import model_calls  # noqa: E402
 import project  # noqa: E402
 import textify  # noqa: E402
 from runtime_paths import overlay_root, writable_path  # noqa: E402
@@ -56,6 +58,8 @@ TOOL_TIMEOUT_SECONDS = 45  # per tool call; a timeout becomes an error step
 STREAM_DEADLINE_SECONDS = 270  # stop with a clear error before 300s cap
 TOO_LONG_ANSWER = ("The check took too long (over 270 seconds) without "
                    "finishing. Nothing was completed. Please try again.")
+MODEL_FAILED_ANSWER = ("The model did not answer, so the check stopped. "
+                       "Nothing was completed. Please try again.")
 
 USAGE = 'Usage: python src/agent.py "<request>"'
 
@@ -419,7 +423,42 @@ def resolve_ticker(company):
 # Tool-output corpus (powers draft_memo number verification)
 # ---------------------------------------------------------------------------
 
-_TOOL_OUTPUTS = []
+class _RunCorpus:
+    """The current run's tool outputs, kept apart per run.
+
+    Concurrent requests share a process on the serverless runtime, so one
+    run starting must not clear what another run's memo is checked against.
+    The list lives in a context variable; reset_corpus gives the caller's
+    context a new one and _call_with_timeout carries it into tool threads.
+    """
+
+    _current = contextvars.ContextVar("onya_run_corpus")
+
+    def _items(self):
+        try:
+            return self._current.get()
+        except LookupError:
+            items = []
+            self._current.set(items)
+            return items
+
+    def reset(self):
+        self._current.set([])
+
+    def append(self, item):
+        self._items().append(item)
+
+    def __iter__(self):
+        return iter(self._items())
+
+    def __len__(self):
+        return len(self._items())
+
+    def __getitem__(self, index):
+        return self._items()[index]
+
+
+_TOOL_OUTPUTS = _RunCorpus()
 
 
 def _record(result):
@@ -429,8 +468,8 @@ def _record(result):
 
 
 def reset_corpus():
-    """Clear the tool-output corpus (called at the start of each run)."""
-    _TOOL_OUTPUTS.clear()
+    """Start a new tool-output corpus (called at the start of each run)."""
+    _TOOL_OUTPUTS.reset()
 
 
 # ---------------------------------------------------------------------------
@@ -1069,7 +1108,8 @@ def _compact_candidate(cand):
 def _call_with_timeout(func, timeout, label):
     """Run func in a worker thread, raising TimeoutError after `timeout`s."""
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    future = executor.submit(func)
+    # A copied context keeps the tool on its own run's corpus.
+    future = executor.submit(contextvars.copy_context().run, func)
     try:
         return future.result(timeout=timeout)
     except concurrent.futures.TimeoutError:
@@ -1227,7 +1267,10 @@ def tool_extract_covenants(company, agreement_url, as_of=None,
         client = build_client()
 
     def request():
-        return client.chat.completions.create(
+        return model_calls.call(
+            client, label="extract_covenants",
+            deadline=model_calls.Deadline(TOOL_TIMEOUT_SECONDS),
+            max_retries=0,
             model=MODEL,
             messages=[{"role": "user", "content": content}],
             max_tokens=max_tokens or extract_mod.MAX_TOKENS,
@@ -1574,8 +1617,8 @@ def tool_draft_memo(company, period_end, draft="", as_of=None):
                             "outputs; every one is verified and any invented "
                             "figure is flagged."),
         }
-    report = verify_memo_numbers(draft, _TOOL_OUTPUTS)
-    labels = verify_memo_labels(draft, _TOOL_OUTPUTS)
+    report = verify_memo_numbers(draft, list(_TOOL_OUTPUTS))
+    labels = verify_memo_labels(draft, list(_TOOL_OUTPUTS))
     drivers = verify_memo_drivers(draft)
     repeated = repeated_phrases_in_memo(draft)
     format_errors = verify_memo_format(draft)
@@ -2026,15 +2069,37 @@ def _fallback_answer(user_prompt, history):
     return "\n".join(lines)
 
 
+class _RunEnded(Exception):
+    """Carries the outcome out of the tool loop when a model call stops it."""
+
+    def __init__(self, outcome):
+        super().__init__(outcome.get("reason"))
+        self.outcome = outcome
+
+
 def run_agent(user_prompt, client=None, run_id=None,
               max_tool_calls=MAX_TOOL_CALLS,
-              deadline_s=STREAM_DEADLINE_SECONDS, on_event=None):
+              deadline_s=STREAM_DEADLINE_SECONDS, on_event=None,
+              call_log=None):
     """Run the tool-calling loop; returns the final answer plus run stats.
 
     Every trace entry is also passed to on_event as it happens, so a
     caller can stream progress (serverless has no background polling).
-    The run stops with a took_too_long outcome once deadline_s elapses.
+    Model calls are bounded by the deadline. The run stops with a
+    took_too_long outcome once deadline_s elapses, or a model_failed
+    outcome when a model call fails for good. A retry is passed to
+    on_event as a model_retry event, and call_log collects each call's
+    label, duration, and outcome.
     """
+    try:
+        return _run_agent(user_prompt, client, run_id, max_tool_calls,
+                          deadline_s, on_event, call_log)
+    except _RunEnded as ended:
+        return ended.outcome
+
+
+def _run_agent(user_prompt, client, run_id, max_tool_calls, deadline_s,
+               on_event, call_log):
     os.chdir(PROJECT_ROOT)
     reset_corpus()
     run_id = run_id or uuid.uuid4().hex[:12]
@@ -2052,6 +2117,31 @@ def run_agent(user_prompt, client=None, run_id=None,
 
     def _expired():
         return (time.monotonic() - started) >= deadline_s
+
+    deadline = model_calls.Deadline(deadline_s)
+
+    def _ask(**request):
+        """A bounded model call that ends the run cleanly if it fails."""
+        try:
+            return model_calls.call(
+                client, label="agent_turn", deadline=deadline, run_id=run_id,
+                call_log=call_log, on_retry=on_event, **request)
+        except model_calls.DeadlineReached:
+            raise _RunEnded(_too_long(tool_calls, total_tokens)) from None
+        except model_calls.ModelCallFailed as exc:
+            raise _RunEnded(_model_failed(exc)) from None
+
+    def _model_failed(exc):
+        _emit({"run_id": run_id, "step": step, "timestamp": _utcnow(),
+               "type": "run_end", "tool": None, "arguments": {},
+               "result_summary": f"stopped: model call {exc.outcome}",
+               "tokens": {"prompt": 0, "completion": 0, "total": 0},
+               "total_tokens": total_tokens, "reason": "model_failed"})
+        return {"answer": MODEL_FAILED_ANSWER, "reason": "model_failed",
+                "run_id": run_id, "tool_calls": tool_calls,
+                "total_tokens": total_tokens,
+                "figure_fields": last_figure_fields,
+                "trace_path": str(trace_path)}
 
     def _too_long(tool_calls, total_tokens):
         entry = {"run_id": run_id, "step": 0,
@@ -2116,7 +2206,7 @@ def run_agent(user_prompt, client=None, run_id=None,
     while True:
         if _expired():
             return _too_long(tool_calls, total_tokens)
-        response = client.chat.completions.create(
+        response = _ask(
             model=MODEL, messages=messages, tools=TOOL_SCHEMAS,
             tool_choice="auto", max_tokens=MAX_TOKENS)
         turn = _usage_of(response)
@@ -2132,7 +2222,7 @@ def run_agent(user_prompt, client=None, run_id=None,
             if not content.strip():
                 messages.append({"role": "user",
                                  "content": RETRY_FINAL_PROMPT})
-                retry = client.chat.completions.create(
+                retry = _ask(
                     model=MODEL, messages=messages, tools=TOOL_SCHEMAS,
                     tool_choice="auto", max_tokens=MAX_TOKENS)
                 retry_turn = _usage_of(retry)
@@ -2158,7 +2248,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                             "total_tokens": total_tokens,
                             "reason": "done"})
                         return {"answer": ensure_default_date_line(
-                                    retry_content, _TOOL_OUTPUTS),
+                                    retry_content, list(_TOOL_OUTPUTS)),
                                 "info_request": last_info_request,
                                 "reason": "done",
                                 "run_id": run_id, "tool_calls": tool_calls,
@@ -2176,7 +2266,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                         "total_tokens": total_tokens,
                         "reason": "done"})
                     return {"answer": ensure_default_date_line(
-                                fallback, _TOOL_OUTPUTS),
+                                fallback, list(_TOOL_OUTPUTS)),
                             "info_request": last_info_request,
                             "reason": "done",
                             "run_id": run_id, "tool_calls": tool_calls,
@@ -2193,7 +2283,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                                       "total_tokens": total_tokens,
                                       "reason": "done"})
                 return {"answer": ensure_default_date_line(
-                            content, _TOOL_OUTPUTS),
+                            content, list(_TOOL_OUTPUTS)),
                         "info_request": last_info_request,
                         "reason": "done", "run_id": run_id,
                         "tool_calls": tool_calls, "total_tokens": total_tokens,
@@ -2258,7 +2348,7 @@ def run_agent(user_prompt, client=None, run_id=None,
                             "Summarize your findings so far for the credit "
                             "analyst, citing only numbers from the tool "
                             "outputs above." % max_tool_calls)})
-            response = client.chat.completions.create(
+            response = _ask(
                 model=MODEL, messages=messages, max_tokens=MAX_TOKENS)
             turn = _usage_of(response)
             total_tokens += turn["total"]
@@ -2268,7 +2358,7 @@ def run_agent(user_prompt, client=None, run_id=None,
             if not content.strip():
                 messages.append({"role": "user",
                                  "content": RETRY_FINAL_PROMPT})
-                retry = client.chat.completions.create(
+                retry = _ask(
                     model=MODEL, messages=messages, max_tokens=MAX_TOKENS)
                 retry_turn = _usage_of(retry)
                 total_tokens += retry_turn["total"]
@@ -2308,8 +2398,9 @@ def build_client():
         raise SystemExit("META_API_KEY missing from ~/.config/onya/.env")
     if not base_url:
         raise SystemExit("META_BASE_URL missing from ~/.config/onya/.env")
+    # No SDK retries: model_calls makes the one retry, and reports it.
     return OpenAI(api_key=api_key, base_url=base_url,
-                  timeout=120, max_retries=2)
+                  timeout=model_calls.PER_CALL_SECONDS, max_retries=0)
 
 
 def main(argv=None):

@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { DataNote, ErrorLine, LoadingLine, Panel } from "../../../components/site";
 import { Reveal } from "../../../components/fade-up";
 import type { PrivateComparison } from "../../../lib/api";
+import { LOST_STREAM_MESSAGE, readEventStream } from "../../../lib/ndjson";
 
 const MAX_UPLOAD_BYTES = 2_000_000;
+const MAX_RUN_MS = 290_000;
 const SAMPLE_WATERMARK =
   "ILLUSTRATIVE SAMPLE. Not a real compliance certificate.";
 
@@ -123,6 +126,14 @@ export default function PrivatePage() {
     setComparison(null);
     setCopied(false);
     setStatus("Reading the certificate");
+    const giveUp = setTimeout(() => {
+      controller.abort();
+      setRunning(false);
+      setStatus(null);
+      setError(
+        "The comparison took too long without finishing, so Onya stopped waiting. Please try again.",
+      );
+    }, MAX_RUN_MS);
     try {
       const res = await fetch("/api/private", {
         method: "POST",
@@ -156,64 +167,50 @@ export default function PrivatePage() {
         );
         return;
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          let record: {
-            type?: unknown;
-            step?: unknown;
-            error?: unknown;
-            comparison?: unknown;
-          };
-          try {
-            record = JSON.parse(line) as typeof record;
-          } catch {
-            continue;
-          }
-          if (record.type === "progress" && typeof record.step === "string") {
-            setStatus(
-              record.step === "reading upload"
-                ? "Reading the certificate"
-                : "Extracting the reported figures",
-            );
-          } else if (record.type === "unavailable") {
-            setRunning(false);
-            setStatus(null);
+      const end = await readEventStream(res.body, (event) => {
+        const record = (event ?? {}) as {
+          type?: unknown;
+          code?: unknown;
+          step?: unknown;
+          error?: unknown;
+          comparison?: unknown;
+        };
+        if (record.type === "progress" && typeof record.step === "string") {
+          setStatus(
+            record.step === "reading upload"
+              ? "Reading the certificate"
+              : "Extracting the reported figures",
+          );
+        } else if (record.type === "model_retry") {
+          setStatus("The model did not answer, so Onya is trying once more");
+        } else if (record.type === "error") {
+          if (record.code === "unavailable") {
             setUnavailable(true);
-            return;
-          } else if (record.type === "error") {
-            setRunning(false);
-            setStatus(null);
+          } else {
             setError(
               typeof record.error === "string" && record.error
                 ? record.error
                 : "The comparison did not finish. Please try again.",
             );
-            return;
-          } else if (
-            record.type === "private_result" &&
-            record.comparison &&
-            typeof record.comparison === "object"
-          ) {
-            setComparison(record.comparison as PrivateComparison);
           }
+        } else if (
+          record.type === "private_result" &&
+          record.comparison &&
+          typeof record.comparison === "object"
+        ) {
+          setComparison(record.comparison as PrivateComparison);
         }
-      }
+      });
       setRunning(false);
       setStatus(null);
+      if (end === "closed") setError(LOST_STREAM_MESSAGE);
     } catch {
       if (controller.signal.aborted) return;
       setRunning(false);
       setStatus(null);
-      setError("The comparison did not finish. Please try again.");
+      setError(LOST_STREAM_MESSAGE);
+    } finally {
+      clearTimeout(giveUp);
     }
   }, [running, ticker, periodEnd, text, fileB64, fileName]);
 
@@ -368,7 +365,10 @@ export default function PrivatePage() {
       )}
       {error && !unavailable && (
         <ErrorLine title="The comparison did not finish." onRetry={submit}>
-          {error}
+          {error}{" "}
+          <Link href="/app/agent/recorded" className="text-link">
+            View a recorded run
+          </Link>
         </ErrorLine>
       )}
       {running && <LoadingLine text={status ?? "Comparing the certificate."} />}

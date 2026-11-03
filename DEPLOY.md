@@ -17,9 +17,16 @@ value; never paste a secret into chat, git, or a file in this repo.
   this and the sub-100 MB size, far under the 500 MB limit).
 - `POST /agent/run` streams the run inside the request as
   newline-delimited JSON (`run_start`/`tool_call` step events, then
-  one `run_result` or `error`). There is no polling:
-  `GET /agent/run/{id}` answers 404. The run stops with a clear
-  `took_too_long` result at 270 s, before the 300 s function cap.
+  exactly one `run_result` or `error`; `POST /private/compare` works
+  the same way, ending in `private_result` or `error`). There is no
+  polling: `GET /agent/run/{id}` answers 404. The run stops with a
+  clear `took_too_long` result at 270 s, before the 300 s function cap.
+- During a run the stream sends a `heartbeat` every 10 s of silence.
+  Model calls ([src/model_calls.py](src/model_calls.py)) have a 90 s
+  limit that fits inside the time left, and at most one retry, sent to
+  the page as `model_retry`. Each call logs its start, duration, and
+  outcome on `onya.model` (no prompt text, no secrets). Search the
+  function logs for `"event": "model_call"`.
 - Rate limits and the token budget live in Upstash Redis (atomic
   Lua claims). Without Redis configured or reachable, `POST`
   fails closed with the paused message.
@@ -96,22 +103,30 @@ scripts/smoke_prod.sh https://<api-project>.vercel.app https://<site-url>
 All lines should say OK. Then open the site, run the agent once on
 Sleep Number, and follow a memo figure link.
 
+To load test (spends real tokens and counts against the rate limits):
+
+```bash
+scripts/load_test.py https://<site-url>
+```
+
 ## Roll back
 
 - Either project: in the dashboard, open Deployments and promote
   the previous production deployment. API and site version
   independently; a site-only change never needs an API redeploy.
+- The site treats 45 s of silence on a run as a lost connection and
+  relies on the API's heartbeats. If you roll the API back to a version
+  from before heartbeats, roll the site back with it.
 
 ## Kill switch and budget
 
 - Pause the live agent: set `ONYA_AGENT_ENABLED` to 0 in the
   `onya-api` Production env vars and redeploy. `POST /agent/run`
-  returns 503 and the site shows "The live agent is paused. See a
-  saved run." Set it back to 1 to resume.
+  returns 503 and the site shows "The live agent is paused." with a
+  link to the recorded run. Set it back to 1 to resume.
 - Daily token budget: `ONYA_DAILY_TOKEN_BUDGET` in the same place
   (default 1500000). When the day's recorded tokens reach it,
-  `POST /agent/run` returns 429 and the site shows the saved-run
-  fallback.
+  `POST /agent/run` returns 429 and the site offers the recorded run.
 
 ## Appendix: other backend targets
 

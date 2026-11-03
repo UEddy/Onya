@@ -10,7 +10,7 @@ test("private check runs the sample and shows the gap rows", async ({
     ),
   ).toBeVisible();
   await page.getByRole("button", { name: "Use the illustrative sample" }).click();
-  await expect(page.getByText("ILLUSTRATIVE SAMPLE", { exact: false })).toBeVisible();
+  await expect(page.locator("p", { hasText: "ILLUSTRATIVE SAMPLE" })).toBeVisible();
   await page.getByRole("button", { name: "Run the comparison" }).click();
   await expect(page.getByText("Comparison: SNBR", { exact: false })).toBeVisible({
     timeout: 60000,

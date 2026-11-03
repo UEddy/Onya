@@ -14,6 +14,8 @@ import logging
 import os
 import time
 
+import model_calls
+
 log = logging.getLogger("onya.private")
 
 MODEL = "meta-models/muse-spark-open-1026"
@@ -22,6 +24,7 @@ MAX_UPLOAD_BYTES = 2_000_000
 # the cap must leave room for the answer (same scale as extract_disclosed).
 MAX_TOKENS = 16000
 TEMPERATURE = 0
+DEADLINE_SECONDS = 270
 
 SAMPLE_NAME = "sample_certificate_snbr.txt"
 
@@ -43,8 +46,9 @@ def make_baseten_client():
     if not api_key or not base_url:
         raise PrivateUnavailable(
             "private mode is unavailable (model not configured)")
-    return OpenAI(api_key=api_key, base_url=base_url, timeout=120,
-                  max_retries=2)
+    # No SDK retries: model_calls makes the one retry, and reports it.
+    return OpenAI(api_key=api_key, base_url=base_url,
+                  timeout=model_calls.PER_CALL_SECONDS, max_retries=0)
 
 
 def sniff_kind(data):
@@ -136,7 +140,8 @@ Certificate:
 """
 
 
-def extract_certificate_figures(document_text, client):
+def extract_certificate_figures(document_text, client, deadline=None,
+                                on_retry=None, call_log=None):
     """Model extraction of reported figures, with quote verification.
 
     Returns (figures, usage_tokens). Each figure carries verified True
@@ -145,7 +150,10 @@ def extract_certificate_figures(document_text, client):
     """
     from extract_disclosed import normalize, quote_in_source
 
-    response = client.chat.completions.create(
+    response = model_calls.call(
+        client, label="private_extract",
+        deadline=deadline or model_calls.Deadline(DEADLINE_SECONDS),
+        on_retry=on_retry, call_log=call_log,
         model=MODEL,
         messages=[{"role": "user",
                    "content": CERT_PROMPT + document_text}],
@@ -340,7 +348,7 @@ def compare_with_onya(ticker, period_end, figures):
 
 
 def run_compare(ticker, period_end, text=None, file_b64=None,
-                filename=None, client=None):
+                filename=None, client=None, on_retry=None, call_log=None):
     """Full pipeline in memory: prepare, extract, compare.
 
     Returns (result, usage_tokens, timings). Raises PrivateInputError
@@ -356,7 +364,7 @@ def run_compare(ticker, period_end, text=None, file_b64=None,
         owned_client = True
     try:
         figures, tokens = extract_certificate_figures(
-            document_text, client)
+            document_text, client, on_retry=on_retry, call_log=call_log)
     finally:
         if owned_client and hasattr(client, "close"):
             try:
