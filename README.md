@@ -1,5 +1,7 @@
 # ![Onya](web/public/brand/onya-mark.svg) Onya
 
+[![CI](https://github.com/UEddy/Onya/actions/workflows/ci.yml/badge.svg)](https://github.com/UEddy/Onya/actions/workflows/ci.yml)
+
 Onya is a covenant monitoring agent for private credit lenders.
 
 Live demo: https://onya-g8f4.vercel.app (public SEC data, no sign-up).
@@ -229,6 +231,10 @@ should review the license themselves.
 Muse reads. Python computes. Each does the part it is suited for.
 
 ## Accuracy
+
+To recompute the back-test totals from committed data, with no network and no
+model, run `make eval`. It prints 23 of 23 disclosed figures and 19 of 21
+contract limits, and exits non-zero if they differ. CI runs it on each push.
 
 Back-test extraction was run with Muse Spark Open; the committed outputs
 sit in `data/backtest/` and the site accuracy page reads them. See
