@@ -1,0 +1,17 @@
+{
+  "cik": "0000827187",
+  "as_of": "2025-11-11",
+  "base": {
+    "url": "https://www.sec.gov/Archives/edgar/data/827187/000082718725000121/ex101usbsleepnumber-twelft.htm",
+    "filingDate": "2025-11-05",
+    "form": "10-Q",
+    "description": "EX-10.1",
+    "title": "AMENDMENT",
+    "is_forbearance": false,
+    "is_amendment": true,
+    "is_complete": true,
+    "char_count": 467075,
+    "character_count": 467075
+  },
+  "amendments": []
+}

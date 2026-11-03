@@ -1160,7 +1160,8 @@ def get_filings_since(ticker: str, date: str = Query(default="")):
                 "note": ("submissions cache is missing for this company; "
                          "no live lookup was attempted")}
     return {"ticker": str(ticker).upper(), "date": day,
-            "cached": True, "filings": rows}
+            "cached": True, "filings": rows,
+            "checked_through": edgar.filings_checked_through(cik)}
 
 
 class InfoRequestBody(BaseModel):

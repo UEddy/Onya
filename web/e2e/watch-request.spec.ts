@@ -33,4 +33,7 @@ test("filed-since lists newer filings with SEC links", async ({ page }) => {
   await expect(link).toBeVisible();
   const href = await link.getAttribute("href");
   expect(href ?? "").toContain("https://www.sec.gov/Archives/edgar/data/");
+  await expect(
+    page.getByText("Filings checked through Oct 30, 2026"),
+  ).toBeVisible();
 });

@@ -328,7 +328,7 @@ npm run dev
 Tests, with counts from a real run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 625 passed
+.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 628 passed
 cd web && npm run test:what-if   # 21 passed
 cd web && npx playwright test    # 19 passed
 ```

@@ -251,6 +251,7 @@ export interface FilingsSince {
   cached: boolean;
   filings: FilingRow[];
   note?: string | null;
+  checked_through?: string | null;
 }
 
 export interface CureBlock {

@@ -551,6 +551,7 @@ class FilingsSince(ApiTestBase):
         self.assertEqual(r.status_code, 200)
         body = r.json()
         self.assertTrue(body["cached"])
+        self.assertEqual(body["checked_through"], "2026-10-30")
         self.assertTrue(body["filings"])
         for row in body["filings"]:
             self.assertIn(row["form"], ("10-K", "10-Q", "8-K"))

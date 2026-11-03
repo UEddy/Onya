@@ -24,7 +24,9 @@ if not SEC_USER_AGENT:
     raise SystemExit("SEC_USER_AGENT missing from ~/.config/onya/.env")
 
 RAW_DIR = Path("data/raw")
-CACHE_DIR = Path("data/cache")
+# Absolute: a bundled selection must not depend on the working directory,
+# because a miss would fall back to a live SEC call without any error.
+CACHE_DIR = bundled_path("cache")
 
 
 def _overlay_dir(name):
@@ -237,6 +239,11 @@ def get_cik(ticker_or_cik):
     s = str(ticker_or_cik).strip()
     if s.isdigit():
         return _cik_10(s)
+    # The bundled registry answers first, so a registered company never
+    # needs SEC's ticker list in a request path.
+    registered = _registry_cik(s)
+    if registered is not None:
+        return registered
     path = fetch(TICKERS_URL, "company_tickers.json")
     data = json.loads(path.read_text())
     entries = data.values() if isinstance(data, dict) else data
@@ -247,11 +254,6 @@ def get_cik(ticker_or_cik):
         symbol = entry.get("ticker")
         if isinstance(symbol, str) and symbol.strip().upper() == want:
             return _cik_10(entry.get("cik_str", ""))
-    # Delisted tickers vanish from the SEC list; the local registry
-    # still maps them, so a cached company keeps resolving offline.
-    fallback = _registry_cik(s)
-    if fallback is not None:
-        return fallback
     raise ValueError(
         f"Unknown ticker {ticker_or_cik!r}: company may be delisted; "
         "pass the CIK instead."
@@ -333,6 +335,11 @@ def _filings_since_snapshot(cik):
     except (OSError, ValueError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def filings_checked_through(cik):
+    """The snapshot's cutoff date for filings_since, or None."""
+    return (_filings_since_snapshot(cik) or {}).get("cutoff")
 
 
 def filings_since(cik, after_date):

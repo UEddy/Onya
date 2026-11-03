@@ -718,28 +718,39 @@ function FiledSinceList({ ticker, date }: { ticker: string; date: string }) {
       </p>
     );
   }
+  const checkedThrough = data.checked_through ? (
+    <p className="mt-3 text-[13px] text-ink-muted">
+      Filings checked through {formatDateLong(data.checked_through)}
+    </p>
+  ) : null;
   if (data.filings.length === 0) {
     return (
-      <p className="max-w-[75ch] text-[15px] text-ink-muted">
-        No 10-K, 10-Q or 8-K filings since {formatDateLong(date)}.
-      </p>
+      <>
+        <p className="max-w-[75ch] text-[15px] text-ink-muted">
+          No 10-K, 10-Q or 8-K filings since {formatDateLong(date)}.
+        </p>
+        {checkedThrough}
+      </>
     );
   }
   return (
-    <ul className="space-y-2">
-      {data.filings.map((row) => (
-        <li key={row.accessionNumber} className="text-[15px]">
-          <a
-            href={row.sec_url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-link underline decoration-hairline underline-offset-4 hover:text-ink"
-          >
-            {row.form}, filed {formatDateLong(row.filingDate)}
-          </a>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-2">
+        {data.filings.map((row) => (
+          <li key={row.accessionNumber} className="text-[15px]">
+            <a
+              href={row.sec_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-link underline decoration-hairline underline-offset-4 hover:text-ink"
+            >
+              {row.form}, filed {formatDateLong(row.filingDate)}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {checkedThrough}
+    </>
   );
 }
 
