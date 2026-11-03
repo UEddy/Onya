@@ -359,6 +359,6 @@ function termsTotals(backtest: Backtest): string {
   return (
     `${t.covenants} terms across ${t.companies} companies: ${t.matched} ` +
     `matched, ${t.amended_after_agreement} amended after the agreement, ` +
-    `${t.mismatched} mismatched, ${t.quote_verified} quotes verified.`
+    `${t.mismatched} mismatched, ${t.quote_verified} covenant quotes verified.`
   );
 }

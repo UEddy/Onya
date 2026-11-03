@@ -15,6 +15,11 @@ from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
+SEC_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "sec"
+
+# edgar refuses to import without a User-Agent. These tests never reach
+# SEC, so a clean clone with no secrets file can run them.
+os.environ.setdefault("SEC_USER_AGENT", "onya-tests test@example.invalid")
 
 import requests
 
@@ -22,6 +27,16 @@ import agent
 import edgar
 
 AS_OF = "2026-05-19"
+
+
+def setUpModule():
+    # Committed public SEC data, so results do not depend on the gitignored
+    # data/raw and data/cache. The ticker list is a real SEC subset: SNBR is
+    # absent because it was delisted, so resolution uses the registry.
+    for name in ("RAW_DIR", "CACHE_DIR"):
+        patcher = patch.object(edgar, name, SEC_FIXTURES)
+        patcher.start()
+        unittest.addModuleCleanup(patcher.stop)
 
 FORBEARANCE_TITLE = ("FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT "
                      "TO AMENDED AND RESTATED CREDIT AND SECURITY AGREEMENT")

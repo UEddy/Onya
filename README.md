@@ -141,11 +141,10 @@ read.
 ### The shared cap
 
 Clauses (a)(iv) and (a)(viii) are separate add-backs in the Consolidated
-EBITDA definition, but they share one cap. The proviso that sets it comes
-after the (a)(ix) cap and clause (b), about 1,500 characters past
-(a)(viii). All of this sits in one definition, so the trap is the
-structure, not the distance. From cap group `cap_ebitda_aiv_aviii` in
-`data/extracted/snbr_covenants.reviewed.json`:
+EBITDA definition. The trap is structure: the nearest cap covers only
+(a)(ix), and the shared $25,000,000 cap, about 1,500 characters after
+(a)(viii), governs (a)(iv) and (a)(viii) together. From cap group
+`cap_ebitda_aiv_aviii` in `data/extracted/snbr_covenants.reviewed.json`:
 
 > the aggregate amount of cash losses and cash expenses included as
 > addbacks in any determination of Consolidated EBITDA under the foregoing
@@ -217,10 +216,10 @@ conditions, including the Usage Policy and the "Built with Muse Spark
 Open" attribution. Its Model as a Service terms do not apply to "internal
 use, research, or any commercial activity that is not Model as a Service".
 The model page offers the weights for download to run "on your own
-system", which needs a GPU with at least 700GB of VRAM (NVFP4).
+system". It is a large model, and Onya has only run it on Baseten.
 
-That permits a lender to run the certificate step on infrastructure they
-control. Onya has not done this: the demo sends certificate text to
+The license terms and the download permit a lender to run the certificate
+step on infrastructure they control. The demo sends certificate text to
 Muse Spark Open on Baseten. `make_baseten_client` in
 `src/private_compare.py` is an OpenAI-compatible client that reads its
 base URL from `BASETEN_BASE_URL`, so the code has a place to point at
@@ -328,9 +327,9 @@ npm run dev
 Tests, with counts from a real run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 559 passed
-cd web && npm run test:what-if   # 17 passed
-cd web && npx playwright test    # 12 passed
+.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 625 passed
+cd web && npm run test:what-if   # 21 passed
+cd web && npx playwright test    # 19 passed
 ```
 
 (The Python suite runs as named `tests.test_*` modules; bare discovery

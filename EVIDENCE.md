@@ -15,7 +15,7 @@ its source, and the command or test that reproduces it.
 | Apr 4, 2026 net leverage with $44M savings | 5.06x vs 4.75x limit, fail | `data/results/snbr_2026-04-04.json` (proforma_scenarios) | `.venv/bin/python -m unittest tests.test_api` |
 | Apr 4, 2026 net leverage without savings | 6.58x vs 4.75x limit, fail | `data/results/snbr_2026-04-04.json` (proforma_scenarios) | `.venv/bin/python -m unittest tests.test_api` |
 | Apr 4, 2026 interest coverage | 0.84x vs 2.10x minimum, fail | `data/results/snbr_2026-04-04.json` | `.venv/bin/python -m unittest tests.test_api` |
-| Governing document as of May 19, 2026 | Forbearance agreement and thirteenth amendment, filed Apr 28, 2026 | `data/cache/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_asof_regression` |
+| Governing document as of May 19, 2026 | Forbearance agreement and thirteenth amendment, filed Apr 28, 2026 | `tests/fixtures/sec/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_asof_regression` |
 | Forbearance filing | 8-K EX-10.1, Apr 28, 2026 | https://www.sec.gov/Archives/edgar/data/827187/000082718726000035/ex101thirteenthamendmentto.htm | fetch with SEC User-Agent, returns 200 |
 | Chapter 11 filing | 8-K, filed Jun 12, 2026 | https://www.sec.gov/Archives/edgar/data/827187/000095010326008891/dp248362_8k.htm | fetch with SEC User-Agent, returns 200 |
 
@@ -32,7 +32,97 @@ its source, and the command or test that reproduces it.
 | Cure: EBITDA increase to pass Apr 4 | $56,250,526.32 | `data/results/snbr_2026-04-04.json` (cure.figures.ebitda_increase_needed) | `.venv/bin/python -m unittest tests.test_cure` |
 | Next test | Jul 4, 2026, limit 4.80x, projected 6.58x, high risk | `data/results/snbr_projection_2026-04-04.json` | `.venv/bin/python -m unittest tests.test_api` |
 | Filings after May 19, 2026 | 8 8-K rows, May 27 to Aug 3, 2026, with SEC links, cache only | `data/raw/submissions_CIK0000827187.json` | `.venv/bin/python -m unittest tests.test_api.FilingsSince` |
-| Memo verifier on sample run `7c2a49625f4e` | 42 of 42 memo figures traced to tool output | `data/samples/snbr_memo.json` (`figures_checked`); corpus `data/results/snbr_2026-04-04.json`, `data/results/snbr_projection_2026-04-04.json`, `data/extracted/snbr_covenants.reviewed.json`, `data/cache/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_agent.MemoValidators.test_sample_memo_verifies_42_of_42` |
+| Memo verifier on sample run `7c2a49625f4e` | 42 of 42 memo figures traced to tool output | `data/samples/snbr_memo.json` (`figures_checked`); corpus `data/results/snbr_2026-04-04.json`, `data/results/snbr_projection_2026-04-04.json`, `data/extracted/snbr_covenants.reviewed.json`, `tests/fixtures/sec/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_agent.MemoValidators.test_sample_memo_verifies_42_of_42` |
+
+## Why Muse Spark
+
+`Local check` and `SEC check` are the two commands below the table. Quotes
+from Hugging Face were read from the linked pages.
+
+| Claim | Value | Source | Reproduce |
+|---|---|---|---|
+| Sleep Number prompt size | 496,322 exhibit characters; 500,622 with instructions; about 106,000 tokens (estimate, 500,622 / 4.7374) | `data/raw/snbr_13th_amendment.htm`; `src/extract.py` (`INSTRUCTIONS`) | Local check |
+| Logged back-test token counts | QUAD 148,372; AMCX 147,634 | `model_usage` in `data/backtest/terms_QUAD.json` and `terms_AMCX.json` | Local check |
+| Characters per token | 4.74, or 4.7374 before rounding (1,402,310 characters / 296,006 tokens, QUAD and AMCX) | Same `model_usage` fields; characters from the next row | SEC check |
+| Back-test prompt characters | GPK 809,926; QUAD 705,998; AMCX 696,312; TRS 662,824; HAIN 607,769; STGW 594,892; CRS 556,849; NUVR 542,693; AIN 509,006; ORLY 430,673 | Filing at `agreement_url` in `data/backtest/terms_<TICKER>.json`; `build_content` in `src/backtest_terms.py` | SEC check |
+| Estimated back-test tokens | Prompt characters / 4.7374 (the ratio before rounding), to the nearest 1,000 | README table | Arithmetic on the rows above |
+| OPTX not read | Agreement filed as scanned images | `status` in `data/backtest/terms_OPTX.json` | Local check |
+| Nearest cap | Covers only (a)(ix); starts 666 characters after (a)(viii) | Cap group `cap_ebitda_aix` in `data/extracted/snbr_covenants.reviewed.json`; `data/raw/snbr_13th_amendment.htm` | Local check |
+| Shared cap | $25,000,000 for the Apr 4, 2026 test; governs (a)(iv) and (a)(viii) together; 1,591 characters after (a)(viii) | Cap group `cap_ebitda_aiv_aviii` in `data/extracted/snbr_covenants.reviewed.json`; `data/raw/snbr_13th_amendment.htm` | Local check |
+| Each clause against the cap alone | $0 disallowed; 5.83x; 4.60x with $44M, pass against 4.75x. Arithmetic, not a recorded model run | $962,096,000 / $165,028,000 and / $209,028,000, from `data/results/snbr_2026-04-04.json` | Local check |
+| One shared cap | $18,732,000 disallowed; 6.58x; 5.06x with $44M, fail against 4.75x | `data/results/snbr_2026-04-04.json` | `.venv/bin/python -m unittest tests.test_api` |
+| Reviewed quotes | 52 quotes, 50 distinct, all 52 found after `normalize` | `data/extracted/snbr_covenants.reviewed.json`; `data/raw/snbr_13th_amendment.htm` | Local check |
+| Model's as-of date in sample run `7c2a49625f4e` | May 19, 2026 on all 7 tool calls; test date plus the 45-day window | `data/samples/snbr_memo.json` (`steps`); system prompt in `src/agent.py` | Local check |
+| Agreement chosen in that run | Forbearance agreement and thirteenth amendment, filed Apr 28, 2026; document type forbearance | `data/samples/snbr_memo.json` (`find_agreements` step); `tests/fixtures/sec/select_0000827187_2026-05-19.json` | `.venv/bin/python -m unittest tests.test_asof_regression` |
+| Later amendment left out | Fourteenth amendment, filed Jun 16, 2026, excluded and flagged in a memo; 4 tests | https://www.sec.gov/Archives/edgar/data/827187/000095010326009081/dp248436_ex1001.htm; `tests/test_asof_regression.py` | `.venv/bin/python -m unittest tests.test_asof_regression.DiscoveryCutoff tests.test_asof_regression.VerifierRejectsForeignLabels` |
+| License terms | "to deal in the Software without restriction", "Built with Muse Spark Open", "internal use, research, or any commercial activity that is not Model as a Service" | https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B/blob/main/LICENSE.md | Read the linked page |
+| Weights for download | "on your own system" | https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B | Read the linked page |
+| Where Onya has run the model | Baseten only; no self-hosted endpoint tested | `make_baseten_client` in `src/private_compare.py`, `BASETEN_BASE_URL` | Code reading |
+
+Local check (no network, uses committed files):
+
+```bash
+PYTHONPATH=src SEC_USER_AGENT=local .venv/bin/python - <<'EOF'
+import json
+from pathlib import Path
+import extract
+from textify import html_to_text
+doc = html_to_text(Path("data/raw/snbr_13th_amendment.htm").read_bytes())
+print("exhibit", len(doc),
+      "prompt", len(doc + "\n\n---\n\n" + extract.INSTRUCTIONS))
+viii = doc.find("(viii) reasonable cash")
+print("(a)(viii) to (a)(ix) cap",
+      doc.find("under this clause (a)(ix)") - viii)
+print("(a)(viii) to shared cap",
+      doc.find("under the foregoing clauses (a)(iv) and (a)(viii)") - viii)
+reviewed = json.loads(
+    Path("data/extracted/snbr_covenants.reviewed.json").read_text())
+for group in reviewed["cap_groups"]:
+    print(group["id"], group["applies_to_clauses"],
+          [s["amount_usd"] for s in group["schedule"]
+           if s["period_end"] == "2026-04-04"])
+quotes = []
+extract.collect_quotes(reviewed, quotes)
+source = extract.normalize(doc)
+print("quotes", len(quotes), "distinct", len(set(quotes)),
+      "found", sum(extract.normalize(q) in source for q in quotes))
+result = json.loads(Path("data/results/snbr_2026-04-04.json").read_text())
+debt, ebitdar = result["numerator"], result["ebitdar"]
+alone = ebitdar + result["disallowed"]
+print("each clause alone", round(debt / alone, 2),
+      round(debt / (alone + 44_000_000), 2))
+for ticker in ("QUAD", "AMCX", "OPTX"):
+    terms = json.loads(
+        Path(f"data/backtest/terms_{ticker}.json").read_text())
+    print(ticker, terms["status"], terms.get("model_usage"))
+memo = json.loads(Path("data/samples/snbr_memo.json").read_text())
+calls = [s for s in memo["steps"] if s["type"] == "tool_call"]
+print("tool calls", len(calls),
+      "as_of", {s["arguments"].get("as_of") for s in calls})
+EOF
+```
+
+SEC check (fetches each agreement, set `SEC_USER_AGENT` to your contact):
+
+```bash
+PYTHONPATH=src .venv/bin/python - <<'EOF'
+import json
+from pathlib import Path
+import backtest_terms as terms
+counts = {}
+for path in sorted(Path("data/backtest").glob("terms_*.json")):
+    record = json.loads(path.read_text())
+    if record["ticker"] == "OPTX" or not record.get("agreement_url"):
+        continue
+    doc, _ = terms.fetch_agreement(
+        {"url": record["agreement_url"]}, record["ticker"])
+    counts[record["ticker"]] = len(terms.build_content(doc))
+    print(record["ticker"], counts[record["ticker"]])
+tokens = 148372 + 147634
+print("chars per token",
+      round((counts["QUAD"] + counts["AMCX"]) / tokens, 4))
+EOF
+```
 
 ## Back-test tables
 

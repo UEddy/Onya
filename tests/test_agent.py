@@ -311,7 +311,7 @@ class MemoValidators(unittest.TestCase):
             json.loads((PROJECT_ROOT / "data" / "extracted" /
                         "snbr_covenants.reviewed.json").read_text(
                             encoding="utf-8")),
-            json.loads((PROJECT_ROOT / "data" / "cache" /
+            json.loads((PROJECT_ROOT / "tests" / "fixtures" / "sec" /
                         "select_0000827187_2026-05-19.json").read_text(
                             encoding="utf-8")),
         ]

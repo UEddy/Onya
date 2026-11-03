@@ -1,0 +1,17 @@
+{
+  "cik": "0000827187",
+  "as_of": "2026-05-19",
+  "base": {
+    "url": "https://www.sec.gov/Archives/edgar/data/827187/000082718726000035/ex101thirteenthamendmentto.htm",
+    "filingDate": "2026-04-28",
+    "form": "8-K",
+    "description": "EX-10.1",
+    "title": "FORBEARANCE AGREEMENT AND THIRTEENTH AMENDMENT TO AMENDED AND RESTATED CREDIT AND SECURITY AGREEMENT",
+    "is_forbearance": true,
+    "is_amendment": true,
+    "is_complete": true,
+    "char_count": 496322,
+    "character_count": 496322
+  },
+  "amendments": []
+}
