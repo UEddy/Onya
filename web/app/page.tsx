@@ -842,6 +842,11 @@ export default function LandingPage() {
                 </div>
               </Reveal>
             </ol>
+            <p className="mt-6 text-[15px]">
+              <Link href="/app/company/SNBR#rewind" className="text-link">
+                Rewind the case: what Onya would have said at each test
+              </Link>
+            </p>
           </section>
 
           <section aria-labelledby="agent-band-heading" className="pt-28 sm:pt-36">

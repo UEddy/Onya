@@ -757,6 +757,145 @@ function FiledSinceList({ ticker, date }: { ticker: string; date: string }) {
 
 const REQUEST_FAILED = "The data service may be waking up. Then try again.";
 
+type RewindData = {
+  steps: {
+    period_end: string;
+    as_of: string;
+    ratio_2dp: number;
+    limit: number;
+    tone: "pass" | "watch" | "breach";
+    word: string;
+    verdict: string;
+    outlook: {
+      next_test: string;
+      limit: number;
+      ratio_2dp: number;
+      risk: string;
+    } | null;
+    governing: { filed: string; url: string };
+  }[];
+  events: { date: string; title: string; url: string }[];
+};
+
+function RewindPanel({ onOpen }: { onOpen: (period: string) => void }) {
+  const [rewind, setRewind] = useState<RewindData | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiGet<RewindData>("/company/SNBR/rewind").then(
+      (data) => {
+        if (cancelled) return;
+        setRewind(data);
+        setFailed(false);
+      },
+      () => {
+        if (!cancelled) setFailed(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt]);
+
+  useEffect(() => {
+    if (rewind && window.location.hash === "#rewind") {
+      document.getElementById("rewind")?.scrollIntoView({ block: "start" });
+    }
+  }, [rewind]);
+
+  return (
+    <section
+      id="rewind"
+      aria-label="Rewind"
+      className="card scroll-mt-20 p-5 sm:p-7"
+    >
+      <h2 className="text-[22px] font-semibold tracking-tight">Rewind</h2>
+      <p className="mt-1 max-w-[70ch] text-[15px] text-ink-muted">
+        What Onya would have said at each test, using only filings on file by
+        that test&apos;s as-of date.
+      </p>
+      {failed && (
+        <ErrorLine
+          title="The rewind could not be loaded."
+          onRetry={() => setAttempt((n) => n + 1)}
+        >
+          The data service may be waking up. Then try again.
+        </ErrorLine>
+      )}
+      {!failed && !rewind && <LoadingLine text="Rewinding the case." />}
+      {rewind && (
+        <ol className="mt-5 border-t border-hairline">
+          {rewind.steps.map((step) => (
+            <li
+              key={step.period_end}
+              className="grid gap-x-8 gap-y-2 border-b border-hairline py-5 md:grid-cols-[170px_minmax(0,1fr)_auto]"
+            >
+              <div>
+                <p className="text-[17px] font-semibold tracking-tight">
+                  {formatDateLong(step.period_end)}
+                </p>
+                <p className="filing-date text-[13px] text-ink-muted">
+                  As of {formatDateLong(step.as_of)}
+                </p>
+              </div>
+              <div className="min-w-0">
+                <p
+                  className={`text-[32px] font-semibold leading-none tracking-tight ${
+                    step.tone === "breach" ? "text-breach" : ""
+                  }`}
+                >
+                  {step.ratio_2dp.toFixed(2)}x
+                </p>
+                <p className="mt-2 text-[15px]">{step.verdict}</p>
+                {step.outlook && (
+                  <p className="mt-1 text-[14px] text-ink-muted">
+                    Next test, {formatDateLong(step.outlook.next_test)}:
+                    projected {step.outlook.ratio_2dp.toFixed(2)}x against{" "}
+                    {step.outlook.limit.toFixed(2)}x, {step.outlook.risk} risk.
+                  </p>
+                )}
+                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
+                  <Link
+                    href={`/app/company/SNBR?period=${step.period_end}`}
+                    onClick={() => onOpen(step.period_end)}
+                    className="text-link"
+                  >
+                    Open this test
+                  </Link>
+                  <a href={step.governing.url} className="text-link">
+                    Agreement filed {formatDateLong(step.governing.filed)}
+                  </a>
+                </p>
+              </div>
+              <div className="md:text-right">
+                <StatusPill tone={step.tone} word={step.word} />
+              </div>
+            </li>
+          ))}
+          {rewind.events.map((event) => (
+            <li
+              key={event.date}
+              className="grid gap-x-8 gap-y-1 border-b border-hairline py-4 md:grid-cols-[170px_minmax(0,1fr)]"
+            >
+              <p className="filing-date text-[15px] font-medium">
+                {formatDateLong(event.date)}
+              </p>
+              <p className="text-[15px]">
+                {event.title}.{" "}
+                <a href={event.url} className="text-link">
+                  Read it on SEC.gov
+                </a>
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 function CaseRequestButton({
   ticker,
   periodEnd,
@@ -1047,6 +1186,10 @@ export default function CaseView({ ticker }: { ticker: string }) {
               </section>
             </Reveal>
           )}
+
+          <Reveal onLoad delay={120}>
+            <RewindPanel onOpen={setSelected} />
+          </Reveal>
 
           {!visibleDetail && <LoadingLine text="Reading this quarter." />}
 

@@ -959,6 +959,86 @@ def get_period(ticker: str, period_end: str):
     return body
 
 
+REWIND_EVENTS = (
+    {"date": "2026-04-28",
+     "title": "Forbearance agreement and thirteenth amendment filed",
+     "url": ("https://www.sec.gov/Archives/edgar/data/827187/"
+             "000082718726000035/ex101thirteenthamendmentto.htm")},
+    {"date": "2026-06-12", "title": "Chapter 11 filing",
+     "url": ("https://www.sec.gov/Archives/edgar/data/827187/"
+             "000095010326008891/dp248362_8k.htm")},
+)
+
+
+def _money_short(value):
+    return f"${value / 1_000_000:.0f}M"
+
+
+def _rewind_step(period):
+    """What Onya would have said at one test, from data/results alone."""
+    result = _read_json(_data_file("results", f"snbr_{period}.json"))
+    lev = result["net_leverage"]
+    ratio, limit = lev["ratio_2dp"], lev["threshold"]
+    head = f"{ratio:.2f}x against {limit:.2f}x"
+    without = (result.get("sensitivity_without_proforma")
+               or {}).get("net_leverage")
+    scenarios = result.get("proforma_scenarios") or []
+    try:
+        projection = _read_json(
+            _data_file("results", f"snbr_projection_{period}.json"))
+    except (OSError, ValueError):
+        projection = None
+    if scenarios:
+        none = next(s for s in scenarios if not s.get("savings"))
+        most = max(scenarios, key=lambda s: s.get("savings") or 0)
+        ratio = none["net_leverage"]["ratio_2dp"]
+        limit = none["net_leverage"]["threshold"]
+        tone, word = "breach", "Breach"
+        verdict = (f"{ratio:.2f}x against {limit:.2f}x: breach; "
+                   f"{most['net_leverage']['ratio_2dp']:.2f}x with "
+                   f"{_money_short(most['savings'])} of projected savings.")
+    elif without and not without.get("pass") and lev.get("pass"):
+        savings = (projection or {}).get("baseline", {}).get(
+            "disclosed_proforma")
+        tone, word = "watch", "Pass with savings"
+        verdict = (f"{head}: pass only with {_money_short(savings)} of "
+                   f"projected savings; {without['ratio_2dp']:.2f}x without.")
+    else:
+        passed = bool(lev.get("pass"))
+        tone, word = ("pass", "Pass") if passed else ("breach", "Breach")
+        verdict = f"{head}: {'pass' if passed else 'breach'}."
+    as_of = agent.test_as_of(period)
+    outlook = None
+    if projection:
+        onya = (projection.get("projections") or {}).get("onya") or {}
+        outlook = {"next_test": projection.get("next_test"),
+                   "limit": projection.get("next_threshold"),
+                   "ratio_2dp": onya.get("ratio_2dp"),
+                   "risk": (projection.get("risk") or {}).get("onya")}
+    governing = _read_json(_data_file(
+        "cache", f"select_0000827187_{as_of}.json"))["base"]
+    return {"period_end": period, "as_of": as_of, "ratio_2dp": ratio,
+            "limit": limit, "tone": tone, "word": word, "verdict": verdict,
+            "outlook": outlook,
+            "governing": {"filed": governing.get("filingDate"),
+                          "url": governing.get("url")}}
+
+
+@router.get("/company/{ticker}/rewind")
+def get_rewind(ticker: str):
+    """What Onya would have said at each test. Committed data, no model."""
+    denied = _require_snbr(ticker)
+    if denied is not None:
+        return denied
+    try:
+        steps = [_rewind_step(period)
+                 for period in question_router.computed_tests()]
+    except (OSError, ValueError, KeyError, StopIteration):
+        return JSONResponse(status_code=404,
+                            content={"detail": "rewind data missing"})
+    return {"ticker": "SNBR", "steps": steps, "events": list(REWIND_EVENTS)}
+
+
 def _net_leverage_clause(result):
     """Net Leverage covenant clause (section 5.7(a)) for the evidence margin."""
     try:
