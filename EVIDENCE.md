@@ -217,6 +217,18 @@ calls). A partial figure uses only the components XBRL could supply:
 | Missing model config | 503 with an unavailable notice | `src/api.py` (`stream_private_compare`) | `.venv/bin/python -m unittest tests.test_private_compare.Endpoint.test_503_without_baseten_key` |
 | Sample flow in the browser | Sample loads; table shows 5.06 vs 6.58 with Verified marks | `web/e2e/private.spec.ts` | `npx playwright test e2e/private.spec.ts` in `web/` |
 
+## Questions, Rewind, and eval
+
+| Claim | Value | Source | Reproduce |
+|---|---|---|---|
+| Questions take the right route with no model call unless Sleep Number | 18 questions: back-tested, unknown, dates, off-topic, injection, other languages; under 1 s; no secrets, no later filings | `src/question_router.py`, `tests/test_question_routes.py` | `.venv/bin/python -m unittest tests.test_question_routes` |
+| The model never sees the visitor's text | Fixed prompt; test date and as-of date set in Python on each tool call | `tests/test_question_routes.py` | same |
+| Jan 3, 2026 as-of date | Mar 12, 2026, the filing date of the 10-K holding its XBRL figures; other tests use the test date plus 45 days | `src/agent.py` (`FIGURES_ON_FILE`); `data/raw/snbr_companyfacts.json` | `.venv/bin/python -m unittest tests.test_question_routes.NothingPastTheCutoff` |
+| Failed model calls log their HTTP status | Status only, no body | `src/model_calls.py` | `.venv/bin/python -m unittest tests.test_question_routes.FailedCallStatus` |
+| Rewind steps | 4.97x against 5.25x, pass; 4.25x against 4.50x, pass only with $50M, 5.47x without; 6.58x against 4.75x, breach, 5.06x with $44M. Figures match the case page API; no filing after the as-of date | `GET /company/SNBR/rewind`, `data/results/`, `tests/test_rewind.py` | `.venv/bin/python -m unittest tests.test_rewind` |
+| Back-test totals | 23 of 23 disclosed figures; 19 of 21 contract limits, 2 changed by later amendments, flagged | `scripts/eval_backtest.py`, `data/backtest/` | `make eval` |
+| CI | Python tests, JS tests, lint, type and copy checks, and `make eval`; actions pinned to commit SHAs, read-only, no secrets. Playwright runs locally, not in CI | `.github/workflows/ci.yml` | Actions tab |
+
 ## Cost and speed
 
 Measured Nov 3, 2026 on the live site with `scripts/load_test.py`: 3 rounds of 2 agent runs plus 1 private check at the same time, 9 runs, 331,733 tokens.
@@ -231,9 +243,9 @@ Measured Nov 3, 2026 on the live site with `scripts/load_test.py`: 3 rounds of 2
 
 | Suite | Count | Command |
 |---|---|---|
-| Python | 662 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
+| Python | 697 passed | `.venv/bin/python -m unittest` over named `tests.test_*` modules |
 | JS | 29 passed | `npm run test:what-if` in `web/` |
-| Playwright | 35 passed | `npx playwright test` in `web/` |
+| Playwright | 41 passed | `npx playwright test` in `web/` |
 | Watch storage | passed | `web/lib/watch.test.ts` via `test:what-if` |
 | Watch plus request flow | 3 passed | `web/e2e/watch-request.spec.ts` |
 | Recomputed section, 1366px and 360px | 3 passed | `web/e2e/accuracy-recompute.spec.ts` |

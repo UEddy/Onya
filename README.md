@@ -45,6 +45,10 @@ and the [Chapter 11 8-K, filed Jun 12,
 2026](https://www.sec.gov/Archives/edgar/data/827187/000095010326008891/dp248362_8k.htm).
 Onya flagged high risk from the January numbers, before the breach.
 
+The case page also has a [Rewind](https://onya-g8f4.vercel.app/app/company/SNBR#rewind)
+view: what Onya would have said at each test, using only filings on file by
+that test's as-of date (`tests/test_rewind.py`).
+
 ## How it works
 
 ```mermaid
@@ -182,6 +186,17 @@ On the back-test, Muse Spark Open matched 23 of 23 disclosed figures, 22
 with a verified quote. See [Accuracy](#accuracy).
 
 ### Agent judgment, bounded by code
+
+Live checks now go further than the sample run below. Python reads the
+question first (`src/question_router.py`) and picks the route. Only Sleep
+Number reaches the model, through a fixed prompt, so the visitor's text never
+does. Back-tested borrowers, unknown companies, off-topic questions, and
+injection attempts are answered in Python with no model call. Any date maps to
+a computed test, and the memo says when one was substituted. The test date and
+as-of date are set in Python on each tool call
+(`tests/test_question_routes.py`). The as-of date is the test date plus 45 days,
+except Jan 3, 2026: its figures are in the 10-K and earnings release filed Mar
+12, 2026, so that test uses Mar 12.
 
 In sample run `7c2a49625f4e` (`data/samples/snbr_memo.json`), asked about
 "the April 2026 test", Muse Spark passed an as-of date of May 19, 2026 to
@@ -324,6 +339,10 @@ million output tokens ([Meta](https://dev.meta.ai/docs/pricing-rate-limits),
   site origin, and the site proxy adds `X-Onya-Token` server-side for
   model-calling endpoints. A bundle test fails the build if the token
   leaks into client JavaScript (`web/scripts/check-bundle-token.mjs`).
+- The model context holds the system prompt, a fixed question, and tool
+  outputs, with no keys or tokens. Responses are scrubbed of secret values, and
+  questions over 4,000 characters are refused
+  (`tests/test_question_routes.py`).
 - Rate limits and the daily token budget live in Redis (`src/limits.py`)
   and fail closed in production: when Redis is unreachable, model calls
   are refused instead of running uncounted.
@@ -359,9 +378,9 @@ npm run dev
 Tests, with counts from a real run:
 
 ```bash
-.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 662 passed
+.venv/bin/python -m unittest tests.test_agent tests.test_api ...  # 697 passed
 cd web && npm run test:what-if   # 29 passed
-cd web && npx playwright test    # 35 passed
+cd web && npx playwright test    # 41 passed
 ```
 
 (The Python suite runs as named `tests.test_*` modules; bare discovery
@@ -381,6 +400,8 @@ Later passes and the final code review used Claude Code.
 
 ## Limitations
 
+- A question that names Sleep Number runs the standard check; the check does
+  not answer other questions about the company. The memo is in English.
 - Sleep Number is the one fully worked case. The other eleven borrowers
   are back-tested on disclosed figures and contract thresholds only.
 - Private mode compares one borrower and period per request against
